@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -160,6 +161,11 @@ export default function AdminUsersPage() {
           <span className="font-medium text-primary-600">
             {LOGIN_PATHS[form.role] || "/admin"}
           </span>
+          . View all credentials in{" "}
+          <Link href="/admin/accounts" className="font-medium text-primary-600 underline">
+            All Accounts
+          </Link>
+          .
         </p>
         <Button type="submit" loading={loading}>
           Create User Account

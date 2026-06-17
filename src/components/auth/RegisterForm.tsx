@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { formatNumericId } from "@/lib/format-ids";
 
 type OtpChannel = "phone" | "email";
 
@@ -221,6 +222,9 @@ export function RegisterForm({
           <h2 className="mt-4 text-xl font-bold text-gray-900">Registration Successful!</h2>
           <p className="mt-2 text-gray-600">Your User ID is:</p>
           <p className="mt-2 text-2xl font-bold text-primary-600">{userId}</p>
+          {/^\d{12}$/.test(userId) && (
+            <p className="mt-1 text-sm text-gray-500">{formatNumericId(userId)}</p>
+          )}
           <p className="mt-4 text-sm text-gray-500">A welcome email has been sent. Redirecting...</p>
         </div>
       </div>

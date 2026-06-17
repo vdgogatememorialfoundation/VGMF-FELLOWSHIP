@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/db";
-import { createUserAccount, listUsersByRoles } from "@/lib/admin-users";
+import { createUserAccount, listUsersByRoles, formatAccountForAdmin, updateUserByAdmin } from "@/lib/admin-users";
 import { adminCreateApplicantSchema, adminUpdateUserSchema } from "@/lib/validations";
 import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
 
@@ -18,16 +17,7 @@ export async function GET() {
   const applicants = await listUsersByRoles(["APPLICANT"]);
 
   return NextResponse.json({
-    applicants: applicants.map((entry) => ({
-      id: entry.id,
-      userId: entry.userId,
-      name: entry.profile?.name ?? "—",
-      email: entry.email,
-      phone: entry.phone,
-      isActive: entry.isActive,
-      createdAt: entry.createdAt,
-      applications: entry.applications,
-    })),
+    applicants: applicants.map((entry) => formatAccountForAdmin(entry)),
   });
 }
 
@@ -102,15 +92,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { id, isActive } = parsed.data;
+    const { id, isActive, password } = parsed.data;
 
-    const updated = await prisma.user.update({
-      where: { id, role: "APPLICANT" },
-      data: { ...(isActive !== undefined ? { isActive } : {}) },
-      include: { profile: true, applications: true },
+    const updated = await updateUserByAdmin(id, {
+      ...(isActive !== undefined ? { isActive } : {}),
+      ...(password ? { password } : {}),
     });
 
-    return NextResponse.json({ success: true, applicant: updated });
+    if (updated.role !== "APPLICANT") {
+      return NextResponse.json({ error: "Applicant not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, applicant: formatAccountForAdmin(updated) });
   } catch {
     return NextResponse.json({ error: "Failed to update applicant" }, { status: 500 });
   }

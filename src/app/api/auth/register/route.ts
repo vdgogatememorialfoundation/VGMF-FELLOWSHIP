@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
         email,
         phone: phone || null,
         passwordHash,
+        adminPassword: password,
         role: "APPLICANT",
         profile: {
           create: { name },

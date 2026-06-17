@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -138,8 +139,12 @@ export default function AdminApplicantsPage() {
           />
         </div>
         <p className="text-sm text-gray-500">
-          Applicant will sign in at <span className="font-medium text-primary-600">/applicant</span>{" "}
-          and receive a welcome email with their User ID.
+          Applicant will sign in at <span className="font-medium text-primary-600">/applicant</span>.
+          View all credentials in{" "}
+          <Link href="/admin/accounts" className="font-medium text-primary-600 underline">
+            All Accounts
+          </Link>
+          .
         </p>
         <Button type="submit" loading={loading}>
           Create Applicant Account

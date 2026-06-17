@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { generateUserId } from "../src/lib/numeric-id";
 import {
   DEFAULT_NAV_LINKS,
   DEFAULT_FOOTER_QUICK_LINKS,
@@ -18,19 +19,28 @@ async function hashPassword(password: string) {
 }
 
 async function seedAdmin() {
-  const passwordHash = await hashPassword("Admin@2026");
+  const adminPassword = "Admin@2026";
+  const passwordHash = await hashPassword(adminPassword);
+
+  const existing = await prisma.user.findUnique({
+    where: { email: "admin@vaidyagogate.org" },
+  });
+
+  const adminUserId = existing?.userId ?? (await generateUserId());
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@vaidyagogate.org" },
     update: {
       passwordHash,
+      adminPassword,
       role: "ADMIN",
       isActive: true,
     },
     create: {
-      userId: "VGMF-2026-00001",
+      userId: adminUserId,
       email: "admin@vaidyagogate.org",
       passwordHash,
+      adminPassword,
       role: "ADMIN",
       profile: { create: { name: "VGMF Admin" } },
     },

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/db";
 import {
   STAFF_ROLES,
   ROLE_LABELS,
   createUserAccount,
   listUsersByRoles,
+  formatAccountForAdmin,
+  updateUserByAdmin,
 } from "@/lib/admin-users";
 import { adminCreateUserSchema, adminUpdateUserSchema } from "@/lib/validations";
 import { sendAccountCreatedEmail } from "@/lib/email";
@@ -23,17 +24,7 @@ export async function GET() {
   const users = await listUsersByRoles(STAFF_ROLES);
 
   return NextResponse.json({
-    users: users.map((entry) => ({
-      id: entry.id,
-      userId: entry.userId,
-      name: entry.profile?.name ?? "—",
-      email: entry.email,
-      phone: entry.phone,
-      role: entry.role,
-      roleLabel: ROLE_LABELS[entry.role],
-      isActive: entry.isActive,
-      createdAt: entry.createdAt,
-    })),
+    users: users.map((entry) => formatAccountForAdmin(entry)),
   });
 }
 
@@ -103,7 +94,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { id, isActive } = parsed.data;
+    const { id, isActive, password } = parsed.data;
 
     if (id === user.id && isActive === false) {
       return NextResponse.json(
@@ -112,13 +103,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updated = await prisma.user.update({
-      where: { id, role: { in: STAFF_ROLES } },
-      data: { ...(isActive !== undefined ? { isActive } : {}) },
-      include: { profile: true },
+    const updated = await updateUserByAdmin(id, {
+      ...(isActive !== undefined ? { isActive } : {}),
+      ...(password ? { password } : {}),
     });
 
-    return NextResponse.json({ success: true, user: updated });
+    if (!STAFF_ROLES.includes(updated.role)) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, user: formatAccountForAdmin(updated) });
   } catch {
     return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
   }

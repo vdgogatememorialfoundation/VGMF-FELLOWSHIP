@@ -1,9 +1,12 @@
 import prisma from "./db";
 import type { UserRole } from "@prisma/client";
-import { hashPassword, generateUserId } from "./auth";
+import { hashPassword } from "./auth";
+import { generateUserId } from "./numeric-id";
 import { roleToPortal, getLoginPath } from "./portal";
 
 export const STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"];
+
+export const ALL_PORTAL_ROLES: UserRole[] = [...STAFF_ROLES, "APPLICANT"];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   APPLICANT: "Applicant",
@@ -45,6 +48,7 @@ export async function createUserAccount(input: CreateAccountInput) {
       email,
       phone,
       passwordHash,
+      adminPassword: input.password,
       role: input.role,
       profile: {
         create: { name: input.name.trim() },
@@ -68,4 +72,69 @@ export async function listUsersByRoles(roles: UserRole[]) {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function listAllAccounts(role?: UserRole) {
+  return prisma.user.findMany({
+    where: role ? { role } : undefined,
+    include: {
+      profile: true,
+      applications: {
+        select: { id: true, applicationNumber: true, status: true },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: [{ role: "asc" }, { createdAt: "desc" }],
+  });
+}
+
+export async function updateUserByAdmin(
+  id: string,
+  data: { isActive?: boolean; password?: string }
+) {
+  const update: {
+    isActive?: boolean;
+    passwordHash?: string;
+    adminPassword?: string;
+  } = {};
+
+  if (data.isActive !== undefined) {
+    update.isActive = data.isActive;
+  }
+
+  if (data.password) {
+    update.passwordHash = await hashPassword(data.password);
+    update.adminPassword = data.password;
+  }
+
+  return prisma.user.update({
+    where: { id },
+    data: update,
+    include: {
+      profile: true,
+      applications: {
+        select: { id: true, applicationNumber: true, status: true },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+}
+
+export function formatAccountForAdmin(
+  entry: Awaited<ReturnType<typeof listAllAccounts>>[number]
+) {
+  return {
+    id: entry.id,
+    userId: entry.userId,
+    name: entry.profile?.name ?? "—",
+    email: entry.email,
+    phone: entry.phone,
+    role: entry.role,
+    roleLabel: ROLE_LABELS[entry.role],
+    adminPassword: entry.adminPassword,
+    isActive: entry.isActive,
+    createdAt: entry.createdAt,
+    loginPath: getLoginPath(roleToPortal(entry.role)),
+    applications: entry.applications,
+  };
 }

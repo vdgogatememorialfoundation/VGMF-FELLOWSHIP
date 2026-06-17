@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { generateUserId } from "../src/lib/numeric-id";
 
 const prisma = new PrismaClient();
 
@@ -7,76 +8,68 @@ async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
 
-async function generateUserId() {
-  const year = new Date().getFullYear();
-  const count = await prisma.user.count();
-  return `VGMF-${year}-${String(count + 1).padStart(5, "0")}`;
-}
+const SEED_ACCOUNTS = [
+  {
+    email: "admin@vaidyagogate.org",
+    password: "Admin@2026",
+    role: "ADMIN" as const,
+    name: "VGMF Admin",
+  },
+  {
+    email: "committee@vgmf.org",
+    password: "Committee@123",
+    role: "COMMITTEE" as const,
+    name: "Dr. Research Committee",
+  },
+  {
+    email: "staff@vgmf.org",
+    password: "Staff@123",
+    role: "STAFF" as const,
+    name: "Foundation Staff",
+  },
+  {
+    email: "trustee@vgmf.org",
+    password: "Trustee@123",
+    role: "TRUSTEE" as const,
+    name: "Board Trustee",
+  },
+];
 
 async function main() {
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@vaidyagogate.org" },
-    update: {
-      passwordHash: await hashPassword("Admin@2026"),
-      role: "ADMIN",
-      isActive: true,
-    },
-    create: {
-      userId: await generateUserId(),
-      email: "admin@vaidyagogate.org",
-      passwordHash: await hashPassword("Admin@2026"),
-      role: "ADMIN",
-      profile: { create: { name: "VGMF Admin" } },
-    },
-  });
+  for (const account of SEED_ACCOUNTS) {
+    const passwordHash = await hashPassword(account.password);
+    const existing = await prisma.user.findUnique({ where: { email: account.email } });
+    const userId = existing?.userId ?? (await generateUserId());
 
-  await prisma.profile.upsert({
-    where: { userId: admin.id },
-    update: { name: "VGMF Admin" },
-    create: { userId: admin.id, name: "VGMF Admin" },
-  });
+    const user = await prisma.user.upsert({
+      where: { email: account.email },
+      update: {
+        passwordHash,
+        adminPassword: account.password,
+        role: account.role,
+        isActive: true,
+      },
+      create: {
+        userId,
+        email: account.email,
+        passwordHash,
+        adminPassword: account.password,
+        role: account.role,
+        profile: { create: { name: account.name } },
+      },
+    });
 
-  await prisma.user.upsert({
-    where: { email: "committee@vgmf.org" },
-    update: {},
-    create: {
-      userId: await generateUserId(),
-      email: "committee@vgmf.org",
-      passwordHash: await hashPassword("Committee@123"),
-      role: "COMMITTEE",
-      profile: { create: { name: "Dr. Research Committee" } },
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: "staff@vgmf.org" },
-    update: {},
-    create: {
-      userId: await generateUserId(),
-      email: "staff@vgmf.org",
-      passwordHash: await hashPassword("Staff@123"),
-      role: "STAFF",
-      profile: { create: { name: "Foundation Staff" } },
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: "trustee@vgmf.org" },
-    update: {},
-    create: {
-      userId: await generateUserId(),
-      email: "trustee@vgmf.org",
-      passwordHash: await hashPassword("Trustee@123"),
-      role: "TRUSTEE",
-      profile: { create: { name: "Board Trustee" } },
-    },
-  });
+    await prisma.profile.upsert({
+      where: { userId: user.id },
+      update: { name: account.name },
+      create: { userId: user.id, name: account.name },
+    });
+  }
 
   console.log("Seed completed:");
-  console.log("  Admin: admin@vaidyagogate.org / Admin@2026");
-  console.log("  Committee: committee@vgmf.org / Committee@123");
-  console.log("  Staff: staff@vgmf.org / Staff@123");
-  console.log("  Trustee: trustee@vgmf.org / Trustee@123");
+  for (const account of SEED_ACCOUNTS) {
+    console.log(`  ${account.role}: ${account.email} / ${account.password}`);
+  }
 }
 
 main()

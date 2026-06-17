@@ -30,13 +30,7 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export async function generateUserId(): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.user.count();
-  return `VGMF-${year}-${String(count + 1).padStart(5, "0")}`;
-}
-
-export { generateApplicationNumber } from "./application-number";
+export { generateUserId, generateApplicationNumber } from "./numeric-id";
 
 export async function generateFellowshipId(): Promise<string> {
   const year = new Date().getFullYear();

@@ -110,6 +110,7 @@ export const adminCreateUserSchema = z
 export const adminUpdateUserSchema = z.object({
   id: z.string().min(1),
   isActive: z.boolean().optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
 
 export const profileSchema = z.object({
