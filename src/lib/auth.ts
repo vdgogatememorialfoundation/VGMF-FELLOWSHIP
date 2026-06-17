@@ -124,7 +124,7 @@ export function getPortalPath(role: UserRole): string {
     case "FINANCE":
       return "/staff";
     case "COMMITTEE":
-      return "/committee";
+      return "/reviewer";
     case "TRUSTEE":
       return "/trustee";
     default:

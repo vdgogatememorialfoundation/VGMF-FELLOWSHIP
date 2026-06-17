@@ -15,7 +15,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:update-admin": "tsx prisma/update-admin.ts"
+    "db:update-admin": "tsx prisma/update-admin.ts",
+    "db:seed-cms": "tsx prisma/seed-cms.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",

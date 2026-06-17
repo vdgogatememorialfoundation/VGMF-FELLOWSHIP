@@ -88,6 +88,26 @@ enum OtpPurpose {
   RESET_PASSWORD
 }
 
+enum FormFieldType {
+  TEXT
+  EMAIL
+  PHONE
+  NUMBER
+  DATE
+  TEXTAREA
+  SELECT
+  RADIO
+  CHECKBOX
+  FILE
+}
+
+enum CmsPageSlug {
+  ABOUT
+  TERMS
+  PRIVACY
+  REFUND
+}
+
 model User {
   id            String   @id @default(cuid())
   userId        String   @unique @map("user_id")
@@ -493,4 +513,96 @@ model OtpCode {
 
   @@index([phone, purpose])
   @@map("otp_codes")
+}
+
+model SiteSettings {
+  id            String   @id @default("default")
+  siteName      String   @default("Vaidya Gogate Memorial Foundation Fellowship Portal 2026") @map("site_name")
+  siteTagline   String?  @map("site_tagline")
+  logoUrl       String?  @map("logo_url")
+  faviconUrl    String?  @map("favicon_url")
+  tickerText    String?  @map("ticker_text")
+  tickerEnabled Boolean  @default(true) @map("ticker_enabled")
+  heroTitle     String?  @map("hero_title")
+  heroSubtitle  String?  @map("hero_subtitle")
+  footerText    String?  @map("footer_text")
+  contactEmail  String?  @map("contact_email")
+  contactPhone  String?  @map("contact_phone")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model CmsPage {
+  id          String     @id @default(cuid())
+  slug        CmsPageSlug @unique
+  title       String
+  content     String     @db.Text
+  isPublished Boolean    @default(true) @map("is_published")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@map("cms_pages")
+}
+
+model Notice {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  priority    Int       @default(0)
+  publishedAt DateTime  @default(now()) @map("published_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("notices")
+}
+
+model FormTemplate {
+  id          String          @id @default(cuid())
+  name        String
+  slug        String          @unique
+  description String?
+  isActive    Boolean         @default(true) @map("is_active")
+  fields      FormField[]
+  submissions FormSubmission[]
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@map("form_templates")
+}
+
+model FormField {
+  id             String        @id @default(cuid())
+  formTemplateId String        @map("form_template_id")
+  section        String        @default("General")
+  label          String
+  fieldKey       String        @map("field_key")
+  fieldType      FormFieldType @map("field_type")
+  placeholder    String?
+  helpText       String?       @map("help_text")
+  required       Boolean       @default(false)
+  options        String?
+  order          Int           @default(0)
+  isActive       Boolean       @default(true) @map("is_active")
+  formTemplate   FormTemplate  @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([formTemplateId, fieldKey])
+  @@map("form_fields")
+}
+
+model FormSubmission {
+  id             String       @id @default(cuid())
+  formTemplateId String       @map("form_template_id")
+  userId         String       @map("user_id")
+  applicationId  String?      @map("application_id")
+  data           Json
+  status         String       @default("DRAFT")
+  submittedAt    DateTime?    @map("submitted_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  formTemplate FormTemplate @relation(fields: [formTemplateId], references: [id])
+
+  @@map("form_submissions")
 }

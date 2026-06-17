@@ -48,9 +48,9 @@ export default function LoginPage() {
               V
             </div>
           </Link>
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">Sign in to your account</h1>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">Sign In</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Use your email or phone number to login
+            Vaidya Gogate Memorial Foundation Fellowship Portal 2026
           </p>
         </div>
 

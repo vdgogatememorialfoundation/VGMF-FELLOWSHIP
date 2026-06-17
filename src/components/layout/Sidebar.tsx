@@ -16,16 +16,21 @@ import {
   Award,
   DollarSign,
   FileBarChart,
+  Megaphone,
+  PenLine,
+  FormInput,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
+import type { PortalType } from "@/lib/portal";
 
 interface SidebarProps {
   user: SessionUser;
-  portal: "applicant" | "admin" | "staff" | "committee" | "trustee";
+  portal: PortalType;
 }
 
-const portalLinks = {
+const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[]> = {
   applicant: [
     { href: "/applicant", label: "Dashboard", icon: LayoutDashboard },
     { href: "/applicant/forms", label: "Forms", icon: FileText },
@@ -34,11 +39,14 @@ const portalLinks = {
   ],
   admin: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/cms", label: "Site Settings", icon: Globe },
+    { href: "/admin/content", label: "Content Pages", icon: PenLine },
+    { href: "/admin/notices", label: "Notices", icon: Megaphone },
+    { href: "/admin/forms", label: "Form Builder", icon: FormInput },
     { href: "/admin/applications", label: "Applications", icon: ClipboardList },
     { href: "/admin/applicants", label: "Applicants", icon: Users },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },
     { href: "/admin/reports", label: "Reports", icon: FileBarChart },
-    { href: "/admin/settings", label: "Settings", icon: Settings },
   ],
   staff: [
     { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
@@ -46,15 +54,23 @@ const portalLinks = {
     { href: "/staff/finance", label: "Finance", icon: DollarSign },
     { href: "/staff/reports", label: "Reports", icon: BarChart3 },
   ],
-  committee: [
-    { href: "/committee", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/committee/applications", label: "Applications", icon: ClipboardList },
-    { href: "/committee/rankings", label: "Rankings", icon: BarChart3 },
+  reviewer: [
+    { href: "/reviewer", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/reviewer/applications", label: "Applications", icon: ClipboardList },
+    { href: "/reviewer/rankings", label: "Rankings", icon: BarChart3 },
   ],
   trustee: [
     { href: "/trustee", label: "Dashboard", icon: LayoutDashboard },
     { href: "/trustee/approvals", label: "Approvals", icon: Award },
   ],
+};
+
+const portalLabels: Record<PortalType, string> = {
+  applicant: "Applicant",
+  admin: "Admin",
+  staff: "Staff",
+  reviewer: "Reviewer",
+  trustee: "Trustee",
 };
 
 export function Sidebar({ user, portal }: SidebarProps) {
@@ -66,16 +82,16 @@ export function Sidebar({ user, portal }: SidebarProps) {
       <div className="border-b border-gray-200 p-6">
         <Link href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
-            V
+            VG
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">VGMF Portal</p>
-            <p className="text-xs capitalize text-gray-500">{portal}</p>
+            <p className="text-xs font-semibold leading-tight text-gray-900">VGMF Portal 2026</p>
+            <p className="text-xs capitalize text-gray-500">{portalLabels[portal]}</p>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {links.map((link) => {
           const Icon = link.icon;
           const isActive =
@@ -117,18 +133,16 @@ export function Sidebar({ user, portal }: SidebarProps) {
 export function TopBar({ user }: { user: SessionUser }) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
-      <div />
+      <p className="text-sm text-gray-500">
+        Vaidya Gogate Memorial Foundation Fellowship Portal 2026
+      </p>
       <div className="flex items-center gap-4">
         <div className="text-right">
           <p className="text-sm font-medium text-gray-900">{user.name}</p>
           <p className="text-xs text-gray-500">{user.email}</p>
         </div>
         <Link
-          href={
-            user.role === "APPLICANT"
-              ? "/applicant/profile"
-              : `/admin/profile`
-          }
+          href={user.role === "APPLICANT" ? "/applicant/profile" : "/admin/profile"}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-700 transition hover:bg-primary-200"
         >
           <User className="h-5 w-5" />
