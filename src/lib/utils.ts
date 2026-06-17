@@ -56,6 +56,7 @@ export const SCORING_CRITERIA = [
 export const MANDATORY_DOCUMENTS = [
   { type: "CV", label: "CV" },
   { type: "REGISTRATION_CERTIFICATE", label: "Registration Certificate" },
+  { type: "NCISM_REGISTRATION", label: "NCISM Registration Certificate" },
   { type: "RESEARCH_PROPOSAL_PDF", label: "Research Proposal PDF" },
   { type: "BUDGET_PROPOSAL_PDF", label: "Budget Proposal PDF" },
   { type: "TIMELINE_PDF", label: "Timeline PDF" },

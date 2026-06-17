@@ -5,6 +5,14 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 
+const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
 export async function POST(request: NextRequest) {
   const user = await getSession();
   if (!user) {
@@ -19,6 +27,21 @@ export async function POST(request: NextRequest) {
 
     if (!applicationId || !docType || !file) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    if (!file || file.size === 0) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (file.size > MAX_DOCUMENT_BYTES) {
+      return NextResponse.json({ error: "File must be 5 MB or smaller" }, { status: 400 });
+    }
+
+    if (file.type && !ALLOWED_DOCUMENT_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: "Only PDF or image files are allowed" },
+        { status: 400 }
+      );
     }
 
     const app = await prisma.application.findFirst({
@@ -39,16 +62,34 @@ export async function POST(request: NextRequest) {
 
     const relativePath = `/uploads/${applicationId}/${fileName}`;
 
-    const document = await prisma.applicationDocument.create({
-      data: {
-        applicationId,
-        type: docType as never,
-        fileName: file.name,
-        filePath: relativePath,
-        fileSize: file.size,
-        mimeType: file.type,
-      },
+    const existingDoc = await prisma.applicationDocument.findFirst({
+      where: { applicationId, type: docType as never },
     });
+
+    const document = existingDoc
+      ? await prisma.applicationDocument.update({
+          where: { id: existingDoc.id },
+          data: {
+            fileName: file.name,
+            filePath: relativePath,
+            fileSize: file.size,
+            mimeType: file.type,
+            status: "PENDING",
+            rejectionReason: null,
+            reviewedAt: null,
+            reviewedBy: null,
+          },
+        })
+      : await prisma.applicationDocument.create({
+          data: {
+            applicationId,
+            type: docType as never,
+            fileName: file.name,
+            filePath: relativePath,
+            fileSize: file.size,
+            mimeType: file.type,
+          },
+        });
 
     return NextResponse.json({ success: true, document });
   } catch (error) {

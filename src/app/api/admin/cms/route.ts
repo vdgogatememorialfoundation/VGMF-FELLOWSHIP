@@ -187,12 +187,18 @@ export async function PUT(request: NextRequest) {
         name: data.name,
         description: data.description,
         isActive: data.isActive ?? true,
+        opensAt: data.opensAt ? new Date(data.opensAt) : null,
+        closesAt: data.closesAt ? new Date(data.closesAt) : null,
+        closedMessage: data.closedMessage ?? null,
       },
       create: {
         name: data.name,
         slug: data.slug,
         description: data.description,
         isActive: data.isActive ?? true,
+        opensAt: data.opensAt ? new Date(data.opensAt) : null,
+        closesAt: data.closesAt ? new Date(data.closesAt) : null,
+        closedMessage: data.closedMessage ?? null,
       },
     });
     return NextResponse.json({ template });

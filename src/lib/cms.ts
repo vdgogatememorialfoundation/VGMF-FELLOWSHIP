@@ -1,5 +1,6 @@
 import prisma from "./db";
 import type { CmsPageSlug } from "@prisma/client";
+import { getFormScheduleStatus } from "./form-schedule";
 import {
   DEFAULT_NAV_LINKS,
   DEFAULT_FOOTER_QUICK_LINKS,
@@ -285,7 +286,7 @@ export async function getActiveNotices() {
 
 export async function getActiveFormTemplate(slug = "fellowship-application") {
   return prisma.formTemplate.findFirst({
-    where: { slug, isActive: true },
+    where: { slug },
     include: {
       fields: {
         where: { isActive: true },
@@ -293,4 +294,13 @@ export async function getActiveFormTemplate(slug = "fellowship-application") {
       },
     },
   });
+}
+
+export async function getFormTemplateForApplicant(slug = "fellowship-application") {
+  const template = await getActiveFormTemplate(slug);
+  if (!template) return null;
+
+  const schedule = getFormScheduleStatus(template);
+
+  return { template, schedule };
 }

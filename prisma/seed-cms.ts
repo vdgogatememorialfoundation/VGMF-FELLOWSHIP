@@ -58,12 +58,26 @@ We provide grants up to ₹75,000 for approved research proposals, along with me
   {
     slug: "TERMS" as const,
     title: "Terms & Conditions",
-    content: `1. Applicants must be registered BAMS practitioners with valid registration.
+    content: `1. Applicants must be registered BAMS practitioners with valid NCISM registration.
 2. All information submitted must be accurate and verifiable.
 3. Fellowship grants are subject to approval by the Review Committee and Trustees.
 4. Selected fellows must submit quarterly progress reports.
 5. Misuse of fellowship funds will result in termination and recovery of disbursed amounts.
-6. The Foundation reserves the right to modify programme terms with prior notice.`,
+6. The Foundation reserves the right to modify programme terms with prior notice.
+7. By submitting this application, you agree to these Terms & Conditions.`,
+  },
+  {
+    slug: "UNDERTAKING" as const,
+    title: "Applicant Undertaking",
+    content: `I hereby undertake that:
+
+1. I am a registered Ayurvedic practitioner with a valid NCISM registration number.
+2. All particulars and documents submitted in my fellowship application are true and correct to the best of my knowledge.
+3. I will conduct the proposed research ethically and in accordance with approved protocols.
+4. I will utilize fellowship funds solely for the approved research purpose and maintain proper accounts.
+5. I will submit quarterly progress reports and final completion report as required by the Foundation.
+6. I understand that any false statement or misuse of funds may lead to rejection, termination, or recovery of disbursed amounts.
+7. I agree to abide by all decisions of the Review Committee and Trustees of the Vaidya Gogate Memorial Foundation.`,
   },
   {
     slug: "PRIVACY" as const,
@@ -98,19 +112,24 @@ const DEFAULT_FIELDS = [
   { section: "Personal Details", label: "Email", fieldKey: "email", fieldType: "EMAIL" as const, required: true, order: 4 },
   { section: "Personal Details", label: "Mobile", fieldKey: "mobile", fieldType: "PHONE" as const, required: true, order: 5 },
   { section: "Personal Details", label: "Address", fieldKey: "address", fieldType: "TEXTAREA" as const, required: true, order: 6 },
-  { section: "Personal Details", label: "City", fieldKey: "city", fieldType: "TEXT" as const, required: true, order: 7 },
-  { section: "Personal Details", label: "State", fieldKey: "state", fieldType: "TEXT" as const, required: true, order: 8 },
-  { section: "Personal Details", label: "Pincode", fieldKey: "pincode", fieldType: "TEXT" as const, required: true, order: 9 },
-  { section: "Professional Details", label: "BAMS College", fieldKey: "bams_college", fieldType: "TEXT" as const, required: true, order: 10 },
-  { section: "Professional Details", label: "Year of Passing", fieldKey: "year_of_passing", fieldType: "NUMBER" as const, required: true, order: 11 },
-  { section: "Professional Details", label: "Current Designation", fieldKey: "current_designation", fieldType: "TEXT" as const, required: true, order: 12 },
-  { section: "Professional Details", label: "Institution/Clinic Name", fieldKey: "institution_name", fieldType: "TEXT" as const, required: true, order: 13 },
-  { section: "Professional Details", label: "Registration Number", fieldKey: "registration_number", fieldType: "TEXT" as const, required: true, order: 14 },
-  { section: "Professional Details", label: "Years of Clinical Practice", fieldKey: "years_of_practice", fieldType: "NUMBER" as const, required: true, order: 15 },
-  { section: "Research Proposal", label: "Project Title", fieldKey: "project_title", fieldType: "TEXT" as const, required: true, order: 16 },
-  { section: "Research Proposal", label: "Research Area", fieldKey: "research_area", fieldType: "SELECT" as const, required: true, order: 17, options: '["Musculoskeletal Disorders","Pain Management","Neurological Disorders","Other"]' },
-  { section: "Research Proposal", label: "Research Objectives", fieldKey: "objectives", fieldType: "TEXTAREA" as const, required: true, order: 18 },
-  { section: "Research Proposal", label: "Methodology", fieldKey: "methodology", fieldType: "TEXTAREA" as const, required: true, order: 19 },
+  { section: "Personal Details", label: "Pincode", fieldKey: "pincode", fieldType: "TEXT" as const, required: true, order: 7, helpText: "Enter 6-digit pincode — city, state and country will be filled automatically" },
+  { section: "Personal Details", label: "City", fieldKey: "city", fieldType: "TEXT" as const, required: true, order: 8 },
+  { section: "Personal Details", label: "State", fieldKey: "state", fieldType: "TEXT" as const, required: true, order: 9 },
+  { section: "Personal Details", label: "Country", fieldKey: "country", fieldType: "TEXT" as const, required: true, order: 10, placeholder: "India" },
+  { section: "Professional Details", label: "BAMS College", fieldKey: "bams_college", fieldType: "TEXT" as const, required: true, order: 11 },
+  { section: "Professional Details", label: "Year of Passing", fieldKey: "year_of_passing", fieldType: "NUMBER" as const, required: true, order: 12 },
+  { section: "Professional Details", label: "Current Designation", fieldKey: "current_designation", fieldType: "TEXT" as const, required: true, order: 13 },
+  { section: "Professional Details", label: "Institution/Clinic Name", fieldKey: "institution_name", fieldType: "TEXT" as const, required: true, order: 14 },
+  { section: "Professional Details", label: "Registration Council", fieldKey: "registration_council", fieldType: "SELECT" as const, required: true, order: 15, options: '["NCISM"]' },
+  { section: "Professional Details", label: "NCISM Registration Number", fieldKey: "registration_number", fieldType: "TEXT" as const, required: true, order: 16, helpText: "Your NCISM registration number as on the certificate" },
+  { section: "Professional Details", label: "NCISM Registration Certificate", fieldKey: "ncism_registration_certificate", fieldType: "FILE" as const, required: true, order: 17, helpText: "Upload NCISM registration certificate (PDF or image, max 5 MB) to verify you are a registered doctor" },
+  { section: "Professional Details", label: "Years of Clinical Practice", fieldKey: "years_of_practice", fieldType: "NUMBER" as const, required: true, order: 18 },
+  { section: "Research Proposal", label: "Project Title", fieldKey: "project_title", fieldType: "TEXT" as const, required: true, order: 19 },
+  { section: "Research Proposal", label: "Research Area", fieldKey: "research_area", fieldType: "SELECT" as const, required: true, order: 20, options: '["Musculoskeletal Disorders","Pain Management","Neurological Disorders","Other"]' },
+  { section: "Research Proposal", label: "Research Objectives", fieldKey: "objectives", fieldType: "TEXTAREA" as const, required: true, order: 21 },
+  { section: "Research Proposal", label: "Methodology", fieldKey: "methodology", fieldType: "TEXTAREA" as const, required: true, order: 22 },
+  { section: "Declarations", label: "Terms & Conditions", fieldKey: "terms_accepted", fieldType: "CHECKBOX" as const, required: true, order: 98 },
+  { section: "Declarations", label: "Applicant Undertaking", fieldKey: "undertaking_accepted", fieldType: "CHECKBOX" as const, required: true, order: 99 },
 ];
 
 async function main() {
@@ -215,7 +234,17 @@ async function main() {
           fieldKey: field.fieldKey,
         },
       },
-      update: {},
+      update: {
+        section: field.section,
+        label: field.label,
+        fieldType: field.fieldType,
+        required: field.required,
+        order: field.order,
+        helpText: "helpText" in field ? field.helpText : undefined,
+        placeholder: "placeholder" in field ? field.placeholder : undefined,
+        options: "options" in field ? field.options : undefined,
+        isActive: true,
+      },
       create: { formTemplateId: template.id, ...field },
     });
   }

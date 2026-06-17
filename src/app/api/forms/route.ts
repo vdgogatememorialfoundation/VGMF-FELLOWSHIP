@@ -2,48 +2,84 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
-import { getActiveFormTemplate } from "@/lib/cms";
-import { syncApplicationFromFormSubmission } from "@/lib/applications";
+import { getFormTemplateForApplicant } from "@/lib/cms";
+import {
+  ensureDraftApplication,
+  syncApplicationFromFormSubmission,
+} from "@/lib/applications";
 import { notifyApplicationSubmitted } from "@/lib/notifications";
+import {
+  validateFormSubmission,
+  FILE_FIELD_DOCUMENT_TYPES,
+} from "@/lib/form-validation";
+import { getFormScheduleStatus } from "@/lib/form-schedule";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug") || "fellowship-application";
+  const user = await getSession();
 
-  const template = await getActiveFormTemplate(slug);
-  if (!template) {
+  const result = await getFormTemplateForApplicant(slug);
+  if (!result) {
     return NextResponse.json({ error: "Form not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ template });
-}
+  const { template, schedule } = result;
 
-async function handleSubmission(
-  userId: string,
-  submission: {
-    id: string;
-    status: string;
-    applicationId: string | null;
-    data: unknown;
-  },
-  status: string,
-  data: Record<string, unknown>
-) {
-  if (status !== "SUBMITTED" || submission.status === "SUBMITTED") {
-    return { submission, application: null as { applicationNumber: string } | null };
+  let submission = null;
+  let applicationId: string | null = null;
+  const uploadedFiles: Record<string, boolean> = {};
+
+  if (user) {
+    submission = await prisma.formSubmission.findFirst({
+      where: { userId: user.id, formTemplateId: template.id },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (submission?.applicationId) {
+      applicationId = submission.applicationId;
+      const docs = await prisma.applicationDocument.findMany({
+        where: { applicationId: submission.applicationId },
+        select: { type: true },
+      });
+
+      for (const field of template.fields) {
+        if (field.fieldType !== "FILE") continue;
+        const docType = FILE_FIELD_DOCUMENT_TYPES[field.fieldKey];
+        if (docType) {
+          uploadedFiles[field.fieldKey] = docs.some((doc) => doc.type === docType);
+        }
+      }
+    }
   }
 
-  const application = await syncApplicationFromFormSubmission(
-    userId,
-    submission.id,
-    data,
-    submission.applicationId
-  );
+  return NextResponse.json({
+    template,
+    schedule,
+    submission,
+    applicationId,
+    uploadedFiles,
+  });
+}
 
-  const applicantEmail = String(data.email || "");
-  await notifyApplicationSubmitted(userId, application.applicationNumber, applicantEmail || undefined);
+async function mergeUploadedFileFlags(
+  data: Record<string, unknown>,
+  applicationId: string | null
+) {
+  if (!applicationId) return data;
 
-  return { submission, application };
+  const docs = await prisma.applicationDocument.findMany({
+    where: { applicationId },
+    select: { type: true },
+  });
+
+  const merged = { ...data };
+  for (const [fieldKey, docType] of Object.entries(FILE_FIELD_DOCUMENT_TYPES)) {
+    if (docs.some((doc) => doc.type === docType)) {
+      merged[`${fieldKey}_uploaded`] = true;
+    }
+  }
+  return merged;
 }
 
 export async function POST(request: NextRequest) {
@@ -58,6 +94,29 @@ export async function POST(request: NextRequest) {
     const formData = (data || {}) as Record<string, unknown>;
     const nextStatus = status || "DRAFT";
 
+    const template = await prisma.formTemplate.findUnique({
+      where: { id: formTemplateId },
+      include: {
+        fields: {
+          where: { isActive: true },
+          orderBy: { order: "asc" },
+        },
+      },
+    });
+
+    if (!template) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
+    const schedule = getFormScheduleStatus(template);
+
+    if (!schedule.open && user.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: schedule.message || "Applications are currently closed" },
+        { status: 403 }
+      );
+    }
+
     if (submissionId) {
       const existing = await prisma.formSubmission.findUnique({
         where: { id: submissionId, userId: user.id },
@@ -67,51 +126,141 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Submission not found" }, { status: 404 });
       }
 
+      if (existing.status === "SUBMITTED") {
+        return NextResponse.json(
+          { error: "This application has already been submitted" },
+          { status: 400 }
+        );
+      }
+
+      const mergedData = await mergeUploadedFileFlags(
+        formData,
+        existing.applicationId
+      );
+
+      if (nextStatus === "SUBMITTED") {
+        const validationError = validateFormSubmission(template.fields, mergedData);
+        if (validationError) {
+          return NextResponse.json({ error: validationError }, { status: 400 });
+        }
+      }
+
       const submission = await prisma.formSubmission.update({
         where: { id: submissionId, userId: user.id },
         data: {
-          data: formData as Prisma.InputJsonValue,
+          data: mergedData as Prisma.InputJsonValue,
           status: nextStatus,
           submittedAt: nextStatus === "SUBMITTED" ? new Date() : undefined,
         },
       });
 
-      const { application } = await handleSubmission(
-        user.id,
-        { ...submission, data: formData },
-        nextStatus,
-        formData
-      );
+      let applicationId = submission.applicationId;
+      let applicationNumber: string | null = null;
+
+      if (nextStatus === "DRAFT") {
+        const application = await ensureDraftApplication(
+          user.id,
+          submission.id,
+          mergedData,
+          submission.applicationId
+        );
+        applicationId = application.id;
+      } else if (nextStatus === "SUBMITTED") {
+        const application = await syncApplicationFromFormSubmission(
+          user.id,
+          submission.id,
+          mergedData,
+          submission.applicationId
+        );
+        applicationId = application.id;
+        applicationNumber = application.applicationNumber;
+
+        const applicantEmail = String(mergedData.email || "");
+        await notifyApplicationSubmitted(
+          user.id,
+          application.applicationNumber,
+          applicantEmail || undefined
+        );
+
+        await prisma.formSubmission.update({
+          where: { id: submission.id },
+          data: {
+            data: {
+              ...mergedData,
+              application_number: application.applicationNumber,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
 
       return NextResponse.json({
-        submission,
-        applicationNumber: application?.applicationNumber ?? null,
+        submission: { ...submission, status: nextStatus },
+        applicationId,
+        applicationNumber,
       });
+    }
+
+    const mergedData = await mergeUploadedFileFlags(formData, null);
+
+    if (nextStatus === "SUBMITTED") {
+      const validationError = validateFormSubmission(template.fields, mergedData);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
     }
 
     const submission = await prisma.formSubmission.create({
       data: {
         formTemplateId,
         userId: user.id,
-        data: formData as Prisma.InputJsonValue,
+        data: mergedData as Prisma.InputJsonValue,
         status: nextStatus,
         submittedAt: nextStatus === "SUBMITTED" ? new Date() : undefined,
       },
     });
 
-    const { application } = await handleSubmission(
-      user.id,
-      submission,
-      nextStatus,
-      formData
-    );
+    let applicationId: string | null = null;
+    let applicationNumber: string | null = null;
+
+    if (nextStatus === "DRAFT") {
+      const application = await ensureDraftApplication(user.id, submission.id, mergedData);
+      applicationId = application.id;
+    } else if (nextStatus === "SUBMITTED") {
+      const application = await syncApplicationFromFormSubmission(
+        user.id,
+        submission.id,
+        mergedData
+      );
+      applicationId = application.id;
+      applicationNumber = application.applicationNumber;
+
+      const applicantEmail = String(mergedData.email || "");
+      await notifyApplicationSubmitted(
+        user.id,
+        application.applicationNumber,
+        applicantEmail || undefined
+      );
+
+      await prisma.formSubmission.update({
+        where: { id: submission.id },
+        data: {
+          data: {
+            ...mergedData,
+            application_number: application.applicationNumber,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
 
     return NextResponse.json({
       submission,
-      applicationNumber: application?.applicationNumber ?? null,
+      applicationId,
+      applicationNumber,
     });
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to save form";
     console.error("Form submission error:", error);
-    return NextResponse.json({ error: "Failed to save form" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -21,8 +21,32 @@ interface FormField {
   isActive: boolean;
 }
 
+interface FormTemplate {
+  id: string;
+  slug: string;
+  name: string;
+  isActive: boolean;
+  opensAt?: string | null;
+  closesAt?: string | null;
+  closedMessage?: string | null;
+  fields: FormField[];
+}
+
+function toDatetimeLocal(iso: string | null | undefined) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function FormBuilderPage() {
-  const [templateId, setTemplateId] = useState("");
+  const [template, setTemplate] = useState<FormTemplate | null>(null);
+  const [schedule, setSchedule] = useState({
+    isActive: true,
+    opensAt: "",
+    closesAt: "",
+    closedMessage: "",
+  });
   const [fields, setFields] = useState<FormField[]>([]);
   const [newField, setNewField] = useState({
     section: "Personal Details",
@@ -36,23 +60,61 @@ export default function FormBuilderPage() {
     order: 0,
   });
   const [message, setMessage] = useState("");
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/cms")
       .then((r) => r.json())
       .then((d) => {
         const form = d.forms?.find(
-          (f: { slug: string }) => f.slug === "fellowship-application"
+          (f: FormTemplate) => f.slug === "fellowship-application"
         );
         if (form) {
-          setTemplateId(form.id);
+          setTemplate(form);
           setFields(form.fields || []);
+          setSchedule({
+            isActive: form.isActive ?? true,
+            opensAt: toDatetimeLocal(form.opensAt),
+            closesAt: toDatetimeLocal(form.closesAt),
+            closedMessage: form.closedMessage || "",
+          });
         }
       });
   }, []);
 
+  async function saveSchedule() {
+    if (!template) return;
+    setSavingSchedule(true);
+    setMessage("");
+
+    const res = await fetch("/api/admin/cms", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        section: "form-template",
+        data: {
+          slug: template.slug,
+          name: template.name,
+          description: "Main fellowship application form",
+          isActive: schedule.isActive,
+          opensAt: schedule.opensAt ? new Date(schedule.opensAt).toISOString() : null,
+          closesAt: schedule.closesAt ? new Date(schedule.closesAt).toISOString() : null,
+          closedMessage: schedule.closedMessage.trim() || null,
+        },
+      }),
+    });
+
+    setSavingSchedule(false);
+    if (res.ok) {
+      setMessage("Application schedule saved!");
+    } else {
+      const data = await res.json();
+      setMessage(data.error || "Failed to save schedule");
+    }
+  }
+
   async function addField() {
-    if (!templateId || !newField.label || !newField.fieldKey) return;
+    if (!template || !newField.label || !newField.fieldKey) return;
 
     const res = await fetch("/api/admin/cms", {
       method: "PUT",
@@ -60,7 +122,7 @@ export default function FormBuilderPage() {
       body: JSON.stringify({
         section: "form-field",
         data: {
-          formTemplateId: templateId,
+          formTemplateId: template.id,
           ...newField,
           options: newField.options
             ? JSON.stringify(newField.options.split(",").map((s) => s.trim()))
@@ -100,13 +162,52 @@ export default function FormBuilderPage() {
       <div>
         <h1 className="text-2xl font-bold">Form Builder</h1>
         <p className="text-gray-600">
-          Customize fellowship application form fields — changes apply instantly for applicants
+          Customize fellowship application form fields and scheduling — changes apply instantly for
+          applicants
         </p>
       </div>
 
       {message && (
         <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>
       )}
+
+      <div className="card space-y-4">
+        <h2 className="font-semibold">Application Schedule</h2>
+        <p className="text-sm text-gray-600">
+          Control when applicants can open and submit the fellowship application form.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={schedule.isActive}
+            onChange={(e) => setSchedule({ ...schedule, isActive: e.target.checked })}
+          />
+          Form enabled (uncheck to close applications immediately)
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Opens at"
+            type="datetime-local"
+            value={schedule.opensAt}
+            onChange={(e) => setSchedule({ ...schedule, opensAt: e.target.value })}
+          />
+          <Input
+            label="Closes at"
+            type="datetime-local"
+            value={schedule.closesAt}
+            onChange={(e) => setSchedule({ ...schedule, closesAt: e.target.value })}
+          />
+        </div>
+        <Textarea
+          label="Closed message (shown when applications are not open)"
+          value={schedule.closedMessage}
+          onChange={(e) => setSchedule({ ...schedule, closedMessage: e.target.value })}
+          placeholder="Fellowship applications are currently closed. Please check official notices for updates."
+        />
+        <Button loading={savingSchedule} onClick={saveSchedule}>
+          Save Schedule
+        </Button>
+      </div>
 
       <div className="card space-y-4">
         <h2 className="font-semibold">Add New Field</h2>
@@ -187,7 +288,11 @@ export default function FormBuilderPage() {
                         ({f.fieldType}) {f.required && "*"}
                       </span>
                     </div>
-                    <Button variant="danger" className="text-xs px-2 py-1" onClick={() => deleteField(f.id)}>
+                    <Button
+                      variant="danger"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => deleteField(f.id)}
+                    >
                       Remove
                     </Button>
                   </div>

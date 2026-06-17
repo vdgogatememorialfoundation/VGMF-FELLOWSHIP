@@ -1,6 +1,7 @@
 import prisma from "./db";
-import type { Gender, ResearchArea } from "@prisma/client";
+import type { ApplicationStatus, Gender, ResearchArea } from "@prisma/client";
 import { generateApplicationNumber } from "./application-number";
+import { isCheckboxAccepted } from "./form-validation";
 
 type FormData = Record<string, unknown>;
 
@@ -32,7 +33,7 @@ function mapResearchArea(value: string): ResearchArea {
   return map[value.trim().toUpperCase()] ?? "OTHER";
 }
 
-function buildApplicationFields(data: FormData) {
+function buildApplicationFields(data: FormData, status: ApplicationStatus) {
   return {
     name: formStr(data, "name", "Applicant"),
     dob: new Date(formStr(data, "dob", "2000-01-01")),
@@ -48,13 +49,17 @@ function buildApplicationFields(data: FormData) {
     yearOfPassing: formInt(data, "year_of_passing", new Date().getFullYear()),
     currentDesignation: formStr(data, "current_designation", "—"),
     institutionName: formStr(data, "institution_name", "—"),
-    registrationCouncil: formStr(data, "registration_council", "Not provided"),
+    registrationCouncil: formStr(data, "registration_council", "NCISM"),
     registrationNumber: formStr(data, "registration_number", "—"),
     yearsOfPractice: formInt(data, "years_of_practice", 0),
     viddhakarmaExperience: formStr(data, "viddhakarma_experience") || null,
     publicationsSummary: formStr(data, "publications_summary") || null,
-    status: "SUBMITTED" as const,
-    submittedAt: new Date(),
+    termsAcceptedAt: isCheckboxAccepted(data.terms_accepted) ? new Date() : null,
+    undertakingAcceptedAt: isCheckboxAccepted(data.undertaking_accepted)
+      ? new Date()
+      : null,
+    status,
+    submittedAt: status === "SUBMITTED" ? new Date() : null,
   };
 }
 
@@ -89,20 +94,75 @@ async function attachResearchProposal(applicationId: string, data: FormData) {
   });
 }
 
+export async function ensureDraftApplication(
+  userId: string,
+  submissionId: string,
+  data: FormData,
+  existingApplicationId?: string | null
+) {
+  const fields = buildApplicationFields(data, "DRAFT");
+
+  if (existingApplicationId) {
+    const application = await prisma.application.update({
+      where: { id: existingApplicationId, userId },
+      data: fields,
+    });
+
+    await attachResearchProposal(application.id, data);
+
+    await prisma.formSubmission.update({
+      where: { id: submissionId },
+      data: { applicationId: application.id },
+    });
+
+    return application;
+  }
+
+  const applicationNumber = await generateApplicationNumber();
+  const application = await prisma.application.create({
+    data: {
+      applicationNumber,
+      userId,
+      ...fields,
+      statusHistory: {
+        create: {
+          toStatus: "DRAFT",
+          notes: "Application draft saved via fellowship form",
+        },
+      },
+    },
+  });
+
+  await attachResearchProposal(application.id, data);
+
+  await prisma.formSubmission.update({
+    where: { id: submissionId },
+    data: { applicationId: application.id },
+  });
+
+  return application;
+}
+
 export async function syncApplicationFromFormSubmission(
   userId: string,
   submissionId: string,
   data: FormData,
   existingApplicationId?: string | null
 ) {
+  const fields = buildApplicationFields(data, "SUBMITTED");
+
   if (existingApplicationId) {
+    const existing = await prisma.application.findUnique({
+      where: { id: existingApplicationId, userId },
+    });
+
     const application = await prisma.application.update({
       where: { id: existingApplicationId, userId },
       data: {
-        ...buildApplicationFields(data),
+        ...fields,
         statusHistory: {
           create: {
-            fromStatus: "DRAFT",
+            fromStatus: existing?.status ?? "DRAFT",
             toStatus: "SUBMITTED",
             notes: "Application submitted via fellowship form",
           },
@@ -125,7 +185,7 @@ export async function syncApplicationFromFormSubmission(
     data: {
       applicationNumber,
       userId,
-      ...buildApplicationFields(data),
+      ...fields,
       statusHistory: {
         create: {
           toStatus: "SUBMITTED",

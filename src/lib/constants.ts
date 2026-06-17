@@ -4,6 +4,7 @@ export const SITE_NAME =
 export const CMS_PAGE_SLUGS = {
   ABOUT: "about",
   TERMS: "terms",
+  UNDERTAKING: "undertaking",
   PRIVACY: "privacy",
   REFUND: "refund",
 } as const;
@@ -11,6 +12,7 @@ export const CMS_PAGE_SLUGS = {
 export const CMS_PAGE_ROUTES: Record<string, string> = {
   ABOUT: "/about",
   TERMS: "/terms",
+  UNDERTAKING: "/undertaking",
   PRIVACY: "/privacy",
   REFUND: "/refund-policy",
 };

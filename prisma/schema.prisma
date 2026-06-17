@@ -30,6 +30,7 @@ enum ApplicationStatus {
 enum DocumentType {
   CV
   REGISTRATION_CERTIFICATE
+  NCISM_REGISTRATION
   RESEARCH_PROPOSAL_PDF
   BUDGET_PROPOSAL_PDF
   TIMELINE_PDF
@@ -104,6 +105,7 @@ enum FormFieldType {
 enum CmsPageSlug {
   ABOUT
   TERMS
+  UNDERTAKING
   PRIVACY
   REFUND
 }
@@ -193,6 +195,8 @@ model Application {
   yearsOfPractice       Int               @map("years_of_practice")
   viddhakarmaExperience String?           @map("viddhakarma_experience")
   publicationsSummary   String?           @map("publications_summary")
+  termsAcceptedAt       DateTime?         @map("terms_accepted_at")
+  undertakingAcceptedAt DateTime?         @map("undertaking_accepted_at")
 
   submittedAt           DateTime?         @map("submitted_at")
   createdAt             DateTime          @default(now()) @map("created_at")
@@ -637,15 +641,18 @@ model Notice {
 }
 
 model FormTemplate {
-  id          String          @id @default(cuid())
-  name        String
-  slug        String          @unique
-  description String?
-  isActive    Boolean         @default(true) @map("is_active")
-  fields      FormField[]
-  submissions FormSubmission[]
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  id            String          @id @default(cuid())
+  name          String
+  slug          String          @unique
+  description   String?
+  isActive      Boolean         @default(true) @map("is_active")
+  opensAt       DateTime?       @map("opens_at")
+  closesAt      DateTime?       @map("closes_at")
+  closedMessage String?         @map("closed_message") @db.Text
+  fields        FormField[]
+  submissions   FormSubmission[]
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
 
   @@map("form_templates")
 }

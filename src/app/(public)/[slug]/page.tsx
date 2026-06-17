@@ -7,6 +7,7 @@ import type { CmsPageSlug } from "@prisma/client";
 const SLUG_MAP: Record<string, CmsPageSlug> = {
   about: "ABOUT",
   terms: "TERMS",
+  undertaking: "UNDERTAKING",
   privacy: "PRIVACY",
   "refund-policy": "REFUND",
 };
