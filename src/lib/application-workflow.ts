@@ -116,6 +116,10 @@ export function validateStatusTransition(
     return "Can only mark responded when a query is raised";
   }
 
+  if (to === "COMPLETED") {
+    return "Application is marked completed only when the fellowship reaches final closure (Installment 3 released)";
+  }
+
   const allowed = ALLOWED_TRANSITIONS[from];
   if (!allowed?.includes(to)) {
     return `Cannot move from ${getLifecycleStatusLabel(from)} to ${getLifecycleStatusLabel(to)}`;

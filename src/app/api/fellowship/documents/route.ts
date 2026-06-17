@@ -171,7 +171,21 @@ export async function PATCH(request: NextRequest) {
         reviewedAt: new Date(),
         reviewedBy: user.id,
       },
+      include: { fellowship: true },
     });
+
+    if (status === "APPROVED" && document.type === "BANK_VERIFICATION") {
+      await prisma.fellowship.update({
+        where: { id: document.fellowshipId },
+        data: {
+          bankVerifiedAt: new Date(),
+          currentStage:
+            document.fellowship.currentStage === "BANK_VERIFICATION"
+              ? "SANCTIONED"
+              : document.fellowship.currentStage,
+        },
+      });
+    }
 
     return NextResponse.json({ success: true, document });
   } catch (error) {

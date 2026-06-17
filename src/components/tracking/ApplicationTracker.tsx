@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle2,
@@ -53,9 +54,19 @@ type TrackedApplication = {
   applicationNumber: string;
   formattedNumber: string;
   status: string;
+  displayStatus?: string;
   progress: number;
   pipelineIndex: number;
   milestoneStates?: string[];
+  fellowshipSteps?: Array<{ key: string; label: string; description: string }> | null;
+  fellowshipStepStates?: string[] | null;
+  pendingActions?: Array<{
+    key: string;
+    label: string;
+    detail: string;
+    href: string;
+    urgent?: boolean;
+  }>;
   rejectionReason: string | null;
   queryNotes?: string | null;
   submittedAt: string | null;
@@ -75,9 +86,17 @@ type TrackedApplication = {
     mentor?: string | null;
     institution?: string | null;
     sanctionedAmount?: number;
+    bankSubmitted?: boolean;
+    bankVerified?: boolean;
     isActive: boolean;
     isCompleted: boolean;
     installmentsReleased?: number;
+    installment1Requirements?: Array<{
+      key: string;
+      label: string;
+      satisfied: boolean;
+      status?: string;
+    }>;
   } | null;
 };
 
@@ -94,19 +113,28 @@ export function ApplicationTracker() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [liveStatus, setLiveStatus] = useState<"connected" | "error">("connected");
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
     try {
-      const res = await fetch("/api/applications/tracking", { cache: "no-store" });
+      const res = await fetch("/api/applications/tracking", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const data = await res.json();
       if (res.ok) {
         setApplications(data.applications || []);
         setPipeline(data.pipeline || []);
         setLastUpdated(data.updatedAt || new Date().toISOString());
+        setLiveStatus("connected");
+      } else {
+        setLiveStatus("error");
       }
+    } catch {
+      setLiveStatus("error");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -116,7 +144,14 @@ export function ApplicationTracker() {
   useEffect(() => {
     load();
     const timer = setInterval(() => load(true), POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [load]);
 
   async function resubmitDocument(applicationId: string, docType: string, file: File) {
@@ -161,9 +196,17 @@ export function ApplicationTracker() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e8f0ec] bg-[#fafdfb] px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-ink-soft">
-          <span className="tracker-live-dot inline-flex h-2 w-2 rounded-full bg-primary-400" />
-          <span className="font-medium text-primary-700">Live updates</span>
-          {lastUpdated && (
+          <span
+            className={`tracker-live-dot inline-flex h-2 w-2 rounded-full ${
+              liveStatus === "connected" ? "bg-primary-400" : "bg-amber-500"
+            }`}
+          />
+          {liveStatus === "error" ? (
+            <span className="font-medium text-amber-800">Unable to refresh — tap Refresh</span>
+          ) : (
+            <span className="font-medium text-primary-700">Live updates</span>
+          )}
+          {lastUpdated && liveStatus === "connected" && (
             <span className="text-muted">
               · {new Date(lastUpdated).toLocaleTimeString("en-IN")}
             </span>
@@ -230,7 +273,10 @@ export function ApplicationTracker() {
                     <span className="text-lg font-bold text-primary-700">{app.progress}%</span>
                   </div>
                   <div className="text-right">
-                    <StatusBadge status={app.status} />
+                    <StatusBadge
+                      status={app.status}
+                      label={app.displayStatus ?? undefined}
+                    />
                     <p className="mt-2 text-xs text-muted">Overall progress</p>
                   </div>
                 </div>
@@ -478,22 +524,101 @@ export function ApplicationTracker() {
                 </div>
               )}
 
-              {app.fellowship && (
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                  <h3 className="font-semibold text-emerald-800">Fellowship Profile</h3>
-                  <p className="mt-1 font-mono text-sm font-bold text-emerald-900">
-                    {app.fellowship.fellowshipId}
-                  </p>
-                  {app.fellowship.stageLabel && (
-                    <p className="mt-1 text-sm text-emerald-700">
-                      Stage: {app.fellowship.stageLabel}
-                    </p>
+              {app.fellowship && app.fellowshipSteps && app.fellowshipStepStates && (
+                <section className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">
+                        Fellowship Progress
+                      </h3>
+                      <p className="mt-1 font-mono text-sm font-semibold text-emerald-900">
+                        {app.fellowship.fellowshipId}
+                      </p>
+                      {app.fellowship.stageLabel && (
+                        <p className="text-sm text-emerald-700">Current: {app.fellowship.stageLabel}</p>
+                      )}
+                    </div>
+                    <Link
+                      href="/applicant/fellowship"
+                      className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+                    >
+                      Open Fellowship Portal
+                    </Link>
+                  </div>
+
+                  <ul className="space-y-3">
+                    {app.fellowshipSteps.map((step, index) => {
+                      const state = app.fellowshipStepStates?.[index] ?? "pending";
+                      return (
+                        <li key={step.key} className="flex items-center gap-3">
+                          {state === "complete" ? (
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                          ) : state === "current" ? (
+                            <Loader2 className="h-5 w-5 shrink-0 animate-spin text-emerald-700" />
+                          ) : (
+                            <Circle className="h-5 w-5 shrink-0 text-gray-300" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-emerald-900">
+                              {step.label}
+                              {state === "current" && (
+                                <span className="ml-2 text-xs font-normal text-emerald-700">
+                                  In progress
+                                </span>
+                              )}
+                            </p>
+                            {(state === "current" || state === "pending") && (
+                              <p className="text-xs text-emerald-700">{step.description}</p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {app.pendingActions && app.pendingActions.length > 0 && (
+                    <div className="mt-4 space-y-2 border-t border-emerald-100 pt-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                        Your next steps
+                      </p>
+                      {app.pendingActions.map((action) => (
+                        <div
+                          key={action.key}
+                          className={`rounded-xl border px-4 py-3 ${
+                            action.urgent
+                              ? "border-amber-200 bg-amber-50"
+                              : "border-emerald-100 bg-white"
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-medium text-ink">{action.label}</p>
+                              <p className="text-xs text-ink-soft">{action.detail}</p>
+                            </div>
+                            <Link
+                              href={action.href}
+                              className="text-sm font-medium text-primary-700 underline"
+                            >
+                              Go →
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  {app.fellowship.institution && (
-                    <p className="text-sm text-emerald-600">Institution: {app.fellowship.institution}</p>
-                  )}
+                </section>
+              )}
+
+              {app.fellowship && !app.fellowship.bankSubmitted && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <strong>Bank details required:</strong> Submit your bank account information in the{" "}
+                  <Link href="/applicant/fellowship#bank-details" className="font-medium underline">
+                    Fellowship Portal
+                  </Link>{" "}
+                  before Installment 1 can be released.
                 </div>
               )}
+
             </div>
           </article>
         );

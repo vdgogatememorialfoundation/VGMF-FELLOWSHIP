@@ -469,6 +469,13 @@ model Fellowship {
   mentor           String?
   institution      String?
   currentStage     FellowshipStage @default(AGREEMENT_PENDING) @map("current_stage")
+  bankAccountHolder String?   @map("bank_account_holder")
+  bankName          String?   @map("bank_name")
+  bankAccountNumber String?   @map("bank_account_number")
+  bankIfsc          String?   @map("bank_ifsc")
+  bankBranch        String?   @map("bank_branch")
+  bankSubmittedAt   DateTime? @map("bank_submitted_at")
+  bankVerifiedAt    DateTime? @map("bank_verified_at")
   isActive         Boolean  @default(true) @map("is_active")
   isCompleted      Boolean  @default(false) @map("is_completed")
   createdAt        DateTime @default(now()) @map("created_at")

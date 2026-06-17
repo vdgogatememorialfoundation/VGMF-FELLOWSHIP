@@ -1,4 +1,5 @@
 import type { ApplicationStatus, FellowshipStage } from "@prisma/client";
+import { getFellowshipStepProgress } from "./fellowship-tracking";
 
 /** Applicant-facing milestones (Amazon-style order tracking) */
 export type ApplicantMilestone = {
@@ -201,9 +202,13 @@ export function getMilestoneIndex(
 ): number {
   if (TERMINAL_STATUSES.includes(status) && status !== "SUSPENDED") return -1;
 
+  if (fellowshipStage === "COMPLETED") {
+    return APPLICANT_MILESTONES.length - 1;
+  }
+
   for (let i = APPLICANT_MILESTONES.length - 1; i >= 0; i--) {
     const m = APPLICANT_MILESTONES[i];
-    if (m.statuses.includes(status)) return i;
+    if (m.statuses.includes(status) && status !== "COMPLETED") return i;
     if (
       fellowshipStage &&
       m.fellowshipStages?.includes(fellowshipStage) &&
@@ -211,6 +216,10 @@ export function getMilestoneIndex(
     ) {
       return i;
     }
+  }
+
+  if (status === "COMPLETED" && fellowshipStage) {
+    return APPLICANT_MILESTONES.length - 1;
   }
 
   if (status === "SCRUTINY" || status === "QUERY_RAISED" || status === "QUERY_RESPONDED") return 0;
@@ -224,6 +233,19 @@ export function getMilestoneProgress(
 ): number {
   const idx = getMilestoneIndex(status, fellowshipStage);
   if (idx < 0) return status === "REJECTED" ? 0 : 0;
+
+  if (fellowshipStage === "COMPLETED") return 100;
+
+  const base = idx / APPLICANT_MILESTONES.length;
+  const slice = 1 / APPLICANT_MILESTONES.length;
+
+  if (idx === APPLICANT_MILESTONES.length - 1 && fellowshipStage) {
+    const fellowshipPart = getFellowshipStepProgress(fellowshipStage) / 100;
+    return Math.min(99, Math.round((base + slice * fellowshipPart) * 100));
+  }
+
+  if (status === "COMPLETED" && !fellowshipStage) return 100;
+
   return Math.round(((idx + 1) / APPLICANT_MILESTONES.length) * 100);
 }
 
@@ -233,6 +255,10 @@ export function getMilestoneStates(
   status: ApplicationStatus,
   fellowshipStage?: FellowshipStage | null
 ): MilestoneState[] {
+  if (fellowshipStage === "COMPLETED") {
+    return APPLICANT_MILESTONES.map(() => "complete");
+  }
+
   const currentIdx = getMilestoneIndex(status, fellowshipStage);
   const isQuery = status === "QUERY_RAISED" || status === "QUERY_RESPONDED";
   const isRejected = TERMINAL_STATUSES.includes(status);
@@ -242,7 +268,13 @@ export function getMilestoneStates(
     if (isQuery && i === 1) return status === "QUERY_RAISED" ? "query" : "current";
     if (currentIdx < 0) return "pending";
     if (i < currentIdx) return "complete";
-    if (i === currentIdx) return "current";
+    if (i === currentIdx) {
+      if (i === APPLICANT_MILESTONES.length - 1 && fellowshipStage) {
+        return "current";
+      }
+      if (status === "COMPLETED" && !fellowshipStage) return "complete";
+      return "current";
+    }
     return "pending";
   });
 }
@@ -267,7 +299,7 @@ export const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationS
   INTERVIEW_COMPLETED: ["TRUSTEE_REVIEW", "REJECTED", "SHORTLISTED"],
   TRUSTEE_REVIEW: ["SELECTED", "AGREEMENT_PENDING", "REJECTED"],
   SELECTED: ["AGREEMENT_PENDING", "SUSPENDED"],
-  AGREEMENT_PENDING: ["COMPLETED", "SUSPENDED", "TERMINATED"],
+  AGREEMENT_PENDING: ["SUSPENDED", "TERMINATED"],
   SUSPENDED: ["UNDER_REVIEW", "TERMINATED", "REJECTED"],
 };
 

@@ -1,6 +1,6 @@
 import { cn, getStatusColor, getStatusLabel } from "@/lib/utils";
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
   return (
     <span
       className={cn(
@@ -8,7 +8,7 @@ export function StatusBadge({ status }: { status: string }) {
         getStatusColor(status)
       )}
     >
-      {getStatusLabel(status)}
+      {label ?? getStatusLabel(status)}
     </span>
   );
 }

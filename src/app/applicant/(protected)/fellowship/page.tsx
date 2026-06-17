@@ -25,6 +25,13 @@ type FellowshipData = {
   duration: string;
   startDate: string | null;
   endDate: string | null;
+  currentStage: string;
+  bankAccountHolder: string | null;
+  bankName: string | null;
+  bankIfsc: string | null;
+  bankBranch: string | null;
+  bankSubmittedAt: string | null;
+  bankVerifiedAt: string | null;
   installments: Installment[];
   progressReports: Array<{ quarter: number; year: number; status: string; submittedAt: string }>;
   finalSubmission: { status: string; submittedAt: string } | null;
@@ -42,13 +49,26 @@ export default function ApplicantFellowshipPage() {
   const [finalReport, setFinalReport] = useState<File | null>(null);
   const [manuscript, setManuscript] = useState<File | null>(null);
   const [utilizationCert, setUtilizationCert] = useState<File | null>(null);
+  const [bankHolder, setBankHolder] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bankIfsc, setBankIfsc] = useState("");
+  const [bankBranch, setBankBranch] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   const reload = useCallback(() => {
     fetch("/api/fellowship")
       .then((r) => r.json())
-      .then(setData);
+      .then((payload) => {
+        setData(payload);
+        if (payload.fellowship) {
+          setBankHolder(payload.fellowship.bankAccountHolder || payload.fellowship.fellowName || "");
+          setBankName(payload.fellowship.bankName || "");
+          setBankIfsc(payload.fellowship.bankIfsc || "");
+          setBankBranch(payload.fellowship.bankBranch || "");
+        }
+      });
   }, []);
 
   useEffect(() => {
@@ -121,6 +141,32 @@ export default function ApplicantFellowshipPage() {
     reload();
   }
 
+  async function submitBankDetails() {
+    setLoading(true);
+    setMessage("");
+    const res = await fetch("/api/fellowship/bank-details", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fellowshipId: f.id,
+        accountHolder: bankHolder,
+        bankName,
+        accountNumber: bankAccount,
+        ifsc: bankIfsc,
+        branch: bankBranch,
+      }),
+    });
+    const result = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setMessage(result.error || "Failed to save bank details");
+      return;
+    }
+    setMessage("Bank details submitted for verification");
+    setBankAccount("");
+    reload();
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -181,23 +227,61 @@ export default function ApplicantFellowshipPage() {
         </div>
       </div>
 
-      <InstallmentDocumentsPanel
-        fellowshipId={f.id}
-        installmentNo={1}
-        onUploaded={reload}
-      />
-      <InstallmentDocumentsPanel
-        fellowshipId={f.id}
-        installmentNo={2}
-        onUploaded={reload}
-      />
+      <div id="bank-details" className="card space-y-4">
+        <h2 className="font-semibold">Bank Details</h2>
+        <p className="text-sm text-gray-600">
+          Required for fund transfer. Also upload bank verification proof under Installment 1 documents.
+        </p>
+        {f.bankVerifiedAt ? (
+          <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+            Bank account verified on {formatDate(f.bankVerifiedAt)}
+          </p>
+        ) : f.bankSubmittedAt ? (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            Bank details submitted on {formatDate(f.bankSubmittedAt)} — awaiting Foundation verification
+          </p>
+        ) : null}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Account holder name" value={bankHolder} onChange={(e) => setBankHolder(e.target.value)} required />
+          <Input label="Bank name" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+          <Input
+            label="Account number"
+            value={bankAccount}
+            onChange={(e) => setBankAccount(e.target.value)}
+            required={!f.bankSubmittedAt}
+            placeholder={f.bankSubmittedAt ? "Re-enter to update" : ""}
+          />
+          <Input label="IFSC code" value={bankIfsc} onChange={(e) => setBankIfsc(e.target.value.toUpperCase())} required />
+          <Input label="Branch (optional)" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} />
+        </div>
+        <Button loading={loading} onClick={submitBankDetails}>
+          {f.bankSubmittedAt ? "Update Bank Details" : "Submit Bank Details"}
+        </Button>
+      </div>
+
+      <div id="installment-1">
+        <InstallmentDocumentsPanel
+          fellowshipId={f.id}
+          installmentNo={1}
+          onUploaded={reload}
+        />
+      </div>
+
+      <div id="installment-2">
+        <InstallmentDocumentsPanel
+          fellowshipId={f.id}
+          installmentNo={2}
+          onUploaded={reload}
+        />
+      </div>
+
       <InstallmentDocumentsPanel
         fellowshipId={f.id}
         installmentNo={3}
         onUploaded={reload}
       />
 
-      <div className="card space-y-4">
+      <div id="quarterly-reports" className="card space-y-4">
         <h2 className="font-semibold">Quarterly Progress Report</h2>
         <p className="text-sm text-gray-600">Rulebook §9 — submit quarterly progress reports</p>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -230,7 +314,7 @@ export default function ApplicantFellowshipPage() {
         </Button>
       </div>
 
-      <div className="card space-y-4">
+      <div id="final-submission" className="card space-y-4">
         <h2 className="font-semibold">Final Submission</h2>
         <p className="text-sm text-gray-600">
           Final report, publication-ready manuscript, and utilization certificate (Rulebook §9.6–9.7)
