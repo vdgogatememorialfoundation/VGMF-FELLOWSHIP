@@ -42,7 +42,7 @@ export function PortalLoginForm({ portal, showRegisterLink }: PortalLoginFormPro
         return;
       }
 
-      window.location.href = data.redirect || PORTAL_DASHBOARD_PATHS[portal];
+      window.location.assign(data.redirect || PORTAL_DASHBOARD_PATHS[portal]);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

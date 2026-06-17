@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
-import type { PortalType } from "@/lib/portal";
+import { PORTAL_DASHBOARD_PATHS, type PortalType } from "@/lib/portal";
 
 interface SidebarProps {
   user: SessionUser;
@@ -77,7 +77,7 @@ export function Sidebar({ user, portal }: SidebarProps) {
   return (
     <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
       <div className="border-b border-gray-200 p-6">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href={PORTAL_DASHBOARD_PATHS[portal]} className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
             VG
           </div>

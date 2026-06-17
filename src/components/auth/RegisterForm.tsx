@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -36,25 +36,43 @@ export function RegisterForm({
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState<OtpChannel | null>(null);
   const [userId, setUserId] = useState("");
+  const lastEmailForOtp = useRef("");
+  const lastPhoneForOtp = useRef("");
 
   const emailOk = !signupOtpEmailEnabled || emailOtpVerified;
   const phoneOk = !signupOtpWhatsappEnabled || phoneOtpVerified;
   const verificationComplete = emailOk && phoneOk;
 
+  function resetEmailOtpState() {
+    setEmailOtpSent(false);
+    setEmailOtpVerified(false);
+    setEmailOtp("");
+    lastEmailForOtp.current = "";
+  }
+
+  function resetPhoneOtpState() {
+    setPhoneOtpSent(false);
+    setPhoneOtpVerified(false);
+    setPhoneOtp("");
+    lastPhoneForOtp.current = "";
+  }
+
   function updateField(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    if (field === "email") {
+      if (value === form.email) return;
+      if (!emailOtpVerified || value.trim().toLowerCase() !== lastEmailForOtp.current) {
+        resetEmailOtpState();
+      }
+    }
 
     if (field === "phone") {
-      setPhoneOtpSent(false);
-      setPhoneOtpVerified(false);
-      setPhoneOtp("");
+      if (value === form.phone) return;
+      if (!phoneOtpVerified || value !== lastPhoneForOtp.current) {
+        resetPhoneOtpState();
+      }
     }
 
-    if (field === "email") {
-      setEmailOtpSent(false);
-      setEmailOtpVerified(false);
-      setEmailOtp("");
-    }
+    setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   async function handleSendOtp(channel: OtpChannel) {
@@ -92,9 +110,11 @@ export function RegisterForm({
 
       if (channel === "phone") {
         setPhoneOtpSent(true);
+        lastPhoneForOtp.current = form.phone;
         setMessage("OTP sent to your WhatsApp. Please enter it below.");
       } else {
         setEmailOtpSent(true);
+        lastEmailForOtp.current = form.email.trim().toLowerCase();
         setMessage("OTP sent to your email. Please enter it below.");
       }
     } catch {
@@ -140,6 +160,7 @@ export function RegisterForm({
         setMessage("Mobile number verified successfully!");
       } else {
         setEmailOtpVerified(true);
+        lastEmailForOtp.current = form.email.trim().toLowerCase();
         setMessage("Email address verified successfully!");
       }
     } catch {
@@ -243,32 +264,51 @@ export function RegisterForm({
               required
             />
 
-            <div>
+            <div className="space-y-2">
               <Input
                 label="Email"
                 type="email"
+                id="register-email"
+                name="email"
+                autoComplete="email"
                 value={form.email}
                 onChange={(e) => updateField("email", e.target.value)}
+                disabled={emailOtpVerified}
                 required
               />
-              {!emailOtpVerified && signupOtpEmailEnabled && (
+              {emailOtpVerified ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                  <span>Email address verified</span>
+                  <button
+                    type="button"
+                    className="font-medium text-primary-700 hover:underline"
+                    onClick={resetEmailOtpState}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : signupOtpEmailEnabled ? (
                 <Button
                   type="button"
                   variant="secondary"
                   loading={otpLoading === "email"}
-                  className="mt-2 w-full"
+                  className="w-full"
                   onClick={() => handleSendOtp("email")}
                 >
                   {emailOtpSent ? "Resend OTP to Email" : "Send OTP to Email"}
                 </Button>
-              )}
+              ) : null}
             </div>
 
             {signupOtpEmailEnabled && emailOtpSent && !emailOtpVerified && (
-              <div>
+              <div className="space-y-2">
                 <Input
                   label="Email OTP"
                   type="text"
+                  id="register-email-otp"
+                  name="email-otp"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
                   maxLength={6}
                   value={emailOtp}
                   onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
@@ -278,7 +318,7 @@ export function RegisterForm({
                 <Button
                   type="button"
                   loading={otpLoading === "email"}
-                  className="mt-2 w-full"
+                  className="w-full"
                   onClick={() => handleVerifyOtp("email")}
                 >
                   Verify Email OTP
@@ -286,39 +326,52 @@ export function RegisterForm({
               </div>
             )}
 
-            {signupOtpEmailEnabled && emailOtpVerified && (
-              <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
-                Email address verified
-              </div>
-            )}
-
-            <div>
+            <div className="space-y-2">
               <Input
                 label="Mobile Number (WhatsApp)"
                 type="tel"
+                id="register-phone"
+                name="phone"
+                autoComplete="tel"
                 value={form.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
                 placeholder="91XXXXXXXXXX or 10-digit number"
+                disabled={phoneOtpVerified}
                 required
               />
-              {!phoneOtpVerified && signupOtpWhatsappEnabled && (
+              {phoneOtpVerified ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                  <span>Mobile number verified via WhatsApp</span>
+                  <button
+                    type="button"
+                    className="font-medium text-primary-700 hover:underline"
+                    onClick={resetPhoneOtpState}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : signupOtpWhatsappEnabled ? (
                 <Button
                   type="button"
                   variant="secondary"
                   loading={otpLoading === "phone"}
-                  className="mt-2 w-full"
+                  className="w-full"
                   onClick={() => handleSendOtp("phone")}
                 >
                   {phoneOtpSent ? "Resend OTP on WhatsApp" : "Send OTP on WhatsApp"}
                 </Button>
-              )}
+              ) : null}
             </div>
 
             {signupOtpWhatsappEnabled && phoneOtpSent && !phoneOtpVerified && (
-              <div>
+              <div className="space-y-2">
                 <Input
                   label="WhatsApp OTP"
                   type="text"
+                  id="register-phone-otp"
+                  name="phone-otp"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
                   maxLength={6}
                   value={phoneOtp}
                   onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ""))}
@@ -328,17 +381,11 @@ export function RegisterForm({
                 <Button
                   type="button"
                   loading={otpLoading === "phone"}
-                  className="mt-2 w-full"
+                  className="w-full"
                   onClick={() => handleVerifyOtp("phone")}
                 >
                   Verify WhatsApp OTP
                 </Button>
-              </div>
-            )}
-
-            {signupOtpWhatsappEnabled && phoneOtpVerified && (
-              <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
-                Mobile number verified via WhatsApp
               </div>
             )}
 
