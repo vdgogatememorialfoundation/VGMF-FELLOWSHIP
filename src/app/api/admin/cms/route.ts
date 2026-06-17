@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { getIntegrationSettingsForAdmin } from "@/lib/integrations";
-import { resolveSecret } from "@/lib/site-content";
+import { resolveSecret, isMaskedSecret } from "@/lib/site-content";
 import { saveSiteAsset, resolveLogoUrl, resolveFaviconUrl } from "@/lib/site-assets";
 import { notifySiteNotice } from "@/lib/notifications";
 
@@ -78,33 +78,27 @@ export async function PUT(request: NextRequest) {
     await prisma.integrationSettings.upsert({
       where: { id: "default" },
       update: {
-        appUrl: data.appUrl,
+        appUrl: data.appUrl?.trim() || null,
         zeptomailToken: resolveSecret(data.zeptomailToken, existing?.zeptomailToken ?? null),
-        zeptomailFromEmail: data.zeptomailFromEmail,
-        zeptomailFromName: data.zeptomailFromName,
+        zeptomailFromEmail: data.zeptomailFromEmail?.trim() || null,
+        zeptomailFromName: data.zeptomailFromName?.trim() || null,
         whatsappToken: resolveSecret(data.whatsappToken, existing?.whatsappToken ?? null),
-        whatsappPhoneNumberId: data.whatsappPhoneNumberId,
-        whatsappOtpTemplateName: data.whatsappOtpTemplateName,
-        whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage,
-        whatsappApiVersion: data.whatsappApiVersion,
+        whatsappPhoneNumberId: data.whatsappPhoneNumberId?.trim() || null,
+        whatsappOtpTemplateName: data.whatsappOtpTemplateName?.trim() || null,
+        whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage?.trim() || null,
+        whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
       },
       create: {
         id: "default",
-        appUrl: data.appUrl,
-        zeptomailToken:
-          data.zeptomailToken && data.zeptomailToken !== "••••••••••••"
-            ? data.zeptomailToken
-            : null,
-        zeptomailFromEmail: data.zeptomailFromEmail,
-        zeptomailFromName: data.zeptomailFromName,
-        whatsappToken:
-          data.whatsappToken && data.whatsappToken !== "••••••••••••"
-            ? data.whatsappToken
-            : null,
-        whatsappPhoneNumberId: data.whatsappPhoneNumberId,
-        whatsappOtpTemplateName: data.whatsappOtpTemplateName,
-        whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage,
-        whatsappApiVersion: data.whatsappApiVersion,
+        appUrl: data.appUrl?.trim() || null,
+        zeptomailToken: isMaskedSecret(data.zeptomailToken) ? null : data.zeptomailToken?.trim() || null,
+        zeptomailFromEmail: data.zeptomailFromEmail?.trim() || null,
+        zeptomailFromName: data.zeptomailFromName?.trim() || null,
+        whatsappToken: isMaskedSecret(data.whatsappToken) ? null : data.whatsappToken?.trim() || null,
+        whatsappPhoneNumberId: data.whatsappPhoneNumberId?.trim() || null,
+        whatsappOtpTemplateName: data.whatsappOtpTemplateName?.trim() || null,
+        whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage?.trim() || null,
+        whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
       },
     });
 

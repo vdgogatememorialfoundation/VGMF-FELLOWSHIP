@@ -25,7 +25,7 @@ services:
       - key: ZEPTOMAIL_FROM_NAME
         value: VGMF Fellowship Portal
       - key: ZEPTOMAIL_API_URL
-        sync: false
+        value: https://api.zeptomail.in/v1.1/email
       - key: WHATSAPP_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID

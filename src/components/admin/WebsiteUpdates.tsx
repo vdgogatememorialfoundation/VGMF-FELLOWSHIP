@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/Button";
 import { NOTICE_CATEGORIES, getNoticeCategoryLabel } from "@/lib/notices";
 import type { NoticeCategory } from "@/lib/notices";
 import type { NavLink, FaqItem, HeroStat, SnapshotItem, HighlightTile, JourneyStep } from "@/lib/site-content";
-import { SECRET_MASK } from "@/lib/site-content";
 
 const TABS = [
   { id: "branding", label: "Branding" },
@@ -206,7 +205,13 @@ export function WebsiteUpdates() {
       .then((r) => r.json())
       .then((d) => {
         if (d.settings) setSettings(d.settings);
-        if (d.integrations) setIntegrations(d.integrations);
+        if (d.integrations) {
+          setIntegrations({
+            ...d.integrations,
+            zeptomailToken: "",
+            whatsappToken: "",
+          });
+        }
 
         const map: Record<string, { title: string; content: string; isPublished?: boolean }> = {};
         d.pages?.forEach((p: { slug: string; title: string; content: string; isPublished?: boolean }) => {
@@ -226,6 +231,16 @@ export function WebsiteUpdates() {
 
   function setTab(tab: TabId) {
     router.push(`/admin/website?tab=${tab}`);
+  }
+
+  async function saveIntegrations() {
+    if (!integrations) return;
+
+    await saveSection("integrations", {
+      ...integrations,
+      zeptomailToken: integrations.zeptomailToken.trim() || undefined,
+      whatsappToken: integrations.whatsappToken.trim() || undefined,
+    });
   }
 
   async function saveSection(section: string, data: unknown) {
@@ -723,7 +738,20 @@ export function WebsiteUpdates() {
 
           <div className="card space-y-4">
             <h2 className="font-semibold">ZeptoMail (Email & OTP)</h2>
-            <Input label="Send Mail Token" type="password" value={integrations.zeptomailToken} placeholder={SECRET_MASK} onChange={(e) => setIntegrations({ ...integrations, zeptomailToken: e.target.value })} />
+            <p className="text-sm text-gray-600">
+              India ZeptoMail accounts use the <code className="text-xs">api.zeptomail.in</code> endpoint automatically.
+              Paste the full Send Mail Token from Agent → SMTP/API (including <code className="text-xs">Zoho-enczapikey</code> prefix if shown).
+            </p>
+            {integrations.status.emailConfigured && (
+              <p className="text-sm text-green-700">Send Mail Token is saved. Leave the field empty below to keep it.</p>
+            )}
+            <Input
+              label="Send Mail Token"
+              type="password"
+              value={integrations.zeptomailToken}
+              placeholder={integrations.status.emailConfigured ? "Leave empty to keep saved token" : "Paste full ZeptoMail Send Mail Token"}
+              onChange={(e) => setIntegrations({ ...integrations, zeptomailToken: e.target.value })}
+            />
             <Input label="From Email" value={integrations.zeptomailFromEmail} onChange={(e) => setIntegrations({ ...integrations, zeptomailFromEmail: e.target.value })} />
             <Input label="From Name" value={integrations.zeptomailFromName} onChange={(e) => setIntegrations({ ...integrations, zeptomailFromName: e.target.value })} />
             <div className="flex gap-2">
@@ -734,7 +762,16 @@ export function WebsiteUpdates() {
 
           <div className="card space-y-4">
             <h2 className="font-semibold">Meta WhatsApp (OTP & Alerts)</h2>
-            <Input label="Permanent Access Token" type="password" value={integrations.whatsappToken} placeholder={SECRET_MASK} onChange={(e) => setIntegrations({ ...integrations, whatsappToken: e.target.value })} />
+            {integrations.status.whatsappConfigured && (
+              <p className="text-sm text-green-700">WhatsApp token is saved. Leave the field empty below to keep it.</p>
+            )}
+            <Input
+              label="Permanent Access Token"
+              type="password"
+              value={integrations.whatsappToken}
+              placeholder={integrations.status.whatsappConfigured ? "Leave empty to keep saved token" : "Paste Meta WhatsApp token"}
+              onChange={(e) => setIntegrations({ ...integrations, whatsappToken: e.target.value })}
+            />
             <Input label="Phone Number ID" value={integrations.whatsappPhoneNumberId} onChange={(e) => setIntegrations({ ...integrations, whatsappPhoneNumberId: e.target.value })} />
             <Input label="OTP Template Name" value={integrations.whatsappOtpTemplateName} onChange={(e) => setIntegrations({ ...integrations, whatsappOtpTemplateName: e.target.value })} />
             <Input label="OTP Template Language" value={integrations.whatsappOtpTemplateLanguage} onChange={(e) => setIntegrations({ ...integrations, whatsappOtpTemplateLanguage: e.target.value })} />
@@ -745,8 +782,8 @@ export function WebsiteUpdates() {
             </div>
           </div>
 
-          <p className="text-xs text-gray-500">Settings saved here override environment variables. Leave token fields unchanged to keep existing secrets.</p>
-          <Button loading={loading} onClick={() => saveSection("integrations", integrations)}>Save API Settings</Button>
+          <p className="text-xs text-gray-500">Settings saved here override environment variables. Secret fields are never shown after save — leave them empty to keep the current token.</p>
+          <Button loading={loading} onClick={saveIntegrations}>Save API Settings</Button>
         </div>
       )}
     </div>

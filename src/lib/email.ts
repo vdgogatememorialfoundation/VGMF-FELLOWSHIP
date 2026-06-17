@@ -1,6 +1,6 @@
 import { getIntegrationConfig } from "./integrations";
 
-const DEFAULT_ZEPTOMAIL_API_URL = "https://api.zeptomail.com/v1.1/email";
+const DEFAULT_ZEPTOMAIL_API_URL = "https://api.zeptomail.in/v1.1/email";
 
 interface SendEmailOptions {
   to: string;

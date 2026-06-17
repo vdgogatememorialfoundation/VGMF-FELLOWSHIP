@@ -138,9 +138,18 @@ export function maskSecret(value: string | null | undefined): string {
   return value ? SECRET_MASK : "";
 }
 
+export function isMaskedSecret(value: string | undefined | null): boolean {
+  if (value === undefined || value === null) return true;
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (trimmed === SECRET_MASK) return true;
+  if (/^[•*.\s]+$/.test(trimmed)) return true;
+  return false;
+}
+
 export function resolveSecret(incoming: string | undefined, existing: string | null): string | null {
-  if (incoming === undefined || incoming === "" || incoming === SECRET_MASK) {
+  if (incoming === undefined || isMaskedSecret(incoming)) {
     return existing;
   }
-  return incoming;
+  return incoming.trim();
 }
