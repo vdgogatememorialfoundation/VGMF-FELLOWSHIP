@@ -50,15 +50,31 @@ A comprehensive fellowship management system for the Viddhakarma Global Medical 
 1. Create account at [ZeptoMail](https://www.zoho.com/zeptomail/)
 2. Verify your domain and create a Mail Agent
 3. Copy the **Send Mail Token** from Agent → SMTP/API
-4. Set env vars: `ZEPTOMAIL_TOKEN`, `ZEPTOMAIL_FROM_EMAIL`, `ZEPTOMAIL_FROM_NAME`
+4. Set env vars: `ZEPTOMAIL_TOKEN`, `ZEPTOMAIL_FROM_EMAIL`, `ZEPTOMAIL_FROM_NAME`  
+   Or configure in **Admin → Website Updates → API Settings** (database settings override env vars).
 
 ### Meta WhatsApp OTP
 1. Set up [WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api) in Meta Business Manager
 2. Create an **Authentication** template (approved by Meta) for OTP
 3. Get **Permanent Access Token** and **Phone Number ID**
-4. Set env vars: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_OTP_TEMPLATE_NAME`
+4. Set env vars: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_OTP_TEMPLATE_NAME`  
+   Or configure in **Admin → Website Updates → API Settings**.
 
-Applicants must verify mobile via WhatsApp OTP before registration.
+## Website CMS (Admin)
+
+Go to **Admin → Website Updates** (`/admin/website`) to manage:
+
+- **Branding** — logo, favicon, site name, contact info
+- **Header & Nav** — navigation links
+- **Footer** — copyright, quick links, legal links, developer credit
+- **Homepage** — hero, stats, highlights, journey steps, about blurb
+- **FAQ** — questions and answers
+- **Ticker** — scrolling announcement bar
+- **Notices** — official notices and announcements
+- **Content Pages** — About, Terms, Privacy, Refund
+- **API Settings** — ZeptoMail, WhatsApp, app URL (with test send buttons)
+
+Applicants must verify email and mobile via OTP before registration.
 
 ## Tech Stack
 

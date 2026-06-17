@@ -1,5 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  DEFAULT_NAV_LINKS,
+  DEFAULT_FOOTER_QUICK_LINKS,
+  DEFAULT_FOOTER_LEGAL_LINKS,
+  DEFAULT_HERO_STATS,
+  DEFAULT_HERO_SNAPSHOT,
+  DEFAULT_HIGHLIGHTS,
+  DEFAULT_JOURNEY_STEPS,
+  DEFAULT_FAQ_ITEMS,
+} from "../src/lib/site-content";
 
 const prisma = new PrismaClient();
 
@@ -113,18 +123,68 @@ async function main() {
       siteTagline: "Advancing Ayurvedic Research & Viddhakarma Studies",
       contactEmail: "info@vaidyagogate.org",
       contactPhone: "+91 9876543210",
+      headerOrgName: "Vaidya Gogate Memorial Foundation",
+      utilityBarText: "Fellowship 2026",
+      heroBadge: "Fellowship 2026 · Applications Open",
+      heroStats: DEFAULT_HERO_STATS,
+      heroSnapshot: DEFAULT_HERO_SNAPSHOT,
+      highlightsTitle: "Programme highlights",
+      highlightsSubtitle:
+        "Clinical research, mentorship, and structured funding — designed like our national seminar experience.",
+      highlights: DEFAULT_HIGHLIGHTS,
+      journeyTitle: "Your application journey",
+      journeySubtitle: "3 simple steps",
+      journeySteps: DEFAULT_JOURNEY_STEPS,
+      faqTitle: "Frequently asked questions",
+      faqSubtitle: "Registration, applications, grants, and tracking — answered.",
+      faqItems: DEFAULT_FAQ_ITEMS,
+      navLinks: DEFAULT_NAV_LINKS,
+      footerQuickLinks: DEFAULT_FOOTER_QUICK_LINKS,
+      footerLegalLinks: DEFAULT_FOOTER_LEGAL_LINKS,
+      footerAboutText: "Advancing Ayurveda since 1972",
+      footerDeveloperCredit:
+        "Developed by Capture Visual Studios · Vaidya Gogate Memorial Foundation Copyrights",
+      contactAddress: "Vaidya Gogate Memorial Foundation, India",
     },
     create: {
       id: "default",
       siteName: "Vaidya Gogate Memorial Foundation Fellowship Portal 2026",
       siteTagline: "Advancing Ayurvedic Research & Viddhakarma Studies",
+      headerOrgName: "Vaidya Gogate Memorial Foundation",
+      utilityBarText: "Fellowship 2026",
       tickerText: "VGMF Fellowship 2026 — Applications Now Open | Visit Notices for important updates",
       tickerEnabled: true,
       heroTitle: "Vaidya Gogate Memorial Foundation Research Fellowship 2026",
       heroSubtitle: "Apply for research fellowships in Ayurvedic medicine with grants up to ₹75,000.",
+      heroBadge: "Fellowship 2026 · Applications Open",
+      heroStats: DEFAULT_HERO_STATS,
+      heroSnapshot: DEFAULT_HERO_SNAPSHOT,
+      highlightsTitle: "Programme highlights",
+      highlightsSubtitle:
+        "Clinical research, mentorship, and structured funding — designed like our national seminar experience.",
+      highlights: DEFAULT_HIGHLIGHTS,
+      journeyTitle: "Your application journey",
+      journeySubtitle: "3 simple steps",
+      journeySteps: DEFAULT_JOURNEY_STEPS,
+      aboutBadge: "Since 1972",
+      aboutTitle: "About the foundation",
+      aboutContent:
+        "The Vaidya Gogate Memorial Foundation advances Ayurvedic education and research. The 2026 Fellowship empowers practitioners to contribute meaningful work in Viddhakarma and allied sciences.",
+      aboutCtaLabel: "Learn more",
+      aboutCtaHref: "/about",
+      faqTitle: "Frequently asked questions",
+      faqSubtitle: "Registration, applications, grants, and tracking — answered.",
+      faqItems: DEFAULT_FAQ_ITEMS,
+      navLinks: DEFAULT_NAV_LINKS,
+      footerQuickLinks: DEFAULT_FOOTER_QUICK_LINKS,
+      footerLegalLinks: DEFAULT_FOOTER_LEGAL_LINKS,
+      footerAboutText: "Advancing Ayurveda since 1972",
+      footerDeveloperCredit:
+        "Developed by Capture Visual Studios · Vaidya Gogate Memorial Foundation Copyrights",
       footerText: "© 2026 Vaidya Gogate Memorial Foundation. All rights reserved.",
       contactEmail: "info@vaidyagogate.org",
       contactPhone: "+91 9876543210",
+      contactAddress: "Vaidya Gogate Memorial Foundation, India",
     },
   });
 

@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { phone, code, purpose } = parsed.data;
-    const result = await verifyOtp(phone, code, purpose);
+    const { channel, phone, email, code, purpose } = parsed.data;
+    const result = await verifyOtp({ channel, phone, email, code, purpose });
 
     if (!result.valid) {
       return NextResponse.json({ error: result.error }, { status: 400 });

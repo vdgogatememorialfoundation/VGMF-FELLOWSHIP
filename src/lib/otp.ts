@@ -1,64 +1,123 @@
 import prisma from "./db";
 import type { OtpPurpose } from "@prisma/client";
 import { sendWhatsAppOtp } from "./whatsapp";
+import { sendOtpEmail } from "./email";
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
+const VERIFICATION_WINDOW_MS = 30 * 60 * 1000;
+
+export type OtpChannel = "phone" | "email";
 
 export function generateOtpCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-export async function createAndSendOtp(
-  phone: string,
-  purpose: OtpPurpose = "REGISTER"
-): Promise<{ success: boolean; error?: string }> {
-  const normalizedPhone = phone.replace(/\s/g, "");
+function normalizePhone(phone: string): string {
+  return phone.replace(/\s/g, "");
+}
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+async function invalidatePreviousOtps(
+  where: { phone?: string; email?: string; purpose: OtpPurpose }
+) {
   await prisma.otpCode.updateMany({
-    where: { phone: normalizedPhone, purpose, verified: false },
+    where: { ...where, verified: false },
     data: { verified: true },
   });
+}
 
+async function storeOtp(
+  data: { phone?: string; email?: string; purpose: OtpPurpose }
+): Promise<string> {
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
   await prisma.otpCode.create({
     data: {
-      phone: normalizedPhone,
+      phone: data.phone,
+      email: data.email,
       code,
-      purpose,
+      purpose: data.purpose,
       expiresAt,
     },
   });
 
-  const sent = await sendWhatsAppOtp(normalizedPhone, code);
+  return code;
+}
 
-  if (!sent && process.env.NODE_ENV === "production") {
-    return { success: false, error: "Failed to send OTP via WhatsApp" };
+function logDevOtp(target: string, code: string) {
+  console.log(`[DEV] OTP for ${target}: ${code}`);
+}
+
+export async function createAndSendOtp(params: {
+  channel: OtpChannel;
+  phone?: string;
+  email?: string;
+  purpose?: OtpPurpose;
+}): Promise<{ success: boolean; error?: string }> {
+  const purpose = params.purpose ?? "REGISTER";
+
+  if (params.channel === "phone") {
+    if (!params.phone) {
+      return { success: false, error: "Phone number is required" };
+    }
+
+    const normalizedPhone = normalizePhone(params.phone);
+    await invalidatePreviousOtps({ phone: normalizedPhone, purpose });
+    const code = await storeOtp({ phone: normalizedPhone, purpose });
+    const sent = await sendWhatsAppOtp(normalizedPhone, code);
+
+    if (!sent && process.env.NODE_ENV === "production") {
+      return { success: false, error: "Failed to send OTP via WhatsApp" };
+    }
+
+    if (!sent) {
+      logDevOtp(normalizedPhone, code);
+    }
+
+    return { success: true };
   }
 
-  if (!sent && process.env.NODE_ENV !== "production") {
-    console.log(`[DEV] OTP for ${normalizedPhone}: ${code}`);
-    return { success: true };
+  if (!params.email) {
+    return { success: false, error: "Email address is required" };
+  }
+
+  const normalizedEmail = normalizeEmail(params.email);
+  await invalidatePreviousOtps({ email: normalizedEmail, purpose });
+  const code = await storeOtp({ email: normalizedEmail, purpose });
+  const sent = await sendOtpEmail(normalizedEmail, code);
+
+  if (!sent && process.env.NODE_ENV === "production") {
+    return { success: false, error: "Failed to send OTP via email" };
+  }
+
+  if (!sent) {
+    logDevOtp(normalizedEmail, code);
   }
 
   return { success: true };
 }
 
-export async function verifyOtp(
-  phone: string,
-  code: string,
-  purpose: OtpPurpose = "REGISTER"
-): Promise<{ valid: boolean; error?: string }> {
-  const normalizedPhone = phone.replace(/\s/g, "");
+export async function verifyOtp(params: {
+  channel: OtpChannel;
+  phone?: string;
+  email?: string;
+  code: string;
+  purpose?: OtpPurpose;
+}): Promise<{ valid: boolean; error?: string }> {
+  const purpose = params.purpose ?? "REGISTER";
+
+  const where =
+    params.channel === "phone"
+      ? { phone: normalizePhone(params.phone || ""), purpose, verified: false }
+      : { email: normalizeEmail(params.email || ""), purpose, verified: false };
 
   const otp = await prisma.otpCode.findFirst({
-    where: {
-      phone: normalizedPhone,
-      purpose,
-      verified: false,
-    },
+    where,
     orderBy: { createdAt: "desc" },
   });
 
@@ -74,7 +133,7 @@ export async function verifyOtp(
     return { valid: false, error: "Too many attempts. Please request a new OTP." };
   }
 
-  if (otp.code !== code) {
+  if (otp.code !== params.code) {
     await prisma.otpCode.update({
       where: { id: otp.id },
       data: { attempts: { increment: 1 } },
@@ -90,21 +149,31 @@ export async function verifyOtp(
   return { valid: true };
 }
 
-export async function isPhoneOtpVerified(
-  phone: string,
-  purpose: OtpPurpose = "REGISTER"
+async function isOtpVerified(
+  where: { phone?: string; email?: string; purpose: OtpPurpose }
 ): Promise<boolean> {
-  const normalizedPhone = phone.replace(/\s/g, "");
-
   const otp = await prisma.otpCode.findFirst({
     where: {
-      phone: normalizedPhone,
-      purpose,
+      ...where,
       verified: true,
-      createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+      createdAt: { gte: new Date(Date.now() - VERIFICATION_WINDOW_MS) },
     },
     orderBy: { createdAt: "desc" },
   });
 
   return !!otp;
+}
+
+export async function isPhoneOtpVerified(
+  phone: string,
+  purpose: OtpPurpose = "REGISTER"
+): Promise<boolean> {
+  return isOtpVerified({ phone: normalizePhone(phone), purpose });
+}
+
+export async function isEmailOtpVerified(
+  email: string,
+  purpose: OtpPurpose = "REGISTER"
+): Promise<boolean> {
+  return isOtpVerified({ email: normalizeEmail(email), purpose });
 }

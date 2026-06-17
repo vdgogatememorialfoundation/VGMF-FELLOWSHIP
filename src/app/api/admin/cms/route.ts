@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
+import { getIntegrationSettingsForAdmin } from "@/lib/integrations";
+import { resolveSecret } from "@/lib/site-content";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -14,16 +16,17 @@ export async function GET() {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [settings, pages, notices, forms] = await Promise.all([
+  const [settings, pages, notices, forms, integrations] = await Promise.all([
     prisma.siteSettings.findUnique({ where: { id: "default" } }),
     prisma.cmsPage.findMany({ orderBy: { slug: "asc" } }),
     prisma.notice.findMany({ orderBy: { priority: "desc" } }),
     prisma.formTemplate.findMany({
       include: { fields: { orderBy: { order: "asc" } } },
     }),
+    getIntegrationSettingsForAdmin(),
   ]);
 
-  return NextResponse.json({ settings, pages, notices, forms });
+  return NextResponse.json({ settings, pages, notices, forms, integrations });
 }
 
 export async function PUT(request: NextRequest) {
@@ -40,6 +43,48 @@ export async function PUT(request: NextRequest) {
       create: { id: "default", ...data },
     });
     return NextResponse.json({ settings });
+  }
+
+  if (section === "integrations") {
+    const existing = await prisma.integrationSettings.findUnique({
+      where: { id: "default" },
+    });
+
+    await prisma.integrationSettings.upsert({
+      where: { id: "default" },
+      update: {
+        appUrl: data.appUrl,
+        zeptomailToken: resolveSecret(data.zeptomailToken, existing?.zeptomailToken ?? null),
+        zeptomailFromEmail: data.zeptomailFromEmail,
+        zeptomailFromName: data.zeptomailFromName,
+        whatsappToken: resolveSecret(data.whatsappToken, existing?.whatsappToken ?? null),
+        whatsappPhoneNumberId: data.whatsappPhoneNumberId,
+        whatsappOtpTemplateName: data.whatsappOtpTemplateName,
+        whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage,
+        whatsappApiVersion: data.whatsappApiVersion,
+      },
+      create: {
+        id: "default",
+        appUrl: data.appUrl,
+        zeptomailToken:
+          data.zeptomailToken && data.zeptomailToken !== "••••••••••••"
+            ? data.zeptomailToken
+            : null,
+        zeptomailFromEmail: data.zeptomailFromEmail,
+        zeptomailFromName: data.zeptomailFromName,
+        whatsappToken:
+          data.whatsappToken && data.whatsappToken !== "••••••••••••"
+            ? data.whatsappToken
+            : null,
+        whatsappPhoneNumberId: data.whatsappPhoneNumberId,
+        whatsappOtpTemplateName: data.whatsappOtpTemplateName,
+        whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage,
+        whatsappApiVersion: data.whatsappApiVersion,
+      },
+    });
+
+    const masked = await getIntegrationSettingsForAdmin();
+    return NextResponse.json({ integrations: masked });
   }
 
   if (section === "page") {
@@ -61,20 +106,19 @@ export async function PUT(request: NextRequest) {
   }
 
   if (section === "notice") {
-    const noticeData = {
-      title: data.title,
-      content: data.content,
-      category: data.category,
-      linkUrl: data.linkUrl,
-      linkLabel: data.linkLabel,
-      isActive: data.isActive,
-      priority: data.priority,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
-      publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
-    };
-
     if (data.id) {
-      const { publishedAt: _p, ...updateData } = noticeData;
+      const updateData: Record<string, unknown> = {};
+      if (data.title !== undefined) updateData.title = data.title;
+      if (data.content !== undefined) updateData.content = data.content;
+      if (data.category !== undefined) updateData.category = data.category;
+      if (data.linkUrl !== undefined) updateData.linkUrl = data.linkUrl;
+      if (data.linkLabel !== undefined) updateData.linkLabel = data.linkLabel;
+      if (data.isActive !== undefined) updateData.isActive = data.isActive;
+      if (data.priority !== undefined) updateData.priority = data.priority;
+      if (data.expiresAt !== undefined) {
+        updateData.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+      }
+
       const notice = await prisma.notice.update({
         where: { id: data.id },
         data: updateData,
@@ -84,14 +128,14 @@ export async function PUT(request: NextRequest) {
 
     const notice = await prisma.notice.create({
       data: {
-        title: noticeData.title,
-        content: noticeData.content,
-        category: noticeData.category ?? "GENERAL",
-        linkUrl: noticeData.linkUrl ?? null,
-        linkLabel: noticeData.linkLabel ?? null,
-        isActive: noticeData.isActive ?? true,
-        priority: noticeData.priority ?? 0,
-        expiresAt: noticeData.expiresAt ?? null,
+        title: data.title,
+        content: data.content,
+        category: data.category ?? "GENERAL",
+        linkUrl: data.linkUrl ?? null,
+        linkLabel: data.linkLabel ?? null,
+        isActive: data.isActive ?? true,
+        priority: data.priority ?? 0,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
       },
     });
     return NextResponse.json({ notice });
@@ -151,31 +195,48 @@ export async function DELETE(request: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
+async function uploadSiteAsset(file: File, prefix: string) {
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "site");
+  await mkdir(uploadDir, { recursive: true });
+
+  const fileName = `${prefix}_${Date.now()}_${file.name}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(path.join(uploadDir, fileName), buffer);
+
+  return `/uploads/site/${fileName}`;
+}
+
 export async function POST(request: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const formData = await request.formData();
-  const file = formData.get("logo") as File;
+  const logo = formData.get("logo") as File | null;
+  const favicon = formData.get("favicon") as File | null;
 
-  if (!file) {
+  if (!logo && !favicon) {
     return NextResponse.json({ error: "No file" }, { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "site");
-  await mkdir(uploadDir, { recursive: true });
+  const update: { logoUrl?: string; faviconUrl?: string } = {};
 
-  const fileName = `logo_${Date.now()}_${file.name}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, fileName), buffer);
+  if (logo) {
+    update.logoUrl = await uploadSiteAsset(logo, "logo");
+  }
 
-  const logoUrl = `/uploads/site/${fileName}`;
+  if (favicon) {
+    update.faviconUrl = await uploadSiteAsset(favicon, "favicon");
+  }
 
   const settings = await prisma.siteSettings.upsert({
     where: { id: "default" },
-    update: { logoUrl },
-    create: { id: "default", siteName: "VGMF Fellowship Portal 2026", logoUrl },
+    update,
+    create: {
+      id: "default",
+      siteName: "VGMF Fellowship Portal 2026",
+      ...update,
+    },
   });
 
-  return NextResponse.json({ settings, logoUrl });
+  return NextResponse.json({ settings, ...update });
 }

@@ -2,18 +2,10 @@ import Link from "next/link";
 import { PublicHeader, PublicFooter, NoticesSection } from "@/components/public/PublicLayout";
 import { FaqSection } from "@/components/public/FaqSection";
 import { getSiteSettings } from "@/lib/cms";
+import { getIcon } from "@/lib/icons";
 import {
-  GraduationCap,
-  FileText,
-  Users,
-  Award,
   ArrowRight,
   Sparkles,
-  BookOpen,
-  IndianRupee,
-  Microscope,
-  BadgeCheck,
-  Bell,
   Mail,
   Phone,
   MapPin,
@@ -28,7 +20,6 @@ export default async function HomePage() {
     <div className="min-h-screen mesh-bg">
       <PublicHeader />
 
-      {/* Hero */}
       <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-14">
         <div className="pointer-events-none absolute inset-0 grid-pattern opacity-60" />
         <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary-400/20 blur-3xl" />
@@ -37,17 +28,18 @@ export default async function HomePage() {
         <div className="relative mx-auto max-w-6xl">
           <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm backdrop-blur">
-                <Sparkles className="h-4 w-4 text-gold" />
-                Fellowship 2026 · Applications Open
-              </div>
+              {settings.heroBadge && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm backdrop-blur">
+                  <Sparkles className="h-4 w-4 text-gold" />
+                  {settings.heroBadge}
+                </div>
+              )}
               <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl">
                 {settings.heroTitle || "VGMF Research Fellowship"}
                 <span className="mt-2 block text-gradient">2026</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-                {settings.heroSubtitle ||
-                  "Fund your Ayurvedic research journey with grants up to ₹75,000. Built for the next generation of Viddhakarma scholars."}
+                {settings.heroSubtitle}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/register" className="btn-gold gap-2 px-8 py-3.5 text-base">
@@ -59,11 +51,7 @@ export default async function HomePage() {
                 </Link>
               </div>
               <div className="mt-10 flex flex-wrap gap-3">
-                {[
-                  { label: "Grant up to", value: "₹75,000" },
-                  { label: "Tracking", value: "12-digit ID" },
-                  { label: "Focus", value: "Viddhakarma" },
-                ].map((stat) => (
+                {settings.heroStats.map((stat) => (
                   <div
                     key={stat.label}
                     className="rounded-2xl border border-[#e4ede8] bg-white/80 px-4 py-3 backdrop-blur"
@@ -85,12 +73,8 @@ export default async function HomePage() {
                 Fellowship snapshot
               </p>
               <div className="mt-6 space-y-4">
-                {[
-                  { icon: Microscope, title: "Research-first", desc: "Clinical & evidence-based proposals" },
-                  { icon: BadgeCheck, title: "Transparent review", desc: "Scoring, shortlist & final award" },
-                  { icon: Bell, title: "Live updates", desc: "Notices, email & dashboard alerts" },
-                ].map((item) => {
-                  const Icon = item.icon;
+                {settings.heroSnapshot.map((item) => {
+                  const Icon = getIcon(item.icon);
                   return (
                     <div key={item.title} className="flex gap-4 rounded-2xl bg-primary-50/80 p-4">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white">
@@ -111,104 +95,76 @@ export default async function HomePage() {
 
       <NoticesSection />
 
-      {/* Bento highlights */}
       <section id="highlights" className="px-5 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="text-center">
             <span className="section-badge">Why apply</span>
-            <h2 className="section-title mt-4">Programme highlights</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-muted">
-              Clinical research, mentorship, and structured funding — designed like our national seminar experience.
-            </p>
+            <h2 className="section-title mt-4">{settings.highlightsTitle}</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-muted">{settings.highlightsSubtitle}</p>
           </div>
 
           <div className="mt-12 grid gap-4 md:grid-cols-6 md:grid-rows-2">
-            <div className="bento-tile md:col-span-3 md:row-span-2 bg-gradient-to-br from-primary-700 to-primary-900 text-white">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
-                <IndianRupee className="h-6 w-6 text-gold" />
-              </div>
-              <h3 className="mt-6 font-display text-2xl font-extrabold">Research grants</h3>
-              <p className="mt-3 max-w-sm text-white/80">
-                Up to ₹75,000 for approved fellowship proposals with milestone-based fund release.
-              </p>
-              <p className="mt-8 font-display text-5xl font-extrabold text-gold">₹75K</p>
-            </div>
+            {settings.highlights.map((tile, index) => {
+              const Icon = tile.icon ? getIcon(tile.icon) : null;
+              const isLarge = tile.variant === "large";
+              const isDashed = tile.variant === "dashed";
 
-            <div className="bento-tile md:col-span-3">
-              <Users className="h-7 w-7 text-primary-600" />
-              <h3 className="mt-4 font-display text-xl font-bold text-ink">Expert review panel</h3>
-              <p className="mt-2 text-sm text-muted">
-                Reviewer scoring, committee remarks, and structured shortlisting.
-              </p>
-            </div>
-
-            <div className="bento-tile md:col-span-3">
-              <BookOpen className="h-7 w-7 text-primary-600" />
-              <h3 className="mt-4 font-display text-xl font-bold text-ink">Viddhakarma focus</h3>
-              <p className="mt-2 text-sm text-muted">
-                Evidence-based Ayurvedic research with real clinical relevance.
-              </p>
-            </div>
-
-            <div className="bento-tile md:col-span-2">
-              <FileText className="h-7 w-7 text-gold" />
-              <h3 className="mt-4 font-display text-lg font-bold text-ink">Smart tracking</h3>
-              <p className="mt-2 text-sm text-muted">12-digit application number + live status.</p>
-            </div>
-
-            <div className="bento-tile md:col-span-2">
-              <Award className="h-7 w-7 text-gold" />
-              <h3 className="mt-4 font-display text-lg font-bold text-ink">Installment payouts</h3>
-              <p className="mt-2 text-sm text-muted">40/40/20 disbursement after milestones.</p>
-            </div>
-
-            <div className="bento-tile md:col-span-2 border-dashed border-primary-300 bg-primary-50/50">
-              <GraduationCap className="h-7 w-7 text-primary-600" />
-              <h3 className="mt-4 font-display text-lg font-bold text-ink">Built for practitioners</h3>
-              <p className="mt-2 text-sm text-muted">Register, apply, and track — all in one place.</p>
-            </div>
+              return (
+                <div
+                  key={`${tile.title}-${index}`}
+                  className={`bento-tile ${
+                    isLarge
+                      ? "md:col-span-3 md:row-span-2 bg-gradient-to-br from-primary-700 to-primary-900 text-white"
+                      : isDashed
+                        ? "md:col-span-2 border-dashed border-primary-300 bg-primary-50/50"
+                        : index === 1
+                          ? "md:col-span-3"
+                          : index === 2
+                            ? "md:col-span-3"
+                            : "md:col-span-2"
+                  }`}
+                >
+                  {Icon && (
+                    <Icon
+                      className={`h-7 w-7 ${isLarge ? "text-gold" : isDashed ? "text-primary-600" : index < 3 ? "text-primary-600" : "text-gold"}`}
+                    />
+                  )}
+                  <h3
+                    className={`mt-4 font-display font-bold ${isLarge ? "text-2xl font-extrabold" : "text-lg text-ink"}`}
+                  >
+                    {tile.title}
+                  </h3>
+                  <p className={`mt-2 text-sm ${isLarge ? "max-w-sm text-white/80" : "text-muted"}`}>
+                    {tile.desc}
+                  </p>
+                  {tile.accent && (
+                    <p className="mt-8 font-display text-5xl font-extrabold text-gold">{tile.accent}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Application journey */}
       <section id="apply" className="grid-pattern px-5 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="text-center">
-            <span className="section-badge">3 simple steps</span>
-            <h2 className="section-title mt-4">Your application journey</h2>
+            <span className="section-badge">{settings.journeySubtitle}</span>
+            <h2 className="section-title mt-4">{settings.journeyTitle}</h2>
           </div>
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {[
-              {
-                step: "01",
-                title: "Register & verify",
-                desc: "Create your account with WhatsApp OTP verification and get your User ID.",
-                icon: GraduationCap,
-                color: "from-primary-500 to-primary-700",
-              },
-              {
-                step: "02",
-                title: "Submit proposal",
-                desc: "Complete the fellowship form, upload documents, and receive your 12-digit tracking number.",
-                icon: FileText,
-                color: "from-[#2d9b72] to-[#1b6b52]",
-              },
-              {
-                step: "03",
-                title: "Review & award",
-                desc: "Reviewers score your work, interviews may follow, and selected fellows receive grants.",
-                icon: Award,
-                color: "from-gold to-[#b8860b]",
-              },
-            ].map((item) => {
-              const Icon = item.icon;
+            {settings.journeySteps.map((item, index) => {
+              const Icon = getIcon(item.icon);
+              const colors = [
+                "from-primary-500 to-primary-700",
+                "from-[#2d9b72] to-[#1b6b52]",
+                "from-gold to-[#b8860b]",
+              ];
               return (
                 <div key={item.step} className="card group relative overflow-hidden">
-                  <div
-                    className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${item.color}`}
-                  />
+                  <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${colors[index % colors.length]}`} />
                   <p className="font-display text-4xl font-extrabold text-primary-100">{item.step}</p>
                   <div className="mt-4 inline-flex rounded-2xl bg-primary-50 p-3 text-primary-600 transition group-hover:scale-110">
                     <Icon className="h-7 w-7" />
@@ -229,25 +185,26 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <FaqSection />
+      <FaqSection
+        title={settings.faqTitle}
+        subtitle={settings.faqSubtitle}
+        items={settings.faqItems}
+      />
 
-      {/* About + contact */}
       <section className="px-5 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="card bg-gradient-to-br from-gold-soft to-white">
-              <span className="section-badge">Since 1972</span>
+              {settings.aboutBadge && <span className="section-badge">{settings.aboutBadge}</span>}
               <h2 className="mt-4 font-display text-3xl font-extrabold text-ink">
-                About the foundation
+                {settings.aboutTitle}
               </h2>
-              <p className="mt-4 leading-relaxed text-ink-soft">
-                The Vaidya Gogate Memorial Foundation advances Ayurvedic education and research.
-                The 2026 Fellowship empowers practitioners to contribute meaningful work in
-                Viddhakarma and allied sciences.
-              </p>
-              <Link href="/about" className="btn-secondary mt-6">
-                Learn more
-              </Link>
+              <p className="mt-4 leading-relaxed text-ink-soft">{settings.aboutContent}</p>
+              {settings.aboutCtaHref && (
+                <Link href={settings.aboutCtaHref} className="btn-secondary mt-6">
+                  {settings.aboutCtaLabel || "Learn more"}
+                </Link>
+              )}
             </div>
 
             <div className="card">
@@ -272,10 +229,12 @@ export default async function HomePage() {
                     <span className="text-sm font-semibold text-ink-soft">{settings.contactPhone}</span>
                   </a>
                 )}
-                <div className="flex items-center gap-4 rounded-2xl border border-[#e4ede8] p-4">
-                  <MapPin className="h-5 w-5 text-primary-600" />
-                  <span className="text-sm font-semibold text-ink-soft">Vaidya Gogate Memorial Foundation, India</span>
-                </div>
+                {settings.contactAddress && (
+                  <div className="flex items-center gap-4 rounded-2xl border border-[#e4ede8] p-4">
+                    <MapPin className="h-5 w-5 text-primary-600" />
+                    <span className="text-sm font-semibold text-ink-soft">{settings.contactAddress}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

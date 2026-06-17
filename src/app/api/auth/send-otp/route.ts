@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { phone, purpose } = parsed.data;
-    const result = await createAndSendOtp(phone, purpose);
+    const { channel, phone, email, purpose } = parsed.data;
+    const result = await createAndSendOtp({ channel, phone, email, purpose });
 
     if (!result.success) {
       return NextResponse.json(
@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "OTP sent to your WhatsApp number",
+      message:
+        channel === "phone"
+          ? "OTP sent to your WhatsApp number"
+          : "OTP sent to your email address",
     });
   } catch (error) {
     console.error("Send OTP error:", error);

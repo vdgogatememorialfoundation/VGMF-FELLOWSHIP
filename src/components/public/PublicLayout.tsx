@@ -8,6 +8,10 @@ import { MobileNav } from "./MobileNav";
 
 export async function PublicHeader() {
   const settings = await getSiteSettings();
+  const navLinks = [
+    ...settings.navLinks,
+    { href: "/#contact", label: "Contact" },
+  ];
 
   return (
     <div className="sticky top-0 z-50">
@@ -32,10 +36,12 @@ export async function PublicHeader() {
                 {settings.contactPhone}
               </a>
             )}
-            <span className="inline-flex items-center gap-1.5 font-semibold text-primary-700">
-              <Calendar className="h-3.5 w-3.5" />
-              Fellowship 2026
-            </span>
+            {settings.utilityBarText && (
+              <span className="inline-flex items-center gap-1.5 font-semibold text-primary-700">
+                <Calendar className="h-3.5 w-3.5" />
+                {settings.utilityBarText}
+              </span>
+            )}
           </div>
           <Link
             href="/register"
@@ -69,7 +75,7 @@ export async function PublicHeader() {
             )}
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-extrabold leading-tight text-ink sm:text-base">
-                Vaidya Gogate Memorial Foundation
+                {settings.headerOrgName}
               </p>
               <p className="truncate text-xs font-medium text-muted">
                 {settings.siteTagline || "Fellowship Portal 2026"}
@@ -78,14 +84,7 @@ export async function PublicHeader() {
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
-            {[
-              { href: "/", label: "Home" },
-              { href: "/#highlights", label: "Highlights" },
-              { href: "/#notices", label: "Notices" },
-              { href: "/#apply", label: "Apply" },
-              { href: "/#faq", label: "FAQ" },
-              { href: "/about", label: "Foundation" },
-            ].map((item) => (
+            {settings.navLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -99,7 +98,7 @@ export async function PublicHeader() {
             </Link>
           </nav>
 
-          <MobileNav />
+          <MobileNav links={navLinks} />
         </div>
       </header>
     </div>
@@ -115,25 +114,30 @@ export async function PublicFooter() {
       <div className="relative mx-auto max-w-7xl">
         <div className="grid gap-10 md:grid-cols-3">
           <div>
-            <p className="font-display text-xl font-extrabold">Vaidya Gogate Memorial Foundation</p>
+            <p className="font-display text-xl font-extrabold">{settings.headerOrgName}</p>
             <p className="mt-3 text-sm text-white/70">{settings.siteTagline}</p>
-            <p className="mt-4 text-sm text-white/60">Advancing Ayurveda since 1972</p>
+            {settings.footerAboutText && (
+              <p className="mt-4 text-sm text-white/60">{settings.footerAboutText}</p>
+            )}
           </div>
           <div>
             <p className="font-display font-bold">Quick links</p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-white/70">
-              <Link href="/#highlights" className="hover:text-gold">Programme highlights</Link>
-              <Link href="/#notices" className="hover:text-gold">Official notices</Link>
-              <Link href="/register" className="hover:text-gold">Start application</Link>
-              <Link href="/about" className="hover:text-gold">About foundation</Link>
+              {settings.footerQuickLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="hover:text-gold">
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
           <div>
             <p className="font-display font-bold">Legal & contact</p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-white/70">
-              <Link href="/terms" className="hover:text-gold">Terms & Conditions</Link>
-              <Link href="/privacy" className="hover:text-gold">Privacy Policy</Link>
-              <Link href="/refund-policy" className="hover:text-gold">Refund Policy</Link>
+              {settings.footerLegalLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="hover:text-gold">
+                  {link.label}
+                </Link>
+              ))}
               {settings.contactEmail && <span>{settings.contactEmail}</span>}
               {settings.contactPhone && <span>{settings.contactPhone}</span>}
             </div>
@@ -144,9 +148,9 @@ export async function PublicFooter() {
             {settings.footerText ||
               `© ${new Date().getFullYear()} Vaidya Gogate Memorial Foundation. All rights reserved.`}
           </p>
-          <p className="mt-2">
-            Developed by Capture Visual Studios · Vaidya Gogate Memorial Foundation Copyrights
-          </p>
+          {settings.footerDeveloperCredit && (
+            <p className="mt-2">{settings.footerDeveloperCredit}</p>
+          )}
         </div>
       </div>
     </footer>

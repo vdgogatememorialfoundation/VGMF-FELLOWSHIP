@@ -1,31 +1,6 @@
-const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || "v22.0";
+import { getIntegrationConfig } from "./integrations";
 
-interface WhatsAppConfig {
-  token: string;
-  phoneNumberId: string;
-  otpTemplateName: string;
-  otpTemplateLanguage: string;
-}
-
-function getConfig(): WhatsAppConfig | null {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-  if (!token || !phoneNumberId) {
-    return null;
-  }
-
-  return {
-    token,
-    phoneNumberId,
-    otpTemplateName: process.env.WHATSAPP_OTP_TEMPLATE_NAME || "authentication",
-    otpTemplateLanguage: process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE || "en",
-  };
-}
-
-export function isWhatsAppConfigured(): boolean {
-  return getConfig() !== null;
-}
+export { isWhatsAppConfigured } from "./integrations";
 
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -38,22 +13,22 @@ export async function sendWhatsAppOtp(
   phone: string,
   otpCode: string
 ): Promise<boolean> {
-  const config = getConfig();
-  if (!config) {
+  const config = await getIntegrationConfig();
+  if (!config.whatsapp.token || !config.whatsapp.phoneNumberId) {
     console.warn("WhatsApp not configured — skipping OTP send");
     return false;
   }
 
   const to = normalizePhone(phone);
-  const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${config.phoneNumberId}/messages`;
+  const url = `https://graph.facebook.com/${config.whatsapp.apiVersion}/${config.whatsapp.phoneNumberId}/messages`;
 
   const payload = {
     messaging_product: "whatsapp",
     to,
     type: "template",
     template: {
-      name: config.otpTemplateName,
-      language: { code: config.otpTemplateLanguage },
+      name: config.whatsapp.otpTemplateName,
+      language: { code: config.whatsapp.otpTemplateLanguage },
       components: [
         {
           type: "body",
@@ -73,7 +48,7 @@ export async function sendWhatsAppOtp(
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.token}`,
+        Authorization: `Bearer ${config.whatsapp.token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
@@ -96,17 +71,17 @@ export async function sendWhatsAppMessage(
   phone: string,
   message: string
 ): Promise<boolean> {
-  const config = getConfig();
-  if (!config) return false;
+  const config = await getIntegrationConfig();
+  if (!config.whatsapp.token || !config.whatsapp.phoneNumberId) return false;
 
   const to = normalizePhone(phone);
-  const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${config.phoneNumberId}/messages`;
+  const url = `https://graph.facebook.com/${config.whatsapp.apiVersion}/${config.whatsapp.phoneNumberId}/messages`;
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.token}`,
+        Authorization: `Bearer ${config.whatsapp.token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

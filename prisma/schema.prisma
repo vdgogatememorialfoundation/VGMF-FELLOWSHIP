@@ -503,7 +503,8 @@ model SupportTicket {
 
 model OtpCode {
   id        String     @id @default(cuid())
-  phone     String
+  phone     String?
+  email     String?
   code      String
   purpose   OtpPurpose @default(REGISTER)
   expiresAt DateTime   @map("expires_at")
@@ -512,25 +513,67 @@ model OtpCode {
   createdAt DateTime   @default(now()) @map("created_at")
 
   @@index([phone, purpose])
+  @@index([email, purpose])
   @@map("otp_codes")
 }
 
 model SiteSettings {
-  id            String   @id @default("default")
-  siteName      String   @default("Vaidya Gogate Memorial Foundation Fellowship Portal 2026") @map("site_name")
-  siteTagline   String?  @map("site_tagline")
-  logoUrl       String?  @map("logo_url")
-  faviconUrl    String?  @map("favicon_url")
-  tickerText    String?  @map("ticker_text")
-  tickerEnabled Boolean  @default(true) @map("ticker_enabled")
-  heroTitle     String?  @map("hero_title")
-  heroSubtitle  String?  @map("hero_subtitle")
-  footerText    String?  @map("footer_text")
-  contactEmail  String?  @map("contact_email")
-  contactPhone  String?  @map("contact_phone")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default("default")
+  siteName              String   @default("Vaidya Gogate Memorial Foundation Fellowship Portal 2026") @map("site_name")
+  siteTagline           String?  @map("site_tagline")
+  logoUrl               String?  @map("logo_url")
+  faviconUrl            String?  @map("favicon_url")
+  headerOrgName         String?  @map("header_org_name")
+  utilityBarText        String?  @map("utility_bar_text")
+  tickerText            String?  @map("ticker_text")
+  tickerEnabled         Boolean  @default(true) @map("ticker_enabled")
+  heroTitle             String?  @map("hero_title")
+  heroSubtitle          String?  @map("hero_subtitle")
+  heroBadge             String?  @map("hero_badge")
+  heroStats             Json?    @map("hero_stats")
+  heroSnapshot          Json?    @map("hero_snapshot")
+  highlightsTitle       String?  @map("highlights_title")
+  highlightsSubtitle    String?  @map("highlights_subtitle")
+  highlights            Json?    @map("highlights")
+  journeyTitle          String?  @map("journey_title")
+  journeySubtitle       String?  @map("journey_subtitle")
+  journeySteps          Json?    @map("journey_steps")
+  aboutBadge            String?  @map("about_badge")
+  aboutTitle            String?  @map("about_title")
+  aboutContent          String?  @map("about_content") @db.Text
+  aboutCtaLabel         String?  @map("about_cta_label")
+  aboutCtaHref          String?  @map("about_cta_href")
+  faqTitle              String?  @map("faq_title")
+  faqSubtitle           String?  @map("faq_subtitle")
+  faqItems              Json?    @map("faq_items")
+  navLinks              Json?    @map("nav_links")
+  footerQuickLinks      Json?    @map("footer_quick_links")
+  footerLegalLinks      Json?    @map("footer_legal_links")
+  footerAboutText       String?  @map("footer_about_text")
+  footerDeveloperCredit String?  @map("footer_developer_credit")
+  footerText            String?  @map("footer_text")
+  contactEmail          String?  @map("contact_email")
+  contactPhone          String?  @map("contact_phone")
+  contactAddress        String?  @map("contact_address")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")
+}
+
+model IntegrationSettings {
+  id                          String   @id @default("default")
+  appUrl                      String?  @map("app_url")
+  zeptomailToken              String?  @map("zeptomail_token")
+  zeptomailFromEmail          String?  @map("zeptomail_from_email")
+  zeptomailFromName           String?  @map("zeptomail_from_name")
+  whatsappToken               String?  @map("whatsapp_token")
+  whatsappPhoneNumberId       String?  @map("whatsapp_phone_number_id")
+  whatsappOtpTemplateName     String?  @map("whatsapp_otp_template_name")
+  whatsappOtpTemplateLanguage String?  @map("whatsapp_otp_template_language")
+  whatsappApiVersion          String?  @map("whatsapp_api_version")
+  updatedAt                   DateTime @updatedAt @map("updated_at")
+
+  @@map("integration_settings")
 }
 
 model CmsPage {

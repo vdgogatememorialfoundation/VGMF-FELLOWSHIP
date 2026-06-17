@@ -1,3 +1,5 @@
+import { getIntegrationConfig } from "./integrations";
+
 const ZEPTOMAIL_API_URL = "https://api.zeptomail.com/v1.1/email";
 
 interface SendEmailOptions {
@@ -8,32 +10,18 @@ interface SendEmailOptions {
   text?: string;
 }
 
-function getConfig() {
-  const token = process.env.ZEPTOMAIL_TOKEN;
-  const fromEmail = process.env.ZEPTOMAIL_FROM_EMAIL;
-  const fromName = process.env.ZEPTOMAIL_FROM_NAME || "VGMF Fellowship Portal";
-
-  if (!token || !fromEmail) {
-    return null;
-  }
-
-  return { token, fromEmail, fromName };
-}
-
-export function isEmailConfigured(): boolean {
-  return getConfig() !== null;
-}
+export { isEmailConfigured } from "./integrations";
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
-  const config = getConfig();
-  if (!config) {
+  const config = await getIntegrationConfig();
+  if (!config.email.token || !config.email.fromEmail) {
     console.warn("ZeptoMail not configured — skipping email send");
     return false;
   }
 
-  const authToken = config.token.startsWith("Zoho-enczapikey")
-    ? config.token
-    : `Zoho-enczapikey ${config.token}`;
+  const authToken = config.email.token.startsWith("Zoho-enczapikey")
+    ? config.email.token
+    : `Zoho-enczapikey ${config.email.token}`;
 
   try {
     const response = await fetch(ZEPTOMAIL_API_URL, {
@@ -44,7 +32,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
         Authorization: authToken,
       },
       body: JSON.stringify({
-        from: { address: config.fromEmail, name: config.fromName },
+        from: { address: config.email.fromEmail, name: config.email.fromName },
         to: [
           {
             email_address: {
@@ -70,6 +58,26 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     console.error("ZeptoMail send failed:", error);
     return false;
   }
+}
+
+export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
+  const appName = process.env.ZEPTOMAIL_FROM_NAME || "VGMF Fellowship Portal";
+
+  return sendEmail({
+    to,
+    subject: `${appName} — Your verification code`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">Email Verification</h2>
+        <p>Use the one-time password below to verify your email address:</p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #16a34a; margin: 24px 0;">${code}</p>
+        <p style="color: #666;">This code expires in 10 minutes. Do not share it with anyone.</p>
+        <p style="color: #666; font-size: 12px;">If you did not request this code, you can safely ignore this email.</p>
+        <p style="color: #666; font-size: 12px;">Vaidya Gogate Memorial Foundation</p>
+      </div>
+    `,
+    text: `Your ${appName} verification code is ${code}. It expires in 10 minutes.`,
+  });
 }
 
 export async function sendWelcomeEmail(

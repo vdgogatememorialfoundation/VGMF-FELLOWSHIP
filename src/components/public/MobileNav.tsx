@@ -3,18 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import type { NavLink } from "@/lib/site-content";
 
-const NAV = [
-  { href: "/", label: "Home" },
-  { href: "/#highlights", label: "Highlights" },
-  { href: "/#notices", label: "Notices" },
-  { href: "/#apply", label: "Apply" },
-  { href: "/#faq", label: "FAQ" },
-  { href: "/about", label: "Foundation" },
-  { href: "/#contact", label: "Contact" },
-];
+interface MobileNavProps {
+  links: NavLink[];
+}
 
-export function MobileNav() {
+export function MobileNav({ links }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,7 +36,7 @@ export function MobileNav() {
               </button>
             </div>
             <nav className="mt-8 flex flex-col gap-1">
-              {NAV.map((item) => (
+              {links.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

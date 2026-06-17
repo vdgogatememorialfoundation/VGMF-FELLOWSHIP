@@ -12,16 +12,64 @@ export const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export const sendOtpSchema = z.object({
-  phone: z.string().min(10, "Valid phone number required"),
-  purpose: z.enum(["REGISTER", "LOGIN", "RESET_PASSWORD"]).default("REGISTER"),
-});
+const otpPurposeSchema = z.enum(["REGISTER", "LOGIN", "RESET_PASSWORD"]).default("REGISTER");
 
-export const verifyOtpSchema = z.object({
-  phone: z.string().min(10, "Valid phone number required"),
-  code: z.string().length(6, "OTP must be 6 digits"),
-  purpose: z.enum(["REGISTER", "LOGIN", "RESET_PASSWORD"]).default("REGISTER"),
-});
+export const sendOtpSchema = z
+  .object({
+    channel: z.enum(["phone", "email"]),
+    phone: z.string().optional(),
+    email: z.string().email("Invalid email address").optional(),
+    purpose: otpPurposeSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.channel === "phone") {
+      if (!data.phone || data.phone.replace(/\s/g, "").length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Valid phone number required",
+          path: ["phone"],
+        });
+      }
+      return;
+    }
+
+    if (!data.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Valid email address required",
+        path: ["email"],
+      });
+    }
+  });
+
+export const verifyOtpSchema = z
+  .object({
+    channel: z.enum(["phone", "email"]),
+    phone: z.string().optional(),
+    email: z.string().email("Invalid email address").optional(),
+    code: z.string().length(6, "OTP must be 6 digits"),
+    purpose: otpPurposeSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.channel === "phone") {
+      if (!data.phone || data.phone.replace(/\s/g, "").length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Valid phone number required",
+          path: ["phone"],
+        });
+      }
+      return;
+    }
+
+    if (!data.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Valid email address required",
+        path: ["email"],
+      });
+    }
+  });
 
 export const loginSchema = z.object({
   identifier: z.string().min(1, "Email or phone is required"),

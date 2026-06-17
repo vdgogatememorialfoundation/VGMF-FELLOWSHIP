@@ -11,16 +11,13 @@ import {
   User,
   Users,
   BarChart3,
-  Settings,
   ClipboardList,
   Award,
   DollarSign,
   FileBarChart,
-  Megaphone,
-  PenLine,
-  FormInput,
   Globe,
   UserCog,
+  FormInput,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -40,9 +37,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   ],
   admin: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/cms", label: "Site Settings", icon: Globe },
-    { href: "/admin/content", label: "Content Pages", icon: PenLine },
-    { href: "/admin/notices", label: "Notices", icon: Megaphone },
+    { href: "/admin/website", label: "Website Updates", icon: Globe },
     { href: "/admin/forms", label: "Form Builder", icon: FormInput },
     { href: "/admin/applications", label: "Applications", icon: ClipboardList },
     { href: "/admin/applicants", label: "Applicants", icon: Users },

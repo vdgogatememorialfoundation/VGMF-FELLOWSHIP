@@ -10,7 +10,7 @@ import {
 import { registerSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/notifications";
 import { sendWelcomeEmail } from "@/lib/email";
-import { isPhoneOtpVerified } from "@/lib/otp";
+import { isEmailOtpVerified, isPhoneOtpVerified } from "@/lib/otp";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,14 +26,20 @@ export async function POST(request: NextRequest) {
 
     const { name, email, phone, password } = parsed.data;
 
-    if (phone) {
-      const otpVerified = await isPhoneOtpVerified(phone, "REGISTER");
-      if (!otpVerified) {
-        return NextResponse.json(
-          { error: "Please verify your mobile number with WhatsApp OTP first" },
-          { status: 400 }
-        );
-      }
+    const phoneOtpVerified = await isPhoneOtpVerified(phone, "REGISTER");
+    if (!phoneOtpVerified) {
+      return NextResponse.json(
+        { error: "Please verify your mobile number with WhatsApp OTP first" },
+        { status: 400 }
+      );
+    }
+
+    const emailOtpVerified = await isEmailOtpVerified(email, "REGISTER");
+    if (!emailOtpVerified) {
+      return NextResponse.json(
+        { error: "Please verify your email address with email OTP first" },
+        { status: 400 }
+      );
     }
 
     const existing = await prisma.user.findFirst({
