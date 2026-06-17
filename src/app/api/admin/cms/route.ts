@@ -3,8 +3,7 @@ import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { getIntegrationSettingsForAdmin } from "@/lib/integrations";
 import { resolveSecret } from "@/lib/site-content";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { saveSiteAsset, resolveLogoUrl, resolveFaviconUrl } from "@/lib/site-assets";
 
 async function requireAdmin() {
   const user = await getSession();
@@ -26,7 +25,21 @@ export async function GET() {
     getIntegrationSettingsForAdmin(),
   ]);
 
-  return NextResponse.json({ settings, pages, notices, forms, integrations });
+  return NextResponse.json({
+    settings: settings
+      ? {
+          ...settings,
+          logoData: undefined,
+          faviconData: undefined,
+          logoUrl: resolveLogoUrl(settings),
+          faviconUrl: resolveFaviconUrl(settings),
+        }
+      : null,
+    pages,
+    notices,
+    forms,
+    integrations,
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -195,15 +208,8 @@ export async function DELETE(request: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-async function uploadSiteAsset(file: File, prefix: string) {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "site");
-  await mkdir(uploadDir, { recursive: true });
-
-  const fileName = `${prefix}_${Date.now()}_${file.name}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, fileName), buffer);
-
-  return `/uploads/site/${fileName}`;
+async function uploadSiteAsset(file: File, type: "logo" | "favicon") {
+  return saveSiteAsset(file, type);
 }
 
 export async function POST(request: NextRequest) {
@@ -221,22 +227,16 @@ export async function POST(request: NextRequest) {
   const update: { logoUrl?: string; faviconUrl?: string } = {};
 
   if (logo) {
-    update.logoUrl = await uploadSiteAsset(logo, "logo");
+    const result = await uploadSiteAsset(logo, "logo");
+    update.logoUrl = result.url;
   }
 
   if (favicon) {
-    update.faviconUrl = await uploadSiteAsset(favicon, "favicon");
+    const result = await uploadSiteAsset(favicon, "favicon");
+    update.faviconUrl = result.url;
   }
 
-  const settings = await prisma.siteSettings.upsert({
-    where: { id: "default" },
-    update,
-    create: {
-      id: "default",
-      siteName: "VGMF Fellowship Portal 2026",
-      ...update,
-    },
-  });
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
 
   return NextResponse.json({ settings, ...update });
 }

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Mail, Phone, Calendar, UserPlus } from "lucide-react";
 import { getSiteSettings, getActiveNotices } from "@/lib/cms";
 import { AnnouncementTicker } from "./AnnouncementTicker";
@@ -61,7 +60,8 @@ export async function PublicHeader() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             {settings.logoUrl ? (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={settings.logoUrl}
                 alt={settings.siteName}
                 width={48}

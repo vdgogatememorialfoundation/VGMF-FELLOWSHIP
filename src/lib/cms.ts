@@ -17,6 +17,7 @@ import {
   type JourneyStep,
   type FaqItem,
 } from "./site-content";
+import { resolveFaviconUrl, resolveLogoUrl } from "./site-assets";
 
 const DEFAULT_SITE_SETTINGS = {
   id: "default",
@@ -110,6 +111,8 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
 
   return {
     ...settings,
+    logoUrl: resolveLogoUrl(settings),
+    faviconUrl: resolveFaviconUrl(settings),
     siteTagline: settings.siteTagline || DEFAULT_SITE_SETTINGS.siteTagline,
     headerOrgName: settings.headerOrgName || DEFAULT_SITE_SETTINGS.headerOrgName,
     utilityBarText: settings.utilityBarText || DEFAULT_SITE_SETTINGS.utilityBarText,

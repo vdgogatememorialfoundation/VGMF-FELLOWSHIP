@@ -522,7 +522,11 @@ model SiteSettings {
   siteName              String   @default("Vaidya Gogate Memorial Foundation Fellowship Portal 2026") @map("site_name")
   siteTagline           String?  @map("site_tagline")
   logoUrl               String?  @map("logo_url")
+  logoData              String?  @map("logo_data") @db.Text
+  logoMimeType          String?  @map("logo_mime_type")
   faviconUrl            String?  @map("favicon_url")
+  faviconData           String?  @map("favicon_data") @db.Text
+  faviconMimeType       String?  @map("favicon_mime_type")
   headerOrgName         String?  @map("header_org_name")
   utilityBarText        String?  @map("utility_bar_text")
   tickerText            String?  @map("ticker_text")
