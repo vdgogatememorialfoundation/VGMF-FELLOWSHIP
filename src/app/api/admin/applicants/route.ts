@@ -3,8 +3,7 @@ import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { createUserAccount, listUsersByRoles } from "@/lib/admin-users";
 import { adminCreateApplicantSchema, adminUpdateUserSchema } from "@/lib/validations";
-import { sendWelcomeEmail } from "@/lib/email";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
 
 async function requireAdmin() {
   const user = await getSession();
@@ -64,7 +63,12 @@ export async function POST(request: NextRequest) {
       "EMAIL"
     );
 
-    await sendWelcomeEmail(created.email, created.profile?.name ?? name, created.userId);
+    await sendWelcomeNotifications(
+      created.id,
+      created.email,
+      created.profile?.name ?? name,
+      created.userId
+    );
 
     return NextResponse.json({
       success: true,

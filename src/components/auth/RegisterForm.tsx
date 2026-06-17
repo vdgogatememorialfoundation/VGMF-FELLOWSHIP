@@ -9,9 +9,15 @@ type OtpChannel = "phone" | "email";
 
 interface RegisterFormProps {
   loginEnabled?: boolean;
+  signupOtpEmailEnabled?: boolean;
+  signupOtpWhatsappEnabled?: boolean;
 }
 
-export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
+export function RegisterForm({
+  loginEnabled = true,
+  signupOtpEmailEnabled = true,
+  signupOtpWhatsappEnabled = true,
+}: RegisterFormProps) {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -31,7 +37,9 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
   const [otpLoading, setOtpLoading] = useState<OtpChannel | null>(null);
   const [userId, setUserId] = useState("");
 
-  const verificationComplete = phoneOtpVerified && emailOtpVerified;
+  const emailOk = !signupOtpEmailEnabled || emailOtpVerified;
+  const phoneOk = !signupOtpWhatsappEnabled || phoneOtpVerified;
+  const verificationComplete = emailOk && phoneOk;
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -146,12 +154,12 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
     setError("");
     setMessage("");
 
-    if (!phoneOtpVerified) {
+    if (signupOtpWhatsappEnabled && !phoneOtpVerified) {
       setError("Please verify your mobile number with WhatsApp OTP first");
       return;
     }
 
-    if (!emailOtpVerified) {
+    if (signupOtpEmailEnabled && !emailOtpVerified) {
       setError("Please verify your email address with email OTP first");
       return;
     }
@@ -209,7 +217,13 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
           </Link>
           <h1 className="mt-4 text-2xl font-bold text-gray-900">Applicant Registration</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Verify your email and mobile via OTP to register
+            {signupOtpEmailEnabled && signupOtpWhatsappEnabled
+              ? "Verify your email and mobile via OTP to register"
+              : signupOtpEmailEnabled
+                ? "Verify your email via OTP to register"
+                : signupOtpWhatsappEnabled
+                  ? "Verify your mobile via WhatsApp OTP to register"
+                  : "Complete the form below to register"}
           </p>
         </div>
 
@@ -237,7 +251,7 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
                 onChange={(e) => updateField("email", e.target.value)}
                 required
               />
-              {!emailOtpVerified && (
+              {!emailOtpVerified && signupOtpEmailEnabled && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -250,7 +264,7 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
               )}
             </div>
 
-            {emailOtpSent && !emailOtpVerified && (
+            {signupOtpEmailEnabled && emailOtpSent && !emailOtpVerified && (
               <div>
                 <Input
                   label="Email OTP"
@@ -272,7 +286,7 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
               </div>
             )}
 
-            {emailOtpVerified && (
+            {signupOtpEmailEnabled && emailOtpVerified && (
               <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
                 Email address verified
               </div>
@@ -287,7 +301,7 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
                 placeholder="91XXXXXXXXXX or 10-digit number"
                 required
               />
-              {!phoneOtpVerified && (
+              {!phoneOtpVerified && signupOtpWhatsappEnabled && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -300,7 +314,7 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
               )}
             </div>
 
-            {phoneOtpSent && !phoneOtpVerified && (
+            {signupOtpWhatsappEnabled && phoneOtpSent && !phoneOtpVerified && (
               <div>
                 <Input
                   label="WhatsApp OTP"
@@ -322,7 +336,7 @@ export function RegisterForm({ loginEnabled = true }: RegisterFormProps) {
               </div>
             )}
 
-            {phoneOtpVerified && (
+            {signupOtpWhatsappEnabled && phoneOtpVerified && (
               <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
                 Mobile number verified via WhatsApp
               </div>

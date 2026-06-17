@@ -74,6 +74,14 @@ interface SiteSettingsState {
   loginEnabled?: boolean;
   signupDisabledMessage?: string;
   loginDisabledMessage?: string;
+  signupOtpEmailEnabled?: boolean;
+  signupOtpWhatsappEnabled?: boolean;
+  applicationNotifyEmailEnabled?: boolean;
+  applicationNotifyWhatsappEnabled?: boolean;
+  welcomeEmailEnabled?: boolean;
+  welcomeWhatsappEnabled?: boolean;
+  alertsEmailEnabled?: boolean;
+  alertsWhatsappEnabled?: boolean;
 }
 
 interface Notice {
@@ -323,41 +331,122 @@ export function WebsiteUpdates() {
       )}
 
       {activeTab === "access" && (
-        <div className="card space-y-4">
-          <h2 className="font-semibold">Applicant Signup & Login</h2>
-          <p className="text-sm text-gray-600">
-            Control public applicant registration and login. Admin, staff, reviewer, and trustee portals are not affected.
-          </p>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={settings.signupEnabled !== false}
-              onChange={(e) => setSettings({ ...settings, signupEnabled: e.target.checked })}
+        <div className="space-y-6">
+          <div className="card space-y-4">
+            <h2 className="font-semibold">Applicant Signup & Login</h2>
+            <p className="text-sm text-gray-600">
+              Control public applicant registration and login. Admin, staff, reviewer, and trustee portals are not affected.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.signupEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, signupEnabled: e.target.checked })}
+              />
+              Enable applicant signup (public registration at /register)
+            </label>
+            <Textarea
+              label="Message when signup is disabled"
+              value={settings.signupDisabledMessage || ""}
+              onChange={(e) => setSettings({ ...settings, signupDisabledMessage: e.target.value })}
+              placeholder="New applicant registration is currently closed..."
             />
-            Enable applicant signup (public registration at /register)
-          </label>
-          <Textarea
-            label="Message when signup is disabled"
-            value={settings.signupDisabledMessage || ""}
-            onChange={(e) => setSettings({ ...settings, signupDisabledMessage: e.target.value })}
-            placeholder="New applicant registration is currently closed..."
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={settings.loginEnabled !== false}
-              onChange={(e) => setSettings({ ...settings, loginEnabled: e.target.checked })}
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.loginEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, loginEnabled: e.target.checked })}
+              />
+              Enable applicant login (/applicant portal)
+            </label>
+            <Textarea
+              label="Message when login is disabled"
+              value={settings.loginDisabledMessage || ""}
+              onChange={(e) => setSettings({ ...settings, loginDisabledMessage: e.target.value })}
+              placeholder="Applicant login is temporarily unavailable..."
             />
-            Enable applicant login (/applicant portal)
-          </label>
-          <Textarea
-            label="Message when login is disabled"
-            value={settings.loginDisabledMessage || ""}
-            onChange={(e) => setSettings({ ...settings, loginDisabledMessage: e.target.value })}
-            placeholder="Applicant login is temporarily unavailable..."
-          />
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="font-semibold">Registration OTP Verification</h2>
+            <p className="text-sm text-gray-600">
+              Choose which OTP channels are required during public applicant signup. Disable both to allow password-only registration.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.signupOtpEmailEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, signupOtpEmailEnabled: e.target.checked })}
+              />
+              Require email OTP during signup
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.signupOtpWhatsappEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, signupOtpWhatsappEnabled: e.target.checked })}
+              />
+              Require WhatsApp OTP during signup
+            </label>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="font-semibold">Emails & WhatsApp Notifications</h2>
+            <p className="text-sm text-gray-600">
+              Control automated messages for welcome, application submission, and portal alerts.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.welcomeEmailEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, welcomeEmailEnabled: e.target.checked })}
+              />
+              Send welcome email on registration (self-signup & admin-created applicants)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.welcomeWhatsappEnabled === true}
+                onChange={(e) => setSettings({ ...settings, welcomeWhatsappEnabled: e.target.checked })}
+              />
+              Send welcome WhatsApp on registration
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.applicationNotifyEmailEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, applicationNotifyEmailEnabled: e.target.checked })}
+              />
+              Send application confirmation email (12-digit tracking number)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.applicationNotifyWhatsappEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, applicationNotifyWhatsappEnabled: e.target.checked })}
+              />
+              Send application confirmation WhatsApp
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.alertsEmailEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, alertsEmailEnabled: e.target.checked })}
+              />
+              Send portal alert emails (status updates, interviews, installments, etc.)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.alertsWhatsappEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, alertsWhatsappEnabled: e.target.checked })}
+              />
+              Send portal alert WhatsApp messages
+            </label>
+          </div>
+
           <Button loading={loading} onClick={() => saveSection("settings", settings)}>
-            Save Access Settings
+            Save Access & Notification Settings
           </Button>
         </div>
       )}

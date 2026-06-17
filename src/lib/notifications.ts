@@ -1,7 +1,8 @@
 import prisma from "./db";
 import type { NotificationChannel } from "@prisma/client";
-import { sendNotificationEmail, sendApplicationConfirmationEmail } from "./email";
+import { sendNotificationEmail, sendApplicationConfirmationEmail, sendWelcomeEmail } from "./email";
 import { sendWhatsAppMessage } from "./whatsapp";
+import { getAccessControl } from "./access-control";
 
 export async function createNotification(
   userId: string,
@@ -9,6 +10,8 @@ export async function createNotification(
   message: string,
   channel: NotificationChannel = "BOTH"
 ) {
+  const access = await getAccessControl();
+
   const notification = await prisma.notification.create({
     data: { userId, title, message, channel },
   });
@@ -21,11 +24,18 @@ export async function createNotification(
   if (user) {
     const name = user.profile?.name ?? user.email;
 
-    if (channel === "EMAIL" || channel === "BOTH") {
+    if (
+      (channel === "EMAIL" || channel === "BOTH") &&
+      access.alertsEmailEnabled
+    ) {
       await sendNotificationEmail(user.email, name, title, message);
     }
 
-    if ((channel === "WHATSAPP" || channel === "BOTH") && user.phone) {
+    if (
+      (channel === "WHATSAPP" || channel === "BOTH") &&
+      access.alertsWhatsappEnabled &&
+      user.phone
+    ) {
       await sendWhatsAppMessage(user.phone, `*${title}*\n\n${message}`);
     }
   }
@@ -33,11 +43,34 @@ export async function createNotification(
   return notification;
 }
 
+export async function sendWelcomeNotifications(
+  userId: string,
+  email: string,
+  name: string,
+  userUserId: string
+) {
+  const access = await getAccessControl();
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  if (access.welcomeEmailEnabled) {
+    await sendWelcomeEmail(email, name, userUserId);
+  }
+
+  if (access.welcomeWhatsappEnabled && user?.phone) {
+    await sendWhatsAppMessage(
+      user.phone,
+      `*Welcome to VGMF Fellowship Portal*\n\nDear ${name}, your account is ready.\nYour User ID: *${userUserId}*\n\nLog in to complete your fellowship application.`
+    );
+  }
+}
+
 export async function notifyApplicationSubmitted(
   userId: string,
   appNumber: string,
   applicantEmail?: string
 ) {
+  const access = await getAccessControl();
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { profile: true },
@@ -56,11 +89,11 @@ export async function notifyApplicationSubmitted(
     },
   });
 
-  if (email) {
+  if (email && access.applicationNotifyEmailEnabled) {
     await sendApplicationConfirmationEmail(email, name, appNumber);
   }
 
-  if (user?.phone) {
+  if (user?.phone && access.applicationNotifyWhatsappEnabled) {
     await sendWhatsAppMessage(
       user.phone,
       `*VGMF Fellowship Application Submitted*\n\nYour 12-digit application number:\n*${appNumber}*\n\nSave this number to track your application status.`

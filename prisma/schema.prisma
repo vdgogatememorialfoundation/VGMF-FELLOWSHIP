@@ -563,6 +563,14 @@ model SiteSettings {
   loginEnabled          Boolean  @default(true) @map("login_enabled")
   signupDisabledMessage String?  @map("signup_disabled_message") @db.Text
   loginDisabledMessage  String?  @map("login_disabled_message") @db.Text
+  signupOtpEmailEnabled            Boolean @default(true) @map("signup_otp_email_enabled")
+  signupOtpWhatsappEnabled         Boolean @default(true) @map("signup_otp_whatsapp_enabled")
+  applicationNotifyEmailEnabled    Boolean @default(true) @map("application_notify_email_enabled")
+  applicationNotifyWhatsappEnabled Boolean @default(true) @map("application_notify_whatsapp_enabled")
+  welcomeEmailEnabled              Boolean @default(true) @map("welcome_email_enabled")
+  welcomeWhatsappEnabled           Boolean @default(false) @map("welcome_whatsapp_enabled")
+  alertsEmailEnabled               Boolean @default(true) @map("alerts_email_enabled")
+  alertsWhatsappEnabled            Boolean @default(true) @map("alerts_whatsapp_enabled")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")

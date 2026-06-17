@@ -16,5 +16,11 @@ export default async function RegisterPage() {
     );
   }
 
-  return <RegisterForm loginEnabled={access.loginEnabled} />;
+  return (
+    <RegisterForm
+      loginEnabled={access.loginEnabled}
+      signupOtpEmailEnabled={access.signupOtpEmailEnabled}
+      signupOtpWhatsappEnabled={access.signupOtpWhatsappEnabled}
+    />
+  );
 }

@@ -8,10 +8,9 @@ import {
   getPortalPath,
 } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
-import { createNotification } from "@/lib/notifications";
-import { sendWelcomeEmail } from "@/lib/email";
+import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
 import { isEmailOtpVerified, isPhoneOtpVerified } from "@/lib/otp";
-import { assertSignupEnabled } from "@/lib/access-control";
+import { assertSignupEnabled, getAccessControl } from "@/lib/access-control";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,21 +30,26 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, email, phone, password } = parsed.data;
+    const access = await getAccessControl();
 
-    const phoneOtpVerified = await isPhoneOtpVerified(phone, "REGISTER");
-    if (!phoneOtpVerified) {
-      return NextResponse.json(
-        { error: "Please verify your mobile number with WhatsApp OTP first" },
-        { status: 400 }
-      );
+    if (access.signupOtpWhatsappEnabled) {
+      const phoneOtpVerified = await isPhoneOtpVerified(phone, "REGISTER");
+      if (!phoneOtpVerified) {
+        return NextResponse.json(
+          { error: "Please verify your mobile number with WhatsApp OTP first" },
+          { status: 400 }
+        );
+      }
     }
 
-    const emailOtpVerified = await isEmailOtpVerified(email, "REGISTER");
-    if (!emailOtpVerified) {
-      return NextResponse.json(
-        { error: "Please verify your email address with email OTP first" },
-        { status: 400 }
-      );
+    if (access.signupOtpEmailEnabled) {
+      const emailOtpVerified = await isEmailOtpVerified(email, "REGISTER");
+      if (!emailOtpVerified) {
+        return NextResponse.json(
+          { error: "Please verify your email address with email OTP first" },
+          { status: 400 }
+        );
+      }
     }
 
     const existing = await prisma.user.findFirst({
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) {
       `Registration successful! Your User ID is ${userId}. You can now complete your fellowship application.`
     );
 
-    await sendWelcomeEmail(email, name, userId);
+    await sendWelcomeNotifications(user.id, email, name, userId);
 
     const token = await createSession(user.id);
     await setSessionCookie(token);

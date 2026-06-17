@@ -66,6 +66,14 @@ const DEFAULT_SITE_SETTINGS = {
   loginEnabled: true,
   signupDisabledMessage: null as string | null,
   loginDisabledMessage: null as string | null,
+  signupOtpEmailEnabled: true,
+  signupOtpWhatsappEnabled: true,
+  applicationNotifyEmailEnabled: true,
+  applicationNotifyWhatsappEnabled: true,
+  welcomeEmailEnabled: true,
+  welcomeWhatsappEnabled: false,
+  alertsEmailEnabled: true,
+  alertsWhatsappEnabled: true,
   updatedAt: new Date(),
 };
 
@@ -111,6 +119,14 @@ export type SiteContent = {
   loginEnabled: boolean;
   signupDisabledMessage: string | null;
   loginDisabledMessage: string | null;
+  signupOtpEmailEnabled: boolean;
+  signupOtpWhatsappEnabled: boolean;
+  applicationNotifyEmailEnabled: boolean;
+  applicationNotifyWhatsappEnabled: boolean;
+  welcomeEmailEnabled: boolean;
+  welcomeWhatsappEnabled: boolean;
+  alertsEmailEnabled: boolean;
+  alertsWhatsappEnabled: boolean;
   updatedAt?: Date;
 };
 
@@ -165,6 +181,14 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     loginEnabled: settings.loginEnabled ?? true,
     signupDisabledMessage: settings.signupDisabledMessage,
     loginDisabledMessage: settings.loginDisabledMessage,
+    signupOtpEmailEnabled: settings.signupOtpEmailEnabled ?? true,
+    signupOtpWhatsappEnabled: settings.signupOtpWhatsappEnabled ?? true,
+    applicationNotifyEmailEnabled: settings.applicationNotifyEmailEnabled ?? true,
+    applicationNotifyWhatsappEnabled: settings.applicationNotifyWhatsappEnabled ?? true,
+    welcomeEmailEnabled: settings.welcomeEmailEnabled ?? true,
+    welcomeWhatsappEnabled: settings.welcomeWhatsappEnabled ?? false,
+    alertsEmailEnabled: settings.alertsEmailEnabled ?? true,
+    alertsWhatsappEnabled: settings.alertsWhatsappEnabled ?? true,
   };
 }
 
