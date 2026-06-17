@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { applicationId, status, rejectionReason, adminNotes } = await request.json();
+    const { applicationId, status, rejectionReason, adminNotes, queryNotes, eligibilityNotes, verificationNotes } = await request.json();
 
     const existing = await prisma.application.findUnique({
       where: { id: applicationId },
@@ -90,6 +90,9 @@ export async function PATCH(request: NextRequest) {
         status,
         rejectionReason,
         adminNotes,
+        queryNotes: queryNotes ?? undefined,
+        eligibilityNotes: eligibilityNotes ?? undefined,
+        verificationNotes: verificationNotes ?? undefined,
         statusHistory: {
           create: {
             fromStatus: existing.status,

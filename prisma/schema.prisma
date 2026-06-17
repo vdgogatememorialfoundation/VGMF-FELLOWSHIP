@@ -18,15 +18,56 @@ enum UserRole {
 
 enum ApplicationStatus {
   DRAFT
+  INCOMPLETE
   SUBMITTED
+  WITHDRAWN
+  QUERY_RAISED
+  QUERY_RESPONDED
   SCRUTINY
   SCRUTINY_APPROVED
+  ELIGIBILITY_CHECK
+  ELIGIBLE
+  CONDITIONALLY_ELIGIBLE
+  NOT_ELIGIBLE
   UNDER_REVIEW
+  TECHNICAL_SCORING
   SHORTLISTED
-  INTERVIEW_SCHEDULED
-  SELECTED
-  REJECTED
   WAITLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  TRUSTEE_REVIEW
+  SELECTED
+  AGREEMENT_PENDING
+  REJECTED
+  SUSPENDED
+  TERMINATED
+  COMPLETED
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  NO_SHOW
+}
+
+enum FellowshipStage {
+  AGREEMENT_PENDING
+  BANK_VERIFICATION
+  SANCTIONED
+  INSTALLMENT_1_RELEASED
+  QUARTERLY_REVIEW_1
+  QUARTERLY_REVIEW_2
+  MID_TERM_REVIEW
+  INSTALLMENT_2_RELEASED
+  QUARTERLY_REVIEW_3
+  QUARTERLY_REVIEW_4
+  FINAL_SUBMISSION
+  FINANCIAL_VERIFICATION
+  FINAL_PRESENTATION
+  INSTALLMENT_3_RELEASED
+  COMPLETED
+  SUSPENDED
+  TERMINATED
 }
 
 enum DocumentType {
@@ -79,6 +120,16 @@ enum InstallmentStatus {
   RELEASED
 }
 
+enum FellowshipDocType {
+  ACCEPTANCE_LETTER
+  BANK_VERIFICATION
+  PROGRESS_REPORT
+  UTILIZATION_STATEMENT
+  FINAL_REPORT
+  PUBLICATION_MANUSCRIPT
+  UTILIZATION_CERTIFICATE
+}
+
 enum NotificationChannel {
   EMAIL
   WHATSAPP
@@ -108,6 +159,7 @@ enum CmsPageSlug {
   ABOUT
   TERMS
   UNDERTAKING
+  RULEBOOK
   PRIVACY
   REFUND
 }
@@ -200,6 +252,9 @@ model Application {
   publicationsSummary   String?           @map("publications_summary")
   termsAcceptedAt       DateTime?         @map("terms_accepted_at")
   undertakingAcceptedAt DateTime?         @map("undertaking_accepted_at")
+  verificationNotes     String?           @map("verification_notes")
+  eligibilityNotes      String?           @map("eligibility_notes")
+  queryNotes            String?           @map("query_notes")
 
   submittedAt           DateTime?         @map("submitted_at")
   createdAt             DateTime          @default(now()) @map("created_at")
@@ -215,6 +270,7 @@ model Application {
   trusteeApproval   TrusteeApproval?
   fellowship        Fellowship?
   statusHistory     ApplicationStatusHistory[]
+  digitalUndertaking DigitalUndertaking?
 
   @@map("applications")
 }
@@ -231,6 +287,45 @@ model ApplicationStatusHistory {
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("application_status_history")
+}
+
+model DigitalUndertaking {
+  id                   String   @id @default(cuid())
+  applicationId        String   @unique @map("application_id")
+  fullName             String   @map("full_name")
+  agreeFellowshipRules Boolean  @map("agree_fellowship_rules")
+  certifyInfoCorrect   Boolean  @map("certify_info_correct")
+  agreeFundUtilization Boolean  @map("agree_fund_utilization")
+  signaturePath        String   @map("signature_path")
+  signatureType        String   @map("signature_type")
+  pdfPath              String   @map("pdf_path")
+  ipAddress            String   @map("ip_address")
+  submittedAt          DateTime @default(now()) @map("submitted_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("digital_undertakings")
+}
+
+model FellowshipDocument {
+  id              String            @id @default(cuid())
+  fellowshipId    String            @map("fellowship_id")
+  installmentNo   Int               @map("installment_no")
+  type            FellowshipDocType
+  fileName        String            @map("file_name")
+  filePath        String            @map("file_path")
+  fileSize        Int               @map("file_size")
+  mimeType        String            @map("mime_type")
+  status          DocumentStatus    @default(PENDING)
+  rejectionReason String?           @map("rejection_reason")
+  uploadedAt      DateTime          @default(now()) @map("uploaded_at")
+  reviewedAt      DateTime?         @map("reviewed_at")
+  reviewedBy      String?           @map("reviewed_by")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@unique([fellowshipId, installmentNo, type])
+  @@map("fellowship_documents")
 }
 
 model ResearchProposal {
@@ -332,6 +427,8 @@ model Interview {
   scheduledTime String   @map("scheduled_time")
   meetingLink   String   @map("meeting_link")
   panelMembers  String   @map("panel_members")
+  status        InterviewStatus @default(SCHEDULED)
+  feedback      String?
   notes         String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -367,6 +464,9 @@ model Fellowship {
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
   awardLetterPath  String?  @map("award_letter_path")
+  mentor           String?
+  institution      String?
+  currentStage     FellowshipStage @default(AGREEMENT_PENDING) @map("current_stage")
   isActive         Boolean  @default(true) @map("is_active")
   isCompleted      Boolean  @default(false) @map("is_completed")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -379,6 +479,8 @@ model Fellowship {
   finalSubmission  FinalSubmission?
   financeRecords   FinanceRecord?
   certificates     Certificate[]
+  fellowshipDocuments FellowshipDocument[]
+  reminders        FellowshipReminder[]
 
   @@map("fellowships")
 }
@@ -412,6 +514,14 @@ model ProgressReport {
   caseRecordsPath String?              @map("case_records_path")
   photosPath      String?              @map("photos_path")
   publicationsPath String?             @map("publications_path")
+  activitiesCompleted String?          @map("activities_completed")
+  casesEnrolled    Int?                 @map("cases_enrolled")
+  expenditure      Float?               @map("expenditure")
+  progressUpdate   String?              @map("progress_update")
+  dataStatus       String?              @map("data_status")
+  analysisUpdate   String?              @map("analysis_update")
+  finalResults     String?              @map("final_results")
+  dueDate          DateTime?            @map("due_date")
   status          ProgressReportStatus @default(SUBMITTED)
   reviewNotes     String?              @map("review_notes")
   submittedAt     DateTime             @default(now()) @map("submitted_at")
@@ -480,6 +590,24 @@ model Certificate {
   fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
 
   @@map("certificates")
+}
+
+model FellowshipReminder {
+  id            String   @id @default(cuid())
+  fellowshipId  String   @map("fellowship_id")
+  quarter       Int
+  year          Int
+  dueDate       DateTime @map("due_date")
+  reminder30Sent Boolean @default(false) @map("reminder_30_sent")
+  reminder15Sent Boolean @default(false) @map("reminder_15_sent")
+  reminderDueSent Boolean @default(false) @map("reminder_due_sent")
+  overdueEscalated Boolean @default(false) @map("overdue_escalated")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@unique([fellowshipId, quarter, year])
+  @@map("fellowship_reminders")
 }
 
 model Notification {

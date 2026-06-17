@@ -1,5 +1,11 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {
+  STATUS_LABELS,
+  STATUS_COLORS,
+  getLifecycleStatusLabel,
+  getLifecycleStatusColor,
+} from "./lifecycle-workflow";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,18 +40,19 @@ export const RESEARCH_AREAS = [
   { value: "OTHER", label: "Other" },
 ] as const;
 
-export const APPLICATION_STATUSES = [
-  { value: "DRAFT", label: "Draft", color: "bg-gray-100 text-gray-800" },
-  { value: "SUBMITTED", label: "Submitted", color: "bg-blue-100 text-blue-800" },
-  { value: "SCRUTINY", label: "Under Scrutiny", color: "bg-amber-100 text-amber-900" },
-  { value: "SCRUTINY_APPROVED", label: "Scrutiny Approved", color: "bg-teal-100 text-teal-800" },
-  { value: "UNDER_REVIEW", label: "Under Review", color: "bg-yellow-100 text-yellow-800" },
-  { value: "SHORTLISTED", label: "Shortlisted", color: "bg-purple-100 text-purple-800" },
-  { value: "INTERVIEW_SCHEDULED", label: "Interview Scheduled", color: "bg-indigo-100 text-indigo-800" },
-  { value: "SELECTED", label: "Selected", color: "bg-green-100 text-green-800" },
-  { value: "REJECTED", label: "Rejected", color: "bg-red-100 text-red-800" },
-  { value: "WAITLISTED", label: "Waitlisted", color: "bg-orange-100 text-orange-800" },
-] as const;
+export function getStatusLabel(status: string): string {
+  return getLifecycleStatusLabel(status);
+}
+
+export function getStatusColor(status: string): string {
+  return getLifecycleStatusColor(status);
+}
+
+export const APPLICATION_STATUSES = Object.entries(STATUS_LABELS).map(([value, label]) => ({
+  value,
+  label,
+  color: STATUS_COLORS[value] ?? "bg-gray-100 text-gray-800",
+}));
 
 export const SCORING_CRITERIA = [
   { key: "scientificMerit", label: "Scientific Merit", maxMarks: 25 },
@@ -69,11 +76,3 @@ export const OPTIONAL_DOCUMENTS = [
   { type: "PUBLICATIONS", label: "Publications" },
   { type: "RECOMMENDATION_LETTER", label: "Recommendation Letter" },
 ] as const;
-
-export function getStatusLabel(status: string): string {
-  return APPLICATION_STATUSES.find((s) => s.value === status)?.label ?? status;
-}
-
-export function getStatusColor(status: string): string {
-  return APPLICATION_STATUSES.find((s) => s.value === status)?.color ?? "bg-gray-100 text-gray-800";
-}

@@ -3,11 +3,14 @@ import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { formatApplicationNumber } from "@/lib/application-number";
 import {
-  TRACKING_PIPELINE,
-  getPipelineProgress,
-  getPipelineIndex,
+  APPLICANT_MILESTONES,
+  getMilestoneProgress,
+  getMilestoneIndex,
+  getMilestoneStates,
   getDocumentLabel,
+  getAdminPhase,
 } from "@/lib/application-workflow";
+import { FELLOWSHIP_STAGE_LABELS } from "@/lib/lifecycle-workflow";
 
 export async function GET() {
   const user = await getSession();
@@ -21,23 +24,30 @@ export async function GET() {
       statusHistory: { orderBy: { createdAt: "desc" } },
       documents: { orderBy: { uploadedAt: "asc" } },
       interview: true,
-      fellowship: true,
+      fellowship: { include: { installments: true, progressReports: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
   return NextResponse.json({
     updatedAt: new Date().toISOString(),
-    pipeline: TRACKING_PIPELINE,
-    applications: applications.map((app) => ({
+    pipeline: APPLICANT_MILESTONES,
+    milestones: APPLICANT_MILESTONES,
+    applications: applications.map((app) => {
+      const fellowshipStage = app.fellowship?.currentStage ?? null;
+      const milestoneStates = getMilestoneStates(app.status, fellowshipStage);
+      return {
       id: app.id,
       applicationNumber: app.applicationNumber,
       formattedNumber: formatApplicationNumber(app.applicationNumber),
       status: app.status,
-      progress: getPipelineProgress(app.status),
-      pipelineIndex: getPipelineIndex(app.status),
+      adminPhase: getAdminPhase(app.status),
+      progress: getMilestoneProgress(app.status, fellowshipStage),
+      pipelineIndex: getMilestoneIndex(app.status, fellowshipStage),
+      milestoneStates,
       rejectionReason: app.rejectionReason,
       adminNotes: app.adminNotes,
+      queryNotes: app.queryNotes,
       submittedAt: app.submittedAt,
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
@@ -70,10 +80,17 @@ export async function GET() {
       fellowship: app.fellowship
         ? {
             fellowshipId: app.fellowship.fellowshipId,
+            currentStage: app.fellowship.currentStage,
+            stageLabel: FELLOWSHIP_STAGE_LABELS[app.fellowship.currentStage] ?? app.fellowship.currentStage,
+            mentor: app.fellowship.mentor,
+            institution: app.fellowship.institution,
+            sanctionedAmount: app.fellowship.sanctionedAmount,
             isActive: app.fellowship.isActive,
             isCompleted: app.fellowship.isCompleted,
+            installmentsReleased: app.fellowship.installments.filter((i) => i.status === "RELEASED").length,
           }
         : null,
-    })),
+    };
+    }),
   });
 }

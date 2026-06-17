@@ -22,6 +22,7 @@ interface FormField {
 const CHECKBOX_LINKS: Record<string, { href: string; label: string }> = {
   terms_accepted: { href: "/terms", label: "Terms & Conditions" },
   undertaking_accepted: { href: "/undertaking", label: "Undertaking" },
+  rulebook_accepted: { href: "/rulebook", label: "Viddhakarma Research Fellowship Rulebook" },
 };
 
 export function DynamicFormFields({

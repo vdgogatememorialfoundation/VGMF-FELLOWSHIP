@@ -55,7 +55,9 @@ type TrackedApplication = {
   status: string;
   progress: number;
   pipelineIndex: number;
+  milestoneStates?: string[];
   rejectionReason: string | null;
+  queryNotes?: string | null;
   submittedAt: string | null;
   createdAt: string;
   documents: TrackingDocument[];
@@ -66,7 +68,17 @@ type TrackedApplication = {
     meetingLink: string;
     panelMembers: string;
   } | null;
-  fellowship: { fellowshipId: string; isActive: boolean; isCompleted: boolean } | null;
+  fellowship: {
+    fellowshipId: string;
+    currentStage?: string;
+    stageLabel?: string;
+    mentor?: string | null;
+    institution?: string | null;
+    sanctionedAmount?: number;
+    isActive: boolean;
+    isCompleted: boolean;
+    installmentsReleased?: number;
+  } | null;
 };
 
 const STAGE_ICONS = [Send, ShieldCheck, FileCheck2, Users, Sparkles, Mic, Trophy];
@@ -282,6 +294,57 @@ export function ApplicationTracker() {
             </div>
 
             <div className="space-y-6 px-5 py-6 sm:px-8">
+              {/* Amazon-style milestone checklist */}
+              <section className="rounded-2xl border border-[#e8f0ec] bg-white p-5">
+                <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted">
+                  Application Status
+                </h3>
+                <ul className="space-y-3">
+                  {pipeline.map((stage, index) => {
+                    const state = app.milestoneStates?.[index] ?? "pending";
+                    return (
+                      <li key={stage.key} className="flex items-center gap-3">
+                        {state === "complete" ? (
+                          <CheckCircle2 className="h-5 w-5 shrink-0 text-primary-500" />
+                        ) : state === "current" ? (
+                          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-gold" />
+                        ) : state === "query" ? (
+                          <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
+                        ) : (
+                          <Circle className="h-5 w-5 shrink-0 text-gray-300" />
+                        )}
+                        <div>
+                          <p
+                            className={`text-sm font-medium ${
+                              state === "complete"
+                                ? "text-primary-700"
+                                : state === "current"
+                                  ? "text-ink"
+                                  : state === "query"
+                                    ? "text-amber-800"
+                                    : "text-muted"
+                            }`}
+                          >
+                            {stage.label}
+                            {state === "current" && (
+                              <span className="ml-2 text-xs font-normal text-gold">In progress</span>
+                            )}
+                          </p>
+                          {(state === "current" || state === "query") && (
+                            <p className="text-xs text-muted">{stage.description}</p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {app.status === "QUERY_RAISED" && app.queryNotes && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    <strong>Query from verification team:</strong> {app.queryNotes}
+                  </div>
+                )}
+              </section>
+
               {isRejected && app.rejectionReason && (
                 <div className="flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50/80 p-4">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
@@ -417,10 +480,18 @@ export function ApplicationTracker() {
 
               {app.fellowship && (
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                  <h3 className="font-semibold text-emerald-800">Fellowship awarded</h3>
-                  <p className="mt-1 text-sm text-emerald-700">
-                    Fellowship ID: {app.fellowship.fellowshipId}
+                  <h3 className="font-semibold text-emerald-800">Fellowship Profile</h3>
+                  <p className="mt-1 font-mono text-sm font-bold text-emerald-900">
+                    {app.fellowship.fellowshipId}
                   </p>
+                  {app.fellowship.stageLabel && (
+                    <p className="mt-1 text-sm text-emerald-700">
+                      Stage: {app.fellowship.stageLabel}
+                    </p>
+                  )}
+                  {app.fellowship.institution && (
+                    <p className="text-sm text-emerald-600">Institution: {app.fellowship.institution}</p>
+                  )}
                 </div>
               )}
             </div>

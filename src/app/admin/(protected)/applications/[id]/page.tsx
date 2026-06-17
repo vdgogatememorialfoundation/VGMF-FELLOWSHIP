@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { formatCurrency } from "@/lib/utils";
 import { formatApplicationNumber } from "@/lib/application-number";
+import { InterviewSchedulePanel } from "@/components/admin/InterviewSchedulePanel";
 import {
   canApproveScrutiny,
   getNextActions,
   getDocumentLabel,
   allDocumentsApproved,
+  ADMIN_ACTION_LABELS,
+  getAdminPhase,
 } from "@/lib/application-workflow";
 
 type ApplicationDocument = {
@@ -39,10 +42,20 @@ type ApplicationData = {
   pincode: string;
   rejectionReason?: string | null;
   adminNotes?: string | null;
+  queryNotes?: string | null;
+  eligibilityNotes?: string | null;
+  verificationNotes?: string | null;
   researchProposal: Record<string, string> | null;
   budget: { total: number } | null;
   documents: ApplicationDocument[];
   committeeScores: Array<{ totalScore: number; committeeUser: { profile: { name: string } | null } }>;
+  interview: {
+    scheduledDate: string;
+    scheduledTime: string;
+    meetingLink: string;
+    panelMembers: string;
+    notes?: string | null;
+  } | null;
   statusHistory: Array<{
     id: string;
     fromStatus: string | null;
@@ -50,17 +63,6 @@ type ApplicationData = {
     notes: string | null;
     createdAt: string;
   }>;
-};
-
-const ACTION_LABELS: Record<string, string> = {
-  SCRUTINY: "Move to Scrutiny",
-  SCRUTINY_APPROVED: "Approve Scrutiny (Final)",
-  UNDER_REVIEW: "Send to Committee",
-  SHORTLISTED: "Shortlist",
-  INTERVIEW_SCHEDULED: "Schedule Interview",
-  SELECTED: "Select Fellow",
-  REJECTED: "Reject",
-  WAITLISTED: "Waitlist",
 };
 
 export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -99,6 +101,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         status,
         rejectionReason: status === "REJECTED" ? rejectionReason : undefined,
         adminNotes,
+        queryNotes: status === "QUERY_RAISED" ? adminNotes : undefined,
       }),
     });
 
@@ -160,6 +163,9 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </div>
         <StatusBadge status={app.status} />
       </div>
+      <p className="text-sm text-gray-500">
+        Workflow phase: <strong>{getAdminPhase(app.status as never)}</strong>
+      </p>
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
@@ -304,6 +310,15 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
       <div className="card space-y-4">
         <h2 className="font-semibold">Status & Final Approval</h2>
+        {["SHORTLISTED", "UNDER_REVIEW", "WAITLISTED", "INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "TECHNICAL_SCORING"].includes(
+          app.status
+        ) && (
+          <InterviewSchedulePanel
+            applicationId={id}
+            existing={app.interview}
+            onScheduled={reload}
+          />
+        )}
         <Textarea
           label="Admin notes"
           value={adminNotes}
@@ -326,7 +341,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 loading={loading}
                 onClick={() => updateStatus(action)}
               >
-                {ACTION_LABELS[action] ?? action.replace(/_/g, " ")}
+                {ADMIN_ACTION_LABELS[action] ?? action.replace(/_/g, " ")}
               </Button>
             );
           })}

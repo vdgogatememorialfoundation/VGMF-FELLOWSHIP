@@ -31,6 +31,7 @@ export const DEFAULT_FOOTER_QUICK_LINKS: NavLink[] = [
 ];
 
 export const DEFAULT_FOOTER_LEGAL_LINKS: NavLink[] = [
+  { href: "/rulebook", label: "Fellowship Rulebook" },
   { href: "/terms", label: "Terms & Conditions" },
   { href: "/undertaking", label: "Applicant Undertaking" },
   { href: "/privacy", label: "Privacy Policy" },

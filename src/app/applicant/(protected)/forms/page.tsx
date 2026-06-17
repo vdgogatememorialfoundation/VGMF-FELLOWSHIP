@@ -52,6 +52,10 @@ export default function ApplicantFormsPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [digitalUndertaking, setDigitalUndertaking] = useState<{
+    id: string;
+    pdfPath: string;
+  } | null>(null);
 
   const loadForm = useCallback(() => {
     setPageLoading(true);
@@ -98,6 +102,7 @@ export default function ApplicantFormsPage() {
           }
 
           if (d.applicationId) setApplicationId(d.applicationId);
+          if (d.digitalUndertaking) setDigitalUndertaking(d.digitalUndertaking);
           setValues(init);
         }
       })
@@ -268,6 +273,39 @@ export default function ApplicantFormsPage() {
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
+
+      {!isSubmitted && applicationId && (
+        <div
+          className={`rounded-xl border p-4 ${
+            digitalUndertaking
+              ? "border-green-200 bg-green-50"
+              : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <p className="font-medium text-gray-900">Digital Undertaking</p>
+          {digitalUndertaking ? (
+            <p className="mt-1 text-sm text-green-800">
+              Completed —{" "}
+              <a
+                href={digitalUndertaking.pdfPath}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                View signed PDF
+              </a>
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-amber-900">
+              Required before final submission.{" "}
+              <Link href="/applicant/undertaking" className="font-medium underline">
+                Complete Digital Undertaking →
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
+
       {applicationNumber && (
         <div className="card border-2 border-gold/40 bg-[#fffdf6] p-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">

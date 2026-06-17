@@ -14,6 +14,19 @@ import {
 } from "@/lib/form-validation";
 import { getFormScheduleStatus } from "@/lib/form-schedule";
 
+async function requireDigitalUndertaking(applicationId: string | null): Promise<string | null> {
+  if (!applicationId) {
+    return "Please save a draft and complete the Digital Undertaking before submitting";
+  }
+  const undertaking = await prisma.digitalUndertaking.findUnique({
+    where: { applicationId },
+  });
+  if (!undertaking) {
+    return "Please complete the Digital Undertaking (sign & submit) before final application submission";
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug") || "fellowship-application";
@@ -28,6 +41,7 @@ export async function GET(request: NextRequest) {
 
   let submission = null;
   let applicationId: string | null = null;
+  let digitalUndertaking = null;
   const uploadedFiles: Record<string, boolean> = {};
 
   if (user) {
@@ -38,10 +52,17 @@ export async function GET(request: NextRequest) {
 
     if (submission?.applicationId) {
       applicationId = submission.applicationId;
-      const docs = await prisma.applicationDocument.findMany({
-        where: { applicationId: submission.applicationId },
-        select: { type: true },
-      });
+      const [docs, undertaking] = await Promise.all([
+        prisma.applicationDocument.findMany({
+          where: { applicationId: submission.applicationId },
+          select: { type: true },
+        }),
+        prisma.digitalUndertaking.findUnique({
+          where: { applicationId: submission.applicationId },
+          select: { id: true, pdfPath: true, submittedAt: true },
+        }),
+      ]);
+      digitalUndertaking = undertaking;
 
       for (const field of template.fields) {
         if (field.fieldType !== "FILE") continue;
@@ -59,6 +80,7 @@ export async function GET(request: NextRequest) {
     submission,
     applicationId,
     uploadedFiles,
+    digitalUndertaking,
   });
 }
 
@@ -143,6 +165,22 @@ export async function POST(request: NextRequest) {
         if (validationError) {
           return NextResponse.json({ error: validationError }, { status: 400 });
         }
+
+        let checkAppId = existing.applicationId;
+        if (!checkAppId) {
+          const draftApp = await ensureDraftApplication(
+            user.id,
+            submissionId,
+            mergedData,
+            null
+          );
+          checkAppId = draftApp.id;
+        }
+
+        const undertakingError = await requireDigitalUndertaking(checkAppId);
+        if (undertakingError) {
+          return NextResponse.json({ error: undertakingError }, { status: 400 });
+        }
       }
 
       const submission = await prisma.formSubmission.update({
@@ -209,6 +247,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (nextStatus === "SUBMITTED") {
+      const validationError = validateFormSubmission(template.fields, mergedData);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
+    }
+
     const submission = await prisma.formSubmission.create({
       data: {
         formTemplateId,
@@ -226,10 +271,17 @@ export async function POST(request: NextRequest) {
       const application = await ensureDraftApplication(user.id, submission.id, mergedData);
       applicationId = application.id;
     } else if (nextStatus === "SUBMITTED") {
+      const draftApp = await ensureDraftApplication(user.id, submission.id, mergedData);
+      const undertakingError = await requireDigitalUndertaking(draftApp.id);
+      if (undertakingError) {
+        return NextResponse.json({ error: undertakingError }, { status: 400 });
+      }
+
       const application = await syncApplicationFromFormSubmission(
         user.id,
         submission.id,
-        mergedData
+        mergedData,
+        draftApp.id
       );
       applicationId = application.id;
       applicationNumber = application.applicationNumber;

@@ -1,4 +1,15 @@
 import type { ApplicationStatus, DocumentStatus } from "@prisma/client";
+import {
+  APPLICANT_MILESTONES,
+  ALLOWED_TRANSITIONS,
+  ADMIN_ACTION_LABELS,
+  getMilestoneIndex,
+  getMilestoneProgress,
+  getMilestoneStates,
+  getLifecycleStatusLabel,
+  getLifecycleStatusColor,
+  getAdminPhase,
+} from "./lifecycle-workflow";
 
 export type TrackingDocument = {
   id: string;
@@ -16,50 +27,24 @@ export type TrackingStage = {
   statuses: ApplicationStatus[];
 };
 
-export const TRACKING_PIPELINE: TrackingStage[] = [
-  {
-    key: "submitted",
-    label: "Submitted",
-    description: "Application received by the foundation",
-    statuses: ["SUBMITTED"],
-  },
-  {
-    key: "scrutiny",
-    label: "Administrative Scrutiny",
-    description: "Details and documents are being verified",
-    statuses: ["SCRUTINY"],
-  },
-  {
-    key: "scrutiny_approved",
-    label: "Scrutiny Cleared",
-    description: "All details and documents approved",
-    statuses: ["SCRUTINY_APPROVED"],
-  },
-  {
-    key: "committee",
-    label: "Committee Review",
-    description: "Review committee is evaluating your proposal",
-    statuses: ["UNDER_REVIEW"],
-  },
-  {
-    key: "shortlisted",
-    label: "Shortlisted",
-    description: "Your application is on the shortlist",
-    statuses: ["SHORTLISTED", "WAITLISTED"],
-  },
-  {
-    key: "interview",
-    label: "Interview",
-    description: "Interview round scheduled or completed",
-    statuses: ["INTERVIEW_SCHEDULED"],
-  },
-  {
-    key: "selected",
-    label: "Final Selection",
-    description: "Fellowship award decision",
-    statuses: ["SELECTED"],
-  },
-];
+/** @deprecated Use APPLICANT_MILESTONES — kept for backward compatibility */
+export const TRACKING_PIPELINE: TrackingStage[] = APPLICANT_MILESTONES.map((m) => ({
+  key: m.key,
+  label: m.label,
+  description: m.description,
+  statuses: m.statuses,
+}));
+
+export {
+  APPLICANT_MILESTONES,
+  ADMIN_ACTION_LABELS,
+  getMilestoneStates,
+  getMilestoneIndex,
+  getMilestoneProgress,
+  getLifecycleStatusLabel,
+  getLifecycleStatusColor,
+  getAdminPhase,
+};
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   NCISM_REGISTRATION: "NCISM Registration Certificate",
@@ -78,20 +63,11 @@ export function getDocumentLabel(type: string): string {
 }
 
 export function getPipelineIndex(status: ApplicationStatus): number {
-  if (status === "REJECTED") return -1;
-  if (status === "DRAFT") return -2;
-
-  for (let i = TRACKING_PIPELINE.length - 1; i >= 0; i--) {
-    if (TRACKING_PIPELINE[i].statuses.includes(status)) return i;
-  }
-  return 0;
+  return getMilestoneIndex(status);
 }
 
 export function getPipelineProgress(status: ApplicationStatus): number {
-  if (status === "REJECTED" || status === "DRAFT") return 0;
-  const index = getPipelineIndex(status);
-  if (index < 0) return 0;
-  return Math.round(((index + 1) / TRACKING_PIPELINE.length) * 100);
+  return getMilestoneProgress(status);
 }
 
 export function allDocumentsApproved(documents: TrackingDocument[]): boolean {
@@ -110,7 +86,7 @@ export function canApproveScrutiny(
   documents: TrackingDocument[]
 ): { ok: boolean; reason?: string } {
   if (status !== "SCRUTINY") {
-    return { ok: false, reason: "Application must be in Scrutiny stage" };
+    return { ok: false, reason: "Application must be in Document Verification stage" };
   }
   if (documents.length === 0) {
     return { ok: false, reason: "No documents uploaded yet" };
@@ -118,21 +94,11 @@ export function canApproveScrutiny(
   if (!allDocumentsApproved(documents)) {
     return {
       ok: false,
-      reason: "Approve or request resubmission for every document before final scrutiny approval",
+      reason: "Approve or request resubmission for every document before marking verified",
     };
   }
   return { ok: true };
 }
-
-const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]>> = {
-  SUBMITTED: ["SCRUTINY", "REJECTED"],
-  SCRUTINY: ["SCRUTINY_APPROVED", "REJECTED"],
-  SCRUTINY_APPROVED: ["UNDER_REVIEW", "REJECTED"],
-  UNDER_REVIEW: ["SHORTLISTED", "REJECTED", "WAITLISTED"],
-  SHORTLISTED: ["INTERVIEW_SCHEDULED", "SELECTED", "REJECTED", "WAITLISTED"],
-  WAITLISTED: ["SHORTLISTED", "SELECTED", "REJECTED"],
-  INTERVIEW_SCHEDULED: ["SELECTED", "REJECTED", "WAITLISTED"],
-};
 
 export function validateStatusTransition(
   from: ApplicationStatus,
@@ -143,16 +109,16 @@ export function validateStatusTransition(
 
   if (to === "SCRUTINY_APPROVED") {
     const check = canApproveScrutiny(from, documents);
-    if (!check.ok) return check.reason ?? "Cannot approve scrutiny";
+    if (!check.ok) return check.reason ?? "Cannot verify documents";
+  }
+
+  if (to === "QUERY_RESPONDED" && from !== "QUERY_RAISED") {
+    return "Can only mark responded when a query is raised";
   }
 
   const allowed = ALLOWED_TRANSITIONS[from];
   if (!allowed?.includes(to)) {
-    return `Cannot move from ${from.replace(/_/g, " ")} to ${to.replace(/_/g, " ")}`;
-  }
-
-  if (to === "UNDER_REVIEW" && from !== "SCRUTINY_APPROVED") {
-    return "Scrutiny must be approved before committee review";
+    return `Cannot move from ${getLifecycleStatusLabel(from)} to ${getLifecycleStatusLabel(to)}`;
   }
 
   return null;

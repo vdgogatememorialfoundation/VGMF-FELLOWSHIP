@@ -15,6 +15,7 @@ export function ReviewerDashboard() {
     budgetJustification: 0, viddhakarmaRelevance: 0,
   });
   const [remarks, setRemarks] = useState("");
+  const [isShortlisted, setIsShortlisted] = useState(false);
 
   useEffect(() => {
     fetch("/api/committee/scores").then((r) => r.json()).then((d) => setApplications(d.applications || []));
@@ -24,7 +25,7 @@ export function ReviewerDashboard() {
     await fetch("/api/committee/scores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ applicationId, ...scores, remarks, isShortlisted: false }),
+      body: JSON.stringify({ applicationId, ...scores, remarks, isShortlisted }),
     });
     setSelected(null);
     fetch("/api/committee/scores").then((r) => r.json()).then((d) => setApplications(d.applications || []));
@@ -92,6 +93,15 @@ export function ReviewerDashboard() {
           ))}
           <p className="font-medium">Total: {totalScore}/100</p>
           <Textarea label="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isShortlisted}
+              onChange={(e) => setIsShortlisted(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary-600"
+            />
+            Recommend for shortlisting
+          </label>
           <div className="flex gap-2">
             <Button onClick={() => submitScore(selected)}>Submit Score</Button>
             <Button variant="secondary" onClick={() => setSelected(null)}>Cancel</Button>

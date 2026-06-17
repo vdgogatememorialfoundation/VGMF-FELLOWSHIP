@@ -8,6 +8,7 @@ const SLUG_MAP: Record<string, CmsPageSlug> = {
   about: "ABOUT",
   terms: "TERMS",
   undertaking: "UNDERTAKING",
+  rulebook: "RULEBOOK",
   privacy: "PRIVACY",
   "refund-policy": "REFUND",
 };

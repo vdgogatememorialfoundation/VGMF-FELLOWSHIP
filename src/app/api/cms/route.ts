@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
-import { getSiteSettings, getActiveNotices } from "@/lib/cms";
+import { getSiteSettings, getActiveNotices, getCmsPage } from "@/lib/cms";
 import prisma from "@/lib/db";
+import type { CmsPageSlug } from "@prisma/client";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
+  const slug = searchParams.get("slug") as CmsPageSlug | null;
+
+  if (slug) {
+    const page = await getCmsPage(slug);
+    return NextResponse.json({ page });
+  }
 
   if (type === "notices") {
     const notices = await getActiveNotices();

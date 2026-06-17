@@ -28,6 +28,12 @@ function mapResearchArea(value: string): ResearchArea {
     "MUSCULOSKELETAL DISORDERS": "MUSCULOSKELETAL_DISORDERS",
     "PAIN MANAGEMENT": "PAIN_MANAGEMENT",
     "NEUROLOGICAL DISORDERS": "NEUROLOGICAL_DISORDERS",
+    "COMPARATIVE STUDIES": "COMPARATIVE_STUDIES",
+    "MECHANISM BASED RESEARCH": "MECHANISM_BASED_RESEARCH",
+    "MECHANISM-BASED RESEARCH": "MECHANISM_BASED_RESEARCH",
+    "CLASSICAL DOCUMENTATION": "CLASSICAL_DOCUMENTATION",
+    "PROTOCOL DEVELOPMENT": "PROTOCOL_DEVELOPMENT",
+    "STANDARDIZATION AND PROTOCOL DEVELOPMENT": "PROTOCOL_DEVELOPMENT",
     OTHER: "OTHER",
   };
   return map[value.trim().toUpperCase()] ?? "OTHER";
@@ -59,8 +65,35 @@ function buildApplicationFields(data: FormData, status: ApplicationStatus) {
       ? new Date()
       : null,
     status,
-    submittedAt: status === "SUBMITTED" ? new Date() : null,
+    submittedAt: status !== "DRAFT" ? new Date() : null,
   };
+}
+
+async function attachBudget(applicationId: string, data: FormData) {
+  const keys = [
+    "equipment",
+    "consumables",
+    "travel",
+    "documentation",
+    "publication",
+    "other",
+  ] as const;
+  const budgetData: Record<string, number> = {};
+  let total = 0;
+
+  for (const key of keys) {
+    const val = formInt(data, key, 0);
+    budgetData[key] = val;
+    total += val;
+  }
+
+  if (total <= 0) return;
+
+  await prisma.budget.upsert({
+    where: { applicationId },
+    update: { ...budgetData, total },
+    create: { applicationId, ...budgetData, total },
+  });
 }
 
 function buildResearchProposalData(data: FormData) {
@@ -109,6 +142,7 @@ export async function ensureDraftApplication(
     });
 
     await attachResearchProposal(application.id, data);
+    await attachBudget(application.id, data);
 
     await prisma.formSubmission.update({
       where: { id: submissionId },
@@ -134,6 +168,7 @@ export async function ensureDraftApplication(
   });
 
   await attachResearchProposal(application.id, data);
+  await attachBudget(application.id, data);
 
   await prisma.formSubmission.update({
     where: { id: submissionId },
@@ -181,6 +216,7 @@ export async function syncApplicationFromFormSubmission(
     });
 
     await attachResearchProposal(application.id, data);
+    await attachBudget(application.id, data);
 
     await prisma.formSubmission.update({
       where: { id: submissionId },
@@ -216,6 +252,7 @@ export async function syncApplicationFromFormSubmission(
   });
 
   await attachResearchProposal(application.id, data);
+  await attachBudget(application.id, data);
 
   await prisma.formSubmission.update({
     where: { id: submissionId },

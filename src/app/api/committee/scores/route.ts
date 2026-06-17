@@ -52,6 +52,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const app = await prisma.application.findUnique({ where: { id: applicationId } });
+    if (app?.status === "UNDER_REVIEW") {
+      await prisma.application.update({
+        where: { id: applicationId },
+        data: {
+          status: "TECHNICAL_SCORING",
+          statusHistory: {
+            create: {
+              fromStatus: "UNDER_REVIEW",
+              toStatus: "TECHNICAL_SCORING",
+              changedBy: user.id,
+              notes: `Technical score submitted: ${totalScore}/100`,
+            },
+          },
+        },
+      });
+    }
+
     return NextResponse.json({ success: true, score });
   } catch (error) {
     console.error("Scoring error:", error);

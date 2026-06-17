@@ -1,4 +1,9 @@
 import type { FormFieldType } from "@prisma/client";
+import {
+  FILE_FIELD_DOCUMENT_TYPES,
+  validateMandatoryDocuments,
+  validateBudgetTotal,
+} from "./form-documents";
 
 export type FormFieldDefinition = {
   fieldKey: string;
@@ -7,9 +12,7 @@ export type FormFieldDefinition = {
   required: boolean;
 };
 
-export const FILE_FIELD_DOCUMENT_TYPES: Record<string, string> = {
-  ncism_registration_certificate: "NCISM_REGISTRATION",
-};
+export { FILE_FIELD_DOCUMENT_TYPES };
 
 export function isCheckboxAccepted(value: unknown): boolean {
   return value === true || value === "true" || value === "on" || value === "1";
@@ -51,8 +54,27 @@ export function validateFormSubmission(
     return "You must accept the Terms & Conditions to submit your application";
   }
 
-  if (!isCheckboxAccepted(data.undertaking_accepted)) {
-    return "You must accept the Undertaking to submit your application";
+  if (!isCheckboxAccepted(data.rulebook_accepted)) {
+    return "You must accept the Viddhakarma Research Fellowship Rulebook to submit your application";
+  }
+
+  // Digital undertaking is validated separately via applicationId in forms route
+
+  const docError = validateMandatoryDocuments([], data);
+  if (docError) return docError;
+
+  const hasBudgetFields = [
+    "equipment",
+    "consumables",
+    "travel",
+    "documentation",
+    "publication",
+    "other",
+  ].some((key) => data[key] != null && String(data[key]).trim() !== "");
+
+  if (hasBudgetFields) {
+    const budgetError = validateBudgetTotal(data);
+    if (budgetError) return budgetError;
   }
 
   return null;

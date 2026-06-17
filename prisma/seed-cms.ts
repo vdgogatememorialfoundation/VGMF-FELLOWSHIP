@@ -11,6 +11,7 @@ import {
   DEFAULT_JOURNEY_STEPS,
   DEFAULT_FAQ_ITEMS,
 } from "../src/lib/site-content";
+import { RULEBOOK_TITLE, RULEBOOK_CONTENT } from "../src/lib/rulebook-content";
 
 const prisma = new PrismaClient();
 
@@ -90,6 +91,11 @@ We provide grants up to ₹75,000 for approved research proposals, along with me
 7. I agree to abide by all decisions of the Review Committee and Trustees of the Vaidya Gogate Memorial Foundation.`,
   },
   {
+    slug: "RULEBOOK" as const,
+    title: RULEBOOK_TITLE,
+    content: RULEBOOK_CONTENT,
+  },
+  {
     slug: "PRIVACY" as const,
     title: "Privacy Policy",
     content: `We collect personal and professional information solely for fellowship application processing.
@@ -134,12 +140,30 @@ const DEFAULT_FIELDS = [
   { section: "Professional Details", label: "NCISM Registration Number", fieldKey: "registration_number", fieldType: "TEXT" as const, required: true, order: 16, helpText: "Your NCISM registration number as on the certificate" },
   { section: "Professional Details", label: "NCISM Registration Certificate", fieldKey: "ncism_registration_certificate", fieldType: "FILE" as const, required: true, order: 17, helpText: "Upload NCISM registration certificate (PDF or image, max 5 MB) to verify you are a registered doctor" },
   { section: "Professional Details", label: "Years of Clinical Practice", fieldKey: "years_of_practice", fieldType: "NUMBER" as const, required: true, order: 18 },
-  { section: "Research Proposal", label: "Project Title", fieldKey: "project_title", fieldType: "TEXT" as const, required: true, order: 19 },
-  { section: "Research Proposal", label: "Research Area", fieldKey: "research_area", fieldType: "SELECT" as const, required: true, order: 20, options: '["Musculoskeletal Disorders","Pain Management","Neurological Disorders","Other"]' },
-  { section: "Research Proposal", label: "Research Objectives", fieldKey: "objectives", fieldType: "TEXTAREA" as const, required: true, order: 21 },
-  { section: "Research Proposal", label: "Methodology", fieldKey: "methodology", fieldType: "TEXTAREA" as const, required: true, order: 22 },
-  { section: "Declarations", label: "Terms & Conditions", fieldKey: "terms_accepted", fieldType: "CHECKBOX" as const, required: true, order: 98 },
-  { section: "Declarations", label: "Applicant Undertaking", fieldKey: "undertaking_accepted", fieldType: "CHECKBOX" as const, required: true, order: 99 },
+  { section: "Professional Details", label: "Viddhakarma Clinical Experience", fieldKey: "viddhakarma_experience", fieldType: "TEXTAREA" as const, required: true, order: 19, helpText: "Describe your clinical experience in Viddhakarma procedures" },
+  { section: "Professional Details", label: "Publications Summary", fieldKey: "publications_summary", fieldType: "TEXTAREA" as const, required: false, order: 20 },
+  { section: "Professional Details", label: "Higher Qualification (MD/MS/PhD)", fieldKey: "higher_qualification", fieldType: "TEXT" as const, required: false, order: 21, helpText: "MD/MS (Ayurveda) or PhD — preferred but not mandatory" },
+  { section: "Research Proposal", label: "Project Title", fieldKey: "project_title", fieldType: "TEXT" as const, required: true, order: 22 },
+  { section: "Research Proposal", label: "Research Area", fieldKey: "research_area", fieldType: "SELECT" as const, required: true, order: 23, options: '["Musculoskeletal Disorders","Pain Management","Neurological Disorders","Comparative Studies","Mechanism Based Research","Classical Documentation","Protocol Development","Other"]' },
+  { section: "Research Proposal", label: "Research Objectives", fieldKey: "objectives", fieldType: "TEXTAREA" as const, required: true, order: 24 },
+  { section: "Research Proposal", label: "Methodology", fieldKey: "methodology", fieldType: "TEXTAREA" as const, required: true, order: 25 },
+  { section: "Research Proposal", label: "Sample Size", fieldKey: "sample_size", fieldType: "TEXT" as const, required: true, order: 26 },
+  { section: "Research Proposal", label: "Study Duration", fieldKey: "study_duration", fieldType: "SELECT" as const, required: true, order: 27, options: '["6 months","12 months","6-12 months"]' },
+  { section: "Research Proposal", label: "Expected Outcomes", fieldKey: "expected_outcomes", fieldType: "TEXTAREA" as const, required: true, order: 28 },
+  { section: "Budget Plan", label: "Equipment (₹)", fieldKey: "equipment", fieldType: "NUMBER" as const, required: true, order: 30, helpText: "Total budget must not exceed ₹75,000" },
+  { section: "Budget Plan", label: "Consumables (₹)", fieldKey: "consumables", fieldType: "NUMBER" as const, required: false, order: 31 },
+  { section: "Budget Plan", label: "Travel (₹)", fieldKey: "travel", fieldType: "NUMBER" as const, required: false, order: 32 },
+  { section: "Budget Plan", label: "Documentation (₹)", fieldKey: "documentation", fieldType: "NUMBER" as const, required: false, order: 33 },
+  { section: "Budget Plan", label: "Publication (₹)", fieldKey: "publication", fieldType: "NUMBER" as const, required: false, order: 34 },
+  { section: "Budget Plan", label: "Other (₹)", fieldKey: "other", fieldType: "NUMBER" as const, required: false, order: 35 },
+  { section: "Mandatory Documents", label: "Curriculum Vitae (CV)", fieldKey: "cv_upload", fieldType: "FILE" as const, required: true, order: 40, helpText: "Upload CV as PDF (max 5 MB)" },
+  { section: "Mandatory Documents", label: "Registration Certificate", fieldKey: "registration_certificate_upload", fieldType: "FILE" as const, required: true, order: 41, helpText: "State/Central Ayurvedic Council registration certificate" },
+  { section: "Mandatory Documents", label: "Research Proposal PDF", fieldKey: "research_proposal_pdf", fieldType: "FILE" as const, required: true, order: 42 },
+  { section: "Mandatory Documents", label: "Budget Proposal PDF", fieldKey: "budget_proposal_pdf", fieldType: "FILE" as const, required: true, order: 43 },
+  { section: "Mandatory Documents", label: "Timeline of Study PDF", fieldKey: "timeline_pdf", fieldType: "FILE" as const, required: true, order: 44 },
+  { section: "Mandatory Documents", label: "Ethical Clearance (if applicable)", fieldKey: "ethical_clearance", fieldType: "FILE" as const, required: false, order: 45 },
+  { section: "Declarations", label: "Terms & Conditions", fieldKey: "terms_accepted", fieldType: "CHECKBOX" as const, required: true, order: 97 },
+  { section: "Declarations", label: "Fellowship Rulebook", fieldKey: "rulebook_accepted", fieldType: "CHECKBOX" as const, required: true, order: 98 },
 ];
 
 async function main() {
@@ -220,7 +244,7 @@ async function main() {
   for (const page of DEFAULT_PAGES) {
     await prisma.cmsPage.upsert({
       where: { slug: page.slug },
-      update: {},
+      update: { title: page.title, content: page.content },
       create: page,
     });
   }
@@ -278,6 +302,11 @@ async function main() {
   }
 
   console.log("CMS seed completed");
+
+  await prisma.formField.updateMany({
+    where: { fieldKey: "undertaking_accepted" },
+    data: { isActive: false },
+  });
 }
 
 main()

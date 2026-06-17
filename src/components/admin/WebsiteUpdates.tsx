@@ -29,6 +29,7 @@ const PAGE_SLUGS = [
   { slug: "ABOUT", label: "About Us", route: "/about" },
   { slug: "TERMS", label: "Terms & Conditions", route: "/terms" },
   { slug: "UNDERTAKING", label: "Applicant Undertaking", route: "/undertaking" },
+  { slug: "RULEBOOK", label: "Fellowship Rulebook", route: "/rulebook" },
   { slug: "PRIVACY", label: "Privacy Policy", route: "/privacy" },
   { slug: "REFUND", label: "Refund Policy", route: "/refund-policy" },
 ];

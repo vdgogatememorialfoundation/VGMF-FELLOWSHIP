@@ -35,7 +35,7 @@ export { generateUserId, generateApplicationNumber } from "./numeric-id";
 export async function generateFellowshipId(): Promise<string> {
   const year = new Date().getFullYear();
   const count = await prisma.fellowship.count();
-  return `FEL-${year}-${String(count + 1).padStart(5, "0")}`;
+  return `VGMF-VRF-${year}-${String(count + 1).padStart(3, "0")}`;
 }
 
 export async function createSession(userId: string): Promise<string> {
