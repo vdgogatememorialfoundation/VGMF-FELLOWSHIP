@@ -3,7 +3,9 @@ import { getSession, getPortalPath } from "@/lib/auth";
 import { Sidebar, TopBar } from "@/components/layout/Sidebar";
 import type { UserRole } from "@prisma/client";
 
-import type { PortalType } from "@/lib/portal";(allowedRoles?: UserRole[]) {
+import type { PortalType } from "@/lib/portal";
+
+export async function requireAuth(allowedRoles?: UserRole[]) {
   const user = await getSession();
   if (!user) redirect("/login");
 
