@@ -61,14 +61,39 @@ export async function PUT(request: NextRequest) {
   }
 
   if (section === "notice") {
+    const noticeData = {
+      title: data.title,
+      content: data.content,
+      category: data.category,
+      linkUrl: data.linkUrl,
+      linkLabel: data.linkLabel,
+      isActive: data.isActive,
+      priority: data.priority,
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+      publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
+    };
+
     if (data.id) {
+      const { publishedAt: _p, ...updateData } = noticeData;
       const notice = await prisma.notice.update({
         where: { id: data.id },
-        data,
+        data: updateData,
       });
       return NextResponse.json({ notice });
     }
-    const notice = await prisma.notice.create({ data });
+
+    const notice = await prisma.notice.create({
+      data: {
+        title: noticeData.title,
+        content: noticeData.content,
+        category: noticeData.category ?? "GENERAL",
+        linkUrl: noticeData.linkUrl ?? null,
+        linkLabel: noticeData.linkLabel ?? null,
+        isActive: noticeData.isActive ?? true,
+        priority: noticeData.priority ?? 0,
+        expiresAt: noticeData.expiresAt ?? null,
+      },
+    });
     return NextResponse.json({ notice });
   }
 

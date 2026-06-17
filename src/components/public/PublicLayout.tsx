@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Mail, Phone, Calendar, UserPlus } from "lucide-react";
 import { getSiteSettings, getActiveNotices } from "@/lib/cms";
 import { AnnouncementTicker } from "./AnnouncementTicker";
+import { OfficialNotices, OfficialNoticesEmpty, type PublicNotice } from "./OfficialNotices";
 
 export async function PublicHeader() {
   const settings = await getSiteSettings();
@@ -126,38 +127,19 @@ export async function PublicFooter() {
 
 export async function NoticesSection() {
   const notices = await getActiveNotices();
-  if (notices.length === 0) return null;
+  if (notices.length === 0) return <OfficialNoticesEmpty />;
 
-  const visibleNotices = notices.slice(0, 4);
+  const payload: PublicNotice[] = notices.map((notice) => ({
+    id: notice.id,
+    title: notice.title,
+    content: notice.content,
+    category: (notice.category ?? "GENERAL") as PublicNotice["category"],
+    linkUrl: notice.linkUrl,
+    linkLabel: notice.linkLabel,
+    priority: notice.priority,
+    publishedAt: notice.publishedAt.toISOString(),
+    expiresAt: notice.expiresAt?.toISOString() ?? null,
+  }));
 
-  return (
-    <section id="notices" className="border-y border-[#e8e2d6] bg-[#faf8f3] px-6 py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-bold text-ink">Notices</h2>
-          <span className="text-xs text-muted">{visibleNotices.length} update{visibleNotices.length !== 1 ? "s" : ""}</span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {visibleNotices.map((notice) => (
-            <div
-              key={notice.id}
-              className="rounded-xl border border-[#e8e2d6] bg-white px-4 py-3 shadow-sm"
-              title={notice.content}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="line-clamp-1 text-sm font-semibold text-ink">{notice.title}</h3>
-                <span className="shrink-0 text-[10px] font-medium text-muted">
-                  {new Date(notice.publishedAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </span>
-              </div>
-              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-soft">{notice.content}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+  return <OfficialNotices notices={payload} />;
 }

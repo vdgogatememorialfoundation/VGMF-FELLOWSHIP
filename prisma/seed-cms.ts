@@ -168,7 +168,10 @@ async function main() {
       data: {
         title: "Fellowship Applications Open for 2026",
         content:
-          "Applications for the Vaidya Gogate Memorial Foundation Research Fellowship 2026 are now open. Register on the portal and complete your application before the deadline.",
+          "Applications for the Vaidya Gogate Memorial Foundation Research Fellowship 2026 are now open. Register and complete your application before the deadline.",
+        category: "EVENT",
+        linkUrl: "/register",
+        linkLabel: "Apply now",
         isActive: true,
         priority: 10,
       },

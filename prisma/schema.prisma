@@ -544,16 +544,27 @@ model CmsPage {
   @@map("cms_pages")
 }
 
+enum NoticeCategory {
+  EVENT
+  DEADLINE
+  GENERAL
+  URGENT
+  RESULT
+}
+
 model Notice {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
-  content     String    @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  priority    Int       @default(0)
-  publishedAt DateTime  @default(now()) @map("published_at")
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  content     String         @db.Text
+  category    NoticeCategory @default(GENERAL)
+  linkUrl     String?        @map("link_url")
+  linkLabel   String?        @map("link_label")
+  isActive    Boolean        @default(true) @map("is_active")
+  priority    Int            @default(0)
+  publishedAt DateTime       @default(now()) @map("published_at")
+  expiresAt   DateTime?      @map("expires_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
 
   @@map("notices")
 }
