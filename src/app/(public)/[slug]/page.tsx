@@ -26,9 +26,9 @@ export default async function CmsPublicPage({
     <div className="min-h-screen">
       <PublicHeader />
       <main className="mx-auto max-w-4xl px-6 py-16">
-        <h1 className="text-3xl font-bold text-gray-900">{page.title}</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">{page.title}</h1>
         <div
-          className="prose prose-green mt-8 max-w-none text-gray-700"
+          className="prose prose-green mt-8 max-w-none rounded-3xl border border-primary-100 bg-white p-8 text-ink-soft shadow-sm prose-headings:font-display prose-headings:font-extrabold"
           dangerouslySetInnerHTML={{ __html: page.content.replace(/\n/g, "<br/>") }}
         />
       </main>

@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Libre_Baskerville } from "next/font/google";
+import { Plus_Jakarta_Sans, Syne } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME } from "@/lib/constants";
 
-const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans" });
-const display = Libre_Baskerville({
+const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  variable: "--font-sans",
+});
+
+const display = Syne({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
   variable: "--font-display",
 });
 

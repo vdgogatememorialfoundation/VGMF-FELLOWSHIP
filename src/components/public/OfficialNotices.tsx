@@ -124,13 +124,13 @@ export function OfficialNotices({ notices }: { notices: PublicNotice[] }) {
   }, [notices]);
 
   return (
-    <section id="notices" className="px-6 py-10">
+    <section id="notices" className="px-6 py-10 bg-gradient-to-b from-primary-50/50 to-transparent">
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-3xl border border-[#e8e2d6] bg-white p-5 shadow-md sm:p-6">
+        <div className="rounded-[2rem] border border-primary-100 bg-white p-5 shadow-[0_20px_60px_rgba(27,107,82,0.1)] sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <Megaphone className="h-5 w-5 text-[#3b82f6]" aria-hidden />
-              <h2 className="font-display text-xl font-bold text-[#b45309]">Official notices</h2>
+              <Megaphone className="h-5 w-5 text-primary-500" aria-hidden />
+              <h2 className="font-display text-xl font-extrabold text-ink">Official notices</h2>
             </div>
             <span className="rounded-full bg-[#f4faf7] px-2.5 py-0.5 text-xs font-medium text-muted">
               {filtered.length} active
@@ -208,12 +208,12 @@ export function OfficialNotices({ notices }: { notices: PublicNotice[] }) {
 
 export function OfficialNoticesEmpty() {
   return (
-    <section id="notices" className="px-6 py-10">
+    <section id="notices" className="bg-gradient-to-b from-primary-50/50 to-transparent px-6 py-10">
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-3xl border border-[#e8e2d6] bg-white p-6 shadow-md text-center">
-          <Megaphone className="mx-auto h-8 w-8 text-[#3b82f6]" />
-          <h2 className="mt-3 font-display text-lg font-bold text-[#b45309]">Official notices</h2>
-          <p className="mt-2 text-sm text-muted">No active notices at this time.</p>
+        <div className="rounded-[2rem] border border-primary-100 bg-white p-6 text-center shadow-[0_20px_60px_rgba(27,107,82,0.1)]">
+          <Megaphone className="mx-auto h-8 w-8 text-primary-500" />
+          <h2 className="mt-3 font-display text-lg font-extrabold text-ink">Official notices</h2>
+          <p className="mt-2 text-sm text-muted">No active notices right now — check back soon ✦</p>
         </div>
       </div>
     </section>

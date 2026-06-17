@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Phone, Calendar, UserPlus } from "lucide-react";
+import { Mail, Phone, Sparkles, UserPlus } from "lucide-react";
 import { getSiteSettings, getActiveNotices } from "@/lib/cms";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 import { OfficialNotices, OfficialNoticesEmpty, type PublicNotice } from "./OfficialNotices";
+import { PublicNav } from "./PublicNav";
 
 export async function PublicHeader() {
   const settings = await getSiteSettings();
@@ -16,7 +17,7 @@ export async function PublicHeader() {
             {settings.contactEmail && (
               <a
                 href={`mailto:${settings.contactEmail}`}
-                className="inline-flex items-center gap-1.5 hover:text-primary-600"
+                className="inline-flex items-center gap-1.5 font-medium hover:text-primary-600"
               >
                 <Mail className="h-3.5 w-3.5" />
                 {settings.contactEmail}
@@ -25,23 +26,24 @@ export async function PublicHeader() {
             {settings.contactPhone && (
               <a
                 href={`tel:${settings.contactPhone}`}
-                className="inline-flex items-center gap-1.5 hover:text-primary-600"
+                className="inline-flex items-center gap-1.5 font-medium hover:text-primary-600"
               >
                 <Phone className="h-3.5 w-3.5" />
                 {settings.contactPhone}
               </a>
             )}
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              Fellowship 2026
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-700">
+              <Sparkles className="h-3 w-3" />
+              2026 Open
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/register" className="inline-flex items-center gap-1.5 font-semibold text-primary-600 hover:text-primary-700">
-              <UserPlus className="h-3.5 w-3.5" />
-              Apply / Register
-            </Link>
-          </div>
+          <Link
+            href="/register"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-primary-700"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Apply now
+          </Link>
         </div>
       </div>
 
@@ -49,8 +51,8 @@ export async function PublicHeader() {
         <AnnouncementTicker text={settings.tickerText} />
       )}
 
-      <header className="site-header">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <header className="site-header relative">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           <Link href="/" className="flex items-center gap-3">
             {settings.logoUrl ? (
               <Image
@@ -58,27 +60,23 @@ export async function PublicHeader() {
                 alt={settings.siteName}
                 width={48}
                 height={48}
-                className="h-12 w-12 object-contain"
+                className="h-11 w-11 rounded-2xl object-contain"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-lg font-bold text-white shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-sm font-extrabold text-white shadow-lg">
                 VG
               </div>
             )}
             <div>
-              <h1 className="font-display text-base font-bold leading-tight text-ink sm:text-lg">
+              <p className="font-display text-sm font-extrabold leading-tight text-ink sm:text-base">
                 Vaidya Gogate Memorial Foundation
-              </h1>
-              <p className="text-xs text-muted">{settings.siteTagline || "Fellowship Portal 2026"}</p>
+              </p>
+              <p className="text-[11px] font-semibold text-muted">
+                {settings.siteTagline || "Fellowship Portal 2026"}
+              </p>
             </div>
           </Link>
-          <nav className="hidden items-center gap-6 md:flex">
-            <Link href="/" className="text-sm font-medium text-ink-soft hover:text-primary-600">Home</Link>
-            <Link href="/about" className="text-sm font-medium text-ink-soft hover:text-primary-600">Foundation</Link>
-            <Link href="/#notices" className="text-sm font-medium text-ink-soft hover:text-primary-600">Notices</Link>
-            <Link href="/#contact" className="text-sm font-medium text-ink-soft hover:text-primary-600">Contact</Link>
-            <Link href="/register" className="btn-primary text-sm">Apply Now</Link>
-          </nav>
+          <PublicNav />
         </div>
       </header>
     </div>
@@ -89,30 +87,40 @@ export async function PublicFooter() {
   const settings = await getSiteSettings();
 
   return (
-    <footer id="contact" className="border-t border-[#e8e2d6] bg-white px-6 py-10">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2">
+    <footer id="contact" className="dark-section border-t border-white/10 px-6 py-12">
+      <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-2">
         <div>
-          <p className="font-display text-lg font-bold text-ink">Vaidya Gogate Memorial Foundation</p>
-          <p className="mt-2 text-sm text-muted">{settings.siteTagline}</p>
-          <p className="mt-3 text-sm text-muted">Advancing Ayurveda since 1972</p>
+          <p className="font-display text-xl font-extrabold text-white">
+            Vaidya Gogate Memorial Foundation
+          </p>
+          <p className="mt-2 text-sm text-white/60">{settings.siteTagline}</p>
+          <p className="mt-3 text-sm text-white/50">Advancing Ayurveda since 1972</p>
           {settings.contactEmail && (
-            <p className="mt-3 text-sm text-muted">{settings.contactEmail}</p>
+            <p className="mt-4 text-sm text-white/60">{settings.contactEmail}</p>
           )}
           {settings.contactPhone && (
-            <p className="text-sm text-muted">{settings.contactPhone}</p>
+            <p className="text-sm text-white/60">{settings.contactPhone}</p>
           )}
         </div>
         <div>
-          <p className="font-semibold text-ink">Legal & Info</p>
+          <p className="font-bold text-white">Legal & Info</p>
           <div className="mt-3 flex flex-col gap-2 text-sm">
-            <Link href="/about" className="text-muted hover:text-primary-600">About Us</Link>
-            <Link href="/terms" className="text-muted hover:text-primary-600">Terms & Conditions</Link>
-            <Link href="/privacy" className="text-muted hover:text-primary-600">Privacy Policy</Link>
-            <Link href="/refund-policy" className="text-muted hover:text-primary-600">Refund Policy</Link>
+            <Link href="/about" className="text-white/60 transition hover:text-neon">
+              About Us
+            </Link>
+            <Link href="/terms" className="text-white/60 transition hover:text-neon">
+              Terms & Conditions
+            </Link>
+            <Link href="/privacy" className="text-white/60 transition hover:text-neon">
+              Privacy Policy
+            </Link>
+            <Link href="/refund-policy" className="text-white/60 transition hover:text-neon">
+              Refund Policy
+            </Link>
           </div>
         </div>
       </div>
-      <div className="mx-auto mt-8 max-w-7xl border-t border-[#e8e2d6] pt-5 text-center text-sm text-muted">
+      <div className="mx-auto mt-10 max-w-6xl border-t border-white/10 pt-6 text-center text-sm text-white/45">
         <p>
           {settings.footerText ||
             `© ${new Date().getFullYear()} Vaidya Gogate Memorial Foundation. All rights reserved.`}
