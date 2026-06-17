@@ -5,6 +5,10 @@ import { getClientIp } from "@/lib/request-ip";
 import { generateUndertakingPdf } from "@/lib/undertaking-pdf";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import {
+  formatUndertakingForClient,
+  repairOrphanUndertaking,
+} from "@/lib/undertaking-assets";
 
 const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
 
@@ -117,6 +121,13 @@ async function readSignatureBuffer(
   };
 }
 
+async function serializeUndertaking(applicationId: string, undertaking: Awaited<ReturnType<typeof repairOrphanUndertaking>>) {
+  if (!undertaking) return null;
+  const repaired = await repairOrphanUndertaking(applicationId);
+  if (!repaired) return null;
+  return formatUndertakingForClient(repaired);
+}
+
 export async function GET(request: NextRequest) {
   const user = await getSession();
   if (!user) {
@@ -143,7 +154,7 @@ export async function GET(request: NextRequest) {
         name: application.name,
         status: application.status,
       },
-      undertaking: application.digitalUndertaking,
+      undertaking: await serializeUndertaking(application.id, application.digitalUndertaking),
     });
   }
 
@@ -171,7 +182,9 @@ export async function GET(request: NextRequest) {
             status: anyApp.status,
           }
         : null,
-      undertaking: anyApp?.digitalUndertaking ?? null,
+      undertaking: anyApp?.digitalUndertaking
+        ? await serializeUndertaking(anyApp.id, anyApp.digitalUndertaking)
+        : null,
     });
   }
 
@@ -182,7 +195,7 @@ export async function GET(request: NextRequest) {
       name: application.name,
       status: application.status,
     },
-    undertaking: application.digitalUndertaking,
+    undertaking: await serializeUndertaking(application.id, application.digitalUndertaking),
   });
 }
 
@@ -219,27 +232,37 @@ export async function POST(request: NextRequest) {
     }
 
     if (application.digitalUndertaking) {
-      return NextResponse.json(
-        { error: "Digital undertaking already submitted", undertaking: application.digitalUndertaking },
-        { status: 400 }
-      );
+      const existing = await repairOrphanUndertaking(applicationId);
+      if (existing) {
+        return NextResponse.json(
+          {
+            error: "Digital undertaking already submitted",
+            undertaking: formatUndertakingForClient(existing),
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const sigDir = path.join(process.cwd(), "public", "uploads", applicationId, "signatures");
     await mkdir(sigDir, { recursive: true });
     const sigFileName = `signature_${Date.now()}.png`;
     const sigFullPath = path.join(sigDir, sigFileName);
-    await writeFile(sigFullPath, signatureBuffer);
+    try {
+      await writeFile(sigFullPath, signatureBuffer);
+    } catch {
+      // Optional local cache; signature is stored in the database.
+    }
     const signaturePath = `/uploads/${applicationId}/signatures/${sigFileName}`;
 
     const ipAddress = getClientIp(request);
     const submittedAt = new Date();
 
-    const pdfPath = await generateUndertakingPdf({
+    const { pdfBuffer, pdfPath } = await generateUndertakingPdf({
       applicationId,
       applicationNumber: application.applicationNumber,
       fullName: fullName.trim(),
-      signatureImagePath: signaturePath,
+      signatureBuffer,
       ipAddress,
       submittedAt,
     });
@@ -254,6 +277,8 @@ export async function POST(request: NextRequest) {
         signaturePath,
         signatureType: signatureType === "upload" ? "UPLOADED" : "DRAWN",
         pdfPath,
+        pdfData: pdfBuffer.toString("base64"),
+        signatureData: signatureBuffer.toString("base64"),
         ipAddress,
         submittedAt,
       },
@@ -264,7 +289,10 @@ export async function POST(request: NextRequest) {
       data: { undertakingAcceptedAt: submittedAt },
     });
 
-    return NextResponse.json({ success: true, undertaking });
+    return NextResponse.json({
+      success: true,
+      undertaking: formatUndertakingForClient(undertaking),
+    });
   } catch (error) {
     console.error("Undertaking submit error:", error);
     const message =

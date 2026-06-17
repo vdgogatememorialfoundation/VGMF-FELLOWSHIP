@@ -4,6 +4,7 @@ import {
   getInstallmentRequirements,
   type RequirementStatus,
 } from "./installment-requirements";
+import { getUndertakingPdfUrl } from "./undertaking-assets";
 
 type FellowshipWithDocs = {
   id: string;
@@ -23,7 +24,7 @@ type FellowshipWithDocs = {
     utilizationCertPath: string | null;
   } | null;
   application: {
-    digitalUndertaking: { pdfPath: string } | null;
+    digitalUndertaking: { id: string } | null;
   };
 };
 
@@ -42,9 +43,9 @@ export async function getInstallmentRequirementStatus(
         label: req.label,
         type: req.type,
         source: req.source,
-        satisfied: Boolean(undertaking?.pdfPath),
+        satisfied: Boolean(undertaking),
         status: undertaking ? "SUBMITTED" : "MISSING",
-        filePath: undertaking?.pdfPath ?? null,
+        filePath: undertaking ? getUndertakingPdfUrl(fellowship.applicationId) : null,
         detail: undertaking ? "Digital undertaking on file" : "Applicant must complete digital undertaking",
       };
     }

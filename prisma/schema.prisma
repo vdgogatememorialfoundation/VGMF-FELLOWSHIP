@@ -299,6 +299,8 @@ model DigitalUndertaking {
   signaturePath        String   @map("signature_path")
   signatureType        String   @map("signature_type")
   pdfPath              String   @map("pdf_path")
+  pdfData              String?  @map("pdf_data") @db.Text
+  signatureData        String?  @map("signature_data") @db.Text
   ipAddress            String   @map("ip_address")
   submittedAt          DateTime @default(now()) @map("submitted_at")
 

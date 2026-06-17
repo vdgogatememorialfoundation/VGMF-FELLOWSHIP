@@ -54,7 +54,7 @@ export default function ApplicantFormsPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [digitalUndertaking, setDigitalUndertaking] = useState<{
     id: string;
-    pdfPath: string;
+    pdfUrl: string;
   } | null>(null);
 
   const loadForm = useCallback(() => {
@@ -287,7 +287,7 @@ export default function ApplicantFormsPage() {
             <p className="mt-1 text-sm text-green-800">
               Completed —{" "}
               <a
-                href={digitalUndertaking.pdfPath}
+                href={digitalUndertaking.pdfUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"

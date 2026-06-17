@@ -10,7 +10,7 @@ import { compressSignatureDataUrl } from "@/lib/signature-image";
 type UndertakingRecord = {
   id: string;
   fullName: string;
-  pdfPath: string;
+  pdfUrl: string;
   ipAddress: string;
   submittedAt: string;
   signatureType: string;
@@ -165,7 +165,7 @@ export function DigitalUndertakingForm() {
             </p>
           </div>
           <a
-            href={undertaking.pdfPath}
+            href={undertaking.pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-sm font-medium text-primary-700 underline"

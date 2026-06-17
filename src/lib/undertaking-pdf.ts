@@ -1,7 +1,6 @@
 import PDFDocument from "pdfkit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 
 function ensurePdfkitFonts() {
@@ -24,14 +23,14 @@ type GenerateUndertakingPdfParams = {
   applicationId: string;
   applicationNumber: string;
   fullName: string;
-  signatureImagePath: string;
+  signatureBuffer: Buffer;
   ipAddress: string;
   submittedAt: Date;
 };
 
 export async function generateUndertakingPdf(
   params: GenerateUndertakingPdfParams
-): Promise<string> {
+): Promise<{ pdfBuffer: Buffer; pdfPath: string }> {
   ensurePdfkitFonts();
 
   const uploadDir = path.join(
@@ -46,23 +45,12 @@ export async function generateUndertakingPdf(
   const fileName = `undertaking_${params.applicationNumber}_${Date.now()}.pdf`;
   const fullPath = path.join(uploadDir, fileName);
 
-  const signatureBuffer = await readFile(
-    path.join(process.cwd(), "public", params.signatureImagePath.replace(/^\//, ""))
-  );
-
-  await new Promise<void>((resolve, reject) => {
+  const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    doc.on("end", async () => {
-      try {
-        await writeFile(fullPath, Buffer.concat(chunks));
-        resolve();
-      } catch (err) {
-        reject(err);
-      }
-    });
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
     doc.fontSize(16).font("Helvetica-Bold").text("DIGITAL UNDERTAKING", { align: "center" });
@@ -80,7 +68,9 @@ export async function generateUndertakingPdf(
     doc.font("Helvetica-Bold").text("Applicant Name: ", { continued: true });
     doc.font("Helvetica").text(params.fullName);
     doc.font("Helvetica-Bold").text("Submitted At: ", { continued: true });
-    doc.font("Helvetica").text(params.submittedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }));
+    doc.font("Helvetica").text(
+      params.submittedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+    );
     doc.font("Helvetica-Bold").text("IP Address: ", { continued: true });
     doc.font("Helvetica").text(params.ipAddress);
     doc.moveDown(1);
@@ -91,7 +81,7 @@ export async function generateUndertakingPdf(
     doc.font("Helvetica-Bold").text("Digital Signature:");
     doc.moveDown(0.5);
     try {
-      doc.image(signatureBuffer, { fit: [200, 80] });
+      doc.image(params.signatureBuffer, { fit: [200, 80] });
     } catch {
       doc.font("Helvetica").text("[Signature image attached]");
     }
@@ -108,5 +98,14 @@ export async function generateUndertakingPdf(
     doc.end();
   });
 
-  return `/uploads/${params.applicationId}/undertaking/${fileName}`;
+  try {
+    await writeFile(fullPath, pdfBuffer);
+  } catch {
+    // Disk write is optional; database copy is the source of truth on Render.
+  }
+
+  return {
+    pdfBuffer,
+    pdfPath: `/uploads/${params.applicationId}/undertaking/${fileName}`,
+  };
 }

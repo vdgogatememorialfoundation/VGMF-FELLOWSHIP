@@ -13,6 +13,10 @@ import {
   FILE_FIELD_DOCUMENT_TYPES,
 } from "@/lib/form-validation";
 import { getFormScheduleStatus } from "@/lib/form-schedule";
+import {
+  formatUndertakingForClient,
+  repairOrphanUndertaking,
+} from "@/lib/undertaking-assets";
 
 async function requireDigitalUndertaking(applicationId: string | null): Promise<string | null> {
   if (!applicationId) {
@@ -59,10 +63,19 @@ export async function GET(request: NextRequest) {
         }),
         prisma.digitalUndertaking.findUnique({
           where: { applicationId: submission.applicationId },
-          select: { id: true, pdfPath: true, submittedAt: true },
+          select: {
+            id: true,
+            applicationId: true,
+            pdfPath: true,
+            pdfData: true,
+            submittedAt: true,
+          },
         }),
       ]);
-      digitalUndertaking = undertaking;
+      if (undertaking) {
+        const repaired = await repairOrphanUndertaking(submission.applicationId);
+        digitalUndertaking = repaired ? formatUndertakingForClient(repaired) : null;
+      }
 
       for (const field of template.fields) {
         if (field.fieldType !== "FILE") continue;
