@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getSiteSettings } from "@/lib/cms";
+import { getSiteSettings, getActiveNotices } from "@/lib/cms";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 
 export async function PublicHeader() {
