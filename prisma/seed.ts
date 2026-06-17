@@ -14,16 +14,26 @@ async function generateUserId() {
 }
 
 async function main() {
-  await prisma.user.upsert({
-    where: { email: "admin@vgmf.org" },
-    update: {},
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@vaidyagogate.org" },
+    update: {
+      passwordHash: await hashPassword("Admin@2026"),
+      role: "ADMIN",
+      isActive: true,
+    },
     create: {
       userId: await generateUserId(),
-      email: "admin@vgmf.org",
-      passwordHash: await hashPassword("Admin@123"),
+      email: "admin@vaidyagogate.org",
+      passwordHash: await hashPassword("Admin@2026"),
       role: "ADMIN",
-      profile: { create: { name: "System Admin" } },
+      profile: { create: { name: "VGMF Admin" } },
     },
+  });
+
+  await prisma.profile.upsert({
+    where: { userId: admin.id },
+    update: { name: "VGMF Admin" },
+    create: { userId: admin.id, name: "VGMF Admin" },
   });
 
   await prisma.user.upsert({
@@ -63,7 +73,7 @@ async function main() {
   });
 
   console.log("Seed completed:");
-  console.log("  Admin: admin@vgmf.org / Admin@123");
+  console.log("  Admin: admin@vaidyagogate.org / Admin@2026");
   console.log("  Committee: committee@vgmf.org / Committee@123");
   console.log("  Staff: staff@vgmf.org / Staff@123");
   console.log("  Trustee: trustee@vgmf.org / Trustee@123");

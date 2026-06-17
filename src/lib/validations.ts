@@ -3,12 +3,24 @@ import { z } from "zod";
 export const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Phone must be at least 10 digits").optional(),
+  phone: z.string().min(10, "Phone must be at least 10 digits"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
+  otp: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
+});
+
+export const sendOtpSchema = z.object({
+  phone: z.string().min(10, "Valid phone number required"),
+  purpose: z.enum(["REGISTER", "LOGIN", "RESET_PASSWORD"]).default("REGISTER"),
+});
+
+export const verifyOtpSchema = z.object({
+  phone: z.string().min(10, "Valid phone number required"),
+  code: z.string().length(6, "OTP must be 6 digits"),
+  purpose: z.enum(["REGISTER", "LOGIN", "RESET_PASSWORD"]).default("REGISTER"),
 });
 
 export const loginSchema = z.object({

@@ -25,7 +25,7 @@ A comprehensive fellowship management system for the Viddhakarma Global Medical 
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@vgmf.org | Admin@123 |
+| Admin | admin@vaidyagogate.org | Admin@2026 |
 | Committee | committee@vgmf.org | Committee@123 |
 | Staff | staff@vgmf.org | Staff@123 |
 | Trustee | trustee@vgmf.org | Trustee@123 |
@@ -42,7 +42,23 @@ A comprehensive fellowship management system for the Viddhakarma Global Medical 
 - Grant management and fund disbursement (40/40/20 installments)
 - Progress reports, mid-term review, final submission
 - Finance tracking and admin dashboard with statistics
-- Notification system (in-app; email/WhatsApp integration ready)
+- Notification system via ZeptoMail (email) and Meta WhatsApp (OTP + alerts)
+
+## Email & WhatsApp Integration
+
+### ZeptoMail
+1. Create account at [ZeptoMail](https://www.zoho.com/zeptomail/)
+2. Verify your domain and create a Mail Agent
+3. Copy the **Send Mail Token** from Agent → SMTP/API
+4. Set env vars: `ZEPTOMAIL_TOKEN`, `ZEPTOMAIL_FROM_EMAIL`, `ZEPTOMAIL_FROM_NAME`
+
+### Meta WhatsApp OTP
+1. Set up [WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api) in Meta Business Manager
+2. Create an **Authentication** template (approved by Meta) for OTP
+3. Get **Permanent Access Token** and **Phone Number ID**
+4. Set env vars: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_OTP_TEMPLATE_NAME`
+
+Applicants must verify mobile via WhatsApp OTP before registration.
 
 ## Tech Stack
 

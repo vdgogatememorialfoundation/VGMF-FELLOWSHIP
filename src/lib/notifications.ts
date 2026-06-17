@@ -1,5 +1,7 @@
 import prisma from "./db";
 import type { NotificationChannel } from "@prisma/client";
+import { sendNotificationEmail } from "./email";
+import { sendWhatsAppMessage } from "./whatsapp";
 
 export async function createNotification(
   userId: string,
@@ -7,9 +9,28 @@ export async function createNotification(
   message: string,
   channel: NotificationChannel = "BOTH"
 ) {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: { userId, title, message, channel },
   });
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  if (user) {
+    const name = user.profile?.name ?? user.email;
+
+    if (channel === "EMAIL" || channel === "BOTH") {
+      await sendNotificationEmail(user.email, name, title, message);
+    }
+
+    if ((channel === "WHATSAPP" || channel === "BOTH") && user.phone) {
+      await sendWhatsAppMessage(user.phone, `*${title}*\n\n${message}`);
+    }
+  }
+
+  return notification;
 }
 
 export async function notifyApplicationSubmitted(userId: string, appNumber: string) {

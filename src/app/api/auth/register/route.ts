@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import {
   hashPassword,
-  verifyPassword,
   createSession,
   setSessionCookie,
   generateUserId,
   getPortalPath,
 } from "@/lib/auth";
-import { registerSchema, loginSchema } from "@/lib/validations";
+import { registerSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/notifications";
+import { sendWelcomeEmail } from "@/lib/email";
+import { isPhoneOtpVerified } from "@/lib/otp";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,12 +26,19 @@ export async function POST(request: NextRequest) {
 
     const { name, email, phone, password } = parsed.data;
 
+    if (phone) {
+      const otpVerified = await isPhoneOtpVerified(phone, "REGISTER");
+      if (!otpVerified) {
+        return NextResponse.json(
+          { error: "Please verify your mobile number with WhatsApp OTP first" },
+          { status: 400 }
+        );
+      }
+    }
+
     const existing = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email },
-          ...(phone ? [{ phone }] : []),
-        ],
+        OR: [{ email }, ...(phone ? [{ phone }] : [])],
       },
     });
 
@@ -63,6 +71,8 @@ export async function POST(request: NextRequest) {
       "Welcome to VGMF Fellowship Portal",
       `Registration successful! Your User ID is ${userId}. You can now complete your fellowship application.`
     );
+
+    await sendWelcomeEmail(email, name, userId);
 
     const token = await createSession(user.id);
     await setSessionCookie(token);

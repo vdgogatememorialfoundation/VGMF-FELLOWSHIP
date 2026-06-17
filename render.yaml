@@ -18,3 +18,17 @@ services:
         generateValue: true
       - key: NEXT_PUBLIC_APP_URL
         sync: false
+      - key: ZEPTOMAIL_TOKEN
+        sync: false
+      - key: ZEPTOMAIL_FROM_EMAIL
+        sync: false
+      - key: ZEPTOMAIL_FROM_NAME
+        value: VGMF Fellowship Portal
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_OTP_TEMPLATE_NAME
+        value: authentication
+      - key: WHATSAPP_OTP_TEMPLATE_LANGUAGE
+        value: en
