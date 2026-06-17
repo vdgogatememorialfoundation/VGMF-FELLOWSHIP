@@ -1,11 +1,13 @@
 import prisma from "@/lib/db";
-import { requireAuth } from "@/components/layout/PortalLayout";
+import { getSession } from "@/lib/auth";
+import { PortalGate } from "@/components/auth/PortalGate";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { FileText, Activity, HelpCircle, ArrowRight } from "lucide-react";
 
-export default async function ApplicantDashboard() {
-  const user = await requireAuth(["APPLICANT"]);
+async function ApplicantDashboard() {
+  const user = await getSession();
+  if (!user) return null;
 
   const applications = await prisma.application.findMany({
     where: { userId: user.id },
@@ -61,7 +63,7 @@ export default async function ApplicantDashboard() {
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm text-gray-500">Application Number</p>
-                <p className="font-medium">{latestApp.applicationNumber}</p>
+                <p className="font-medium font-mono tracking-wide">{latestApp.applicationNumber}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Submitted</p>
@@ -108,5 +110,13 @@ export default async function ApplicantDashboard() {
           </div>
         )}
       </div>
+  );
+}
+
+export default async function ApplicantPage() {
+  return (
+    <PortalGate portal="applicant" showRegisterLink>
+      <ApplicantDashboard />
+    </PortalGate>
   );
 }

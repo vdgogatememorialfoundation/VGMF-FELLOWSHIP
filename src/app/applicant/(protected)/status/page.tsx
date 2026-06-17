@@ -3,9 +3,10 @@ import prisma from "@/lib/db";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
 import { formatDate } from "@/lib/utils";
+import { formatApplicationNumber } from "@/lib/application-number";
 
 export default async function ApplicantStatusPage() {
-  const user = await requireAuth(["APPLICANT"]);
+  const user = await requireAuth(["APPLICANT"], "applicant");
 
   const applications = await prisma.application.findMany({
     where: { userId: user.id },
@@ -34,7 +35,10 @@ export default async function ApplicantStatusPage() {
             <div key={app.id} className="card space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold">{app.applicationNumber}</h2>
+                  <h2 className="text-lg font-semibold font-mono tracking-wide">{app.applicationNumber}</h2>
+                  {/^\d{12}$/.test(app.applicationNumber) && (
+                    <p className="text-sm text-gray-500">{formatApplicationNumber(app.applicationNumber)}</p>
+                  )}
                   <p className="text-sm text-gray-500">Applied: {formatDate(app.createdAt)}</p>
                 </div>
                 <StatusBadge status={app.status} />

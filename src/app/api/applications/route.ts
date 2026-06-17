@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await notifyApplicationSubmitted(user.id, app.applicationNumber);
+      await notifyApplicationSubmitted(user.id, app.applicationNumber, app.email);
       return NextResponse.json({ success: true, application: app });
     }
 

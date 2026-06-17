@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
+import { PortalGate } from "@/components/auth/PortalGate";
 import {
   ClipboardList,
   Eye,
@@ -10,7 +11,7 @@ import {
   DollarSign,
 } from "lucide-react";
 
-export default async function AdminDashboard() {
+async function AdminDashboard() {
   const [
     totalApplications,
     underReview,
@@ -105,5 +106,13 @@ export default async function AdminDashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default async function AdminPage() {
+  return (
+    <PortalGate portal="admin">
+      <AdminDashboard />
+    </PortalGate>
   );
 }

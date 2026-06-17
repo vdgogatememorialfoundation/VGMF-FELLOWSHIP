@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { getSession, getPortalPath } from "@/lib/auth";
 import { Sidebar, TopBar } from "@/components/layout/Sidebar";
 import type { UserRole } from "@prisma/client";
-
 import type { PortalType } from "@/lib/portal";
+import { getLoginPath } from "@/lib/portal";
 
-export async function requireAuth(allowedRoles?: UserRole[]) {
+export async function requireAuth(allowedRoles?: UserRole[], portal?: PortalType) {
   const user = await getSession();
-  if (!user) redirect("/login");
+  if (!user) {
+    redirect(portal ? getLoginPath(portal) : "/applicant");
+  }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     redirect(getPortalPath(user.role));
@@ -29,7 +31,7 @@ export function PortalLayout({
     <div className="flex min-h-screen">
       <Sidebar user={user} portal={portal} />
       <div className="flex flex-1 flex-col">
-        <TopBar user={user} />
+        <TopBar user={user} portal={portal} />
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
@@ -37,22 +39,22 @@ export function PortalLayout({
 }
 
 export async function ApplicantLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAuth(["APPLICANT"]);
+  const user = await requireAuth(["APPLICANT"], "applicant");
   return <PortalLayout user={user} portal="applicant">{children}</PortalLayout>;
 }
 
 export async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAuth(["ADMIN"]);
+  const user = await requireAuth(["ADMIN"], "admin");
   return <PortalLayout user={user} portal="admin">{children}</PortalLayout>;
 }
 
 export async function StaffLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAuth(["STAFF", "FINANCE"]);
+  const user = await requireAuth(["STAFF", "FINANCE"], "staff");
   return <PortalLayout user={user} portal="staff">{children}</PortalLayout>;
 }
 
 export async function ReviewerLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAuth(["COMMITTEE"]);
+  const user = await requireAuth(["COMMITTEE"], "reviewer");
   return <PortalLayout user={user} portal="reviewer">{children}</PortalLayout>;
 }
 
@@ -61,6 +63,6 @@ export async function CommitteeLayout({ children }: { children: React.ReactNode 
 }
 
 export async function TrusteeLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAuth(["TRUSTEE"]);
+  const user = await requireAuth(["TRUSTEE"], "trustee");
   return <PortalLayout user={user} portal="trustee">{children}</PortalLayout>;
 }

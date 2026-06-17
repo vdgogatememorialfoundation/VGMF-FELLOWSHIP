@@ -1,7 +1,8 @@
 import prisma from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
+import { PortalGate } from "@/components/auth/PortalGate";
 
-export default async function StaffDashboard() {
+async function StaffDashboard() {
   const financeRecords = await prisma.financeRecord.findMany({
     include: { fellowship: true },
   });
@@ -32,5 +33,13 @@ export default async function StaffDashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default async function StaffPage() {
+  return (
+    <PortalGate portal="staff">
+      <StaffDashboard />
+    </PortalGate>
   );
 }

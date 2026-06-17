@@ -1,0 +1,71 @@
+import prisma from "./db";
+import type { UserRole } from "@prisma/client";
+import { hashPassword, generateUserId } from "./auth";
+import { roleToPortal, getLoginPath } from "./portal";
+
+export const STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"];
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  APPLICANT: "Applicant",
+  ADMIN: "Admin",
+  STAFF: "Staff",
+  FINANCE: "Finance",
+  COMMITTEE: "Reviewer",
+  TRUSTEE: "Trustee",
+};
+
+interface CreateAccountInput {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  role: UserRole;
+}
+
+export async function createUserAccount(input: CreateAccountInput) {
+  const email = input.email.trim().toLowerCase();
+  const phone = input.phone?.trim() || null;
+
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ email }, ...(phone ? [{ phone }] : [])],
+    },
+  });
+
+  if (existing) {
+    throw new Error("Email or phone already registered");
+  }
+
+  const userId = await generateUserId();
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.user.create({
+    data: {
+      userId,
+      email,
+      phone,
+      passwordHash,
+      role: input.role,
+      profile: {
+        create: { name: input.name.trim() },
+      },
+    },
+    include: { profile: true },
+  });
+
+  return {
+    user,
+    loginPath: getLoginPath(roleToPortal(input.role)),
+  };
+}
+
+export async function listUsersByRoles(roles: UserRole[]) {
+  return prisma.user.findMany({
+    where: { role: { in: roles } },
+    include: {
+      profile: true,
+      applications: { select: { id: true, applicationNumber: true, status: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}

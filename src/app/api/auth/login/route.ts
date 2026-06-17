@@ -7,6 +7,7 @@ import {
   getPortalPath,
 } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
+import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { identifier, password } = parsed.data;
+    const { identifier, password, portal } = parsed.data;
 
     const user = await prisma.user.findFirst({
       where: {
@@ -43,6 +44,18 @@ export async function POST(request: NextRequest) {
         { error: "Invalid email/phone or password" },
         { status: 401 }
       );
+    }
+
+    if (portal) {
+      const allowedRoles = PORTAL_ALLOWED_ROLES[portal];
+      if (!allowedRoles.includes(user.role)) {
+        return NextResponse.json(
+          {
+            error: `This account is not authorized for the ${PORTAL_LABELS[portal]}. Please use the correct portal.`,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const token = await createSession(user.id);

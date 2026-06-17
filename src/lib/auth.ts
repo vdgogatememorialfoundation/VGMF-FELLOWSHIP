@@ -36,11 +36,7 @@ export async function generateUserId(): Promise<string> {
   return `VGMF-${year}-${String(count + 1).padStart(5, "0")}`;
 }
 
-export async function generateApplicationNumber(): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.application.count();
-  return `APP-${year}-${String(count + 1).padStart(5, "0")}`;
-}
+export { generateApplicationNumber } from "./application-number";
 
 export async function generateFellowshipId(): Promise<string> {
   const year = new Date().getFullYear();

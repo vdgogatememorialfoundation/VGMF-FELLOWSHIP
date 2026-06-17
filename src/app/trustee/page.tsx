@@ -1,7 +1,8 @@
 import prisma from "@/lib/db";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PortalGate } from "@/components/auth/PortalGate";
 
-export default async function TrusteeDashboard() {
+async function TrusteeDashboard() {
   const applications = await prisma.application.findMany({
     where: { status: { in: ["SHORTLISTED", "SELECTED"] } },
     include: {
@@ -85,5 +86,13 @@ export default async function TrusteeDashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default async function TrusteePage() {
+  return (
+    <PortalGate portal="trustee">
+      <TrusteeDashboard />
+    </PortalGate>
   );
 }

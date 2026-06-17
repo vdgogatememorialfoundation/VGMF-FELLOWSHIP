@@ -1,9 +1,7 @@
-import { TrusteeLayout as TrusteeShell } from "@/components/layout/PortalLayout";
-
-export default async function TrusteeRootLayout({
+export default function TrusteeRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <TrusteeShell>{children}</TrusteeShell>;
+  return children;
 }

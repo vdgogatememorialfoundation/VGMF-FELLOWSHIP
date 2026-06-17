@@ -7,13 +7,12 @@ import {
   Users,
   Award,
   ArrowRight,
-  Shield,
-  BarChart3,
-  ClipboardCheck,
   Leaf,
   BookOpen,
   IndianRupee,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const settings = await getSiteSettings();
@@ -41,12 +40,6 @@ export default async function HomePage() {
             <Link href="/register" className="btn-gold inline-flex items-center gap-2 px-8 py-3">
               Start Application
               <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-8 py-3 text-sm font-semibold backdrop-blur transition hover:bg-white/20"
-            >
-              Sign In
             </Link>
           </div>
         </div>
@@ -77,36 +70,6 @@ export default async function HomePage() {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      <section id="portals" className="bg-[#f4faf7] px-6 py-16">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="section-title text-center">Portal Access</h2>
-          <p className="mt-3 text-center text-muted">
-            Dedicated secure portals for every stakeholder
-          </p>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { title: "Applicant", desc: "Register, apply, track status", icon: GraduationCap, href: "/register", color: "bg-white text-primary-600" },
-              { title: "Admin", desc: "CMS, forms, applications", icon: Shield, href: "/login", color: "bg-white text-purple-600" },
-              { title: "Staff", desc: "Finance & operations", icon: BarChart3, href: "/login", color: "bg-white text-blue-600" },
-              { title: "Reviewer", desc: "Score & shortlist", icon: ClipboardCheck, href: "/login", color: "bg-white text-orange-600" },
-            ].map((portal) => {
-              const Icon = portal.icon;
-              return (
-                <Link key={portal.title} href={portal.href} className="card group transition hover:border-primary-300 hover:shadow-lg">
-                  <div className={`inline-flex rounded-2xl p-3 shadow-sm ${portal.color}`}>
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold text-ink group-hover:text-primary-600">
-                    {portal.title} Portal
-                  </h3>
-                  <p className="mt-2 text-sm text-muted">{portal.desc}</p>
-                </Link>
-              );
-            })}
-          </div>
         </div>
       </section>
 

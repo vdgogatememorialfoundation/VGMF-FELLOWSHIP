@@ -1,9 +1,7 @@
-import { ReviewerLayout as ReviewerShell } from "@/components/layout/PortalLayout";
-
-export default async function ReviewerRootLayout({
+export default function ReviewerRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <ReviewerShell>{children}</ReviewerShell>;
+  return children;
 }

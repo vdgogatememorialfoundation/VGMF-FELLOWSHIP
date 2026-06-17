@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { DynamicFormFields } from "@/components/forms/DynamicFormFields";
 import { Button } from "@/components/ui/Button";
+import { formatApplicationNumber } from "@/lib/application-number";
 
 interface FormField {
   id: string;
@@ -24,6 +25,7 @@ export default function ApplicantFormsPage() {
   } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [submissionId, setSubmissionId] = useState("");
+  const [applicationNumber, setApplicationNumber] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,9 +74,14 @@ export default function ApplicantFormsPage() {
     }
 
     setSubmissionId(data.submission.id);
+    if (data.applicationNumber) {
+      setApplicationNumber(data.applicationNumber);
+    }
     setSuccess(
       status === "SUBMITTED"
-        ? "Application submitted successfully!"
+        ? data.applicationNumber
+          ? `Application submitted successfully! Your 12-digit application number is ${data.applicationNumber}. A confirmation email has been sent.`
+          : "Application submitted successfully!"
         : "Draft saved successfully!"
     );
   }
@@ -92,6 +99,14 @@ export default function ApplicantFormsPage() {
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
+      {applicationNumber && (
+        <div className="card border-2 border-gold/40 bg-[#fffdf6] p-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Application Tracking Number</p>
+          <p className="mt-2 font-mono text-2xl font-bold tracking-widest text-primary-700">{applicationNumber}</p>
+          <p className="mt-1 text-sm text-muted">{formatApplicationNumber(applicationNumber)}</p>
+          <p className="mt-3 text-sm text-muted">Save this number and check your email for confirmation.</p>
+        </div>
+      )}
 
       <div className="card">
         <DynamicFormFields fields={template.fields} values={values} onChange={updateField} />

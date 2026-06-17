@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Phone, Calendar, User, UserPlus } from "lucide-react";
+import { Mail, Phone, Calendar, UserPlus } from "lucide-react";
 import { getSiteSettings, getActiveNotices } from "@/lib/cms";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 
@@ -36,14 +36,9 @@ export async function PublicHeader() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="inline-flex items-center gap-1.5 font-semibold text-primary-600 hover:text-primary-700">
-              <User className="h-3.5 w-3.5" />
-              Sign in
-            </Link>
-            <span className="text-gray-300">|</span>
             <Link href="/register" className="inline-flex items-center gap-1.5 font-semibold text-primary-600 hover:text-primary-700">
               <UserPlus className="h-3.5 w-3.5" />
-              Create account
+              Apply / Register
             </Link>
           </div>
         </div>
@@ -80,7 +75,6 @@ export async function PublicHeader() {
             <Link href="/" className="text-sm font-medium text-ink-soft hover:text-primary-600">Home</Link>
             <Link href="/about" className="text-sm font-medium text-ink-soft hover:text-primary-600">Foundation</Link>
             <Link href="/#notices" className="text-sm font-medium text-ink-soft hover:text-primary-600">Notices</Link>
-            <Link href="/#portals" className="text-sm font-medium text-ink-soft hover:text-primary-600">Portals</Link>
             <Link href="/#contact" className="text-sm font-medium text-ink-soft hover:text-primary-600">Contact</Link>
             <Link href="/register" className="btn-primary text-sm">Apply Now</Link>
           </nav>
@@ -94,12 +88,18 @@ export async function PublicFooter() {
   const settings = await getSiteSettings();
 
   return (
-    <footer id="contact" className="border-t border-[#e8e2d6] bg-white px-6 py-12">
-      <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-3">
+    <footer id="contact" className="border-t border-[#e8e2d6] bg-white px-6 py-10">
+      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2">
         <div>
           <p className="font-display text-lg font-bold text-ink">Vaidya Gogate Memorial Foundation</p>
           <p className="mt-2 text-sm text-muted">{settings.siteTagline}</p>
-          <p className="mt-4 text-sm text-muted">Advancing Ayurveda since 1972</p>
+          <p className="mt-3 text-sm text-muted">Advancing Ayurveda since 1972</p>
+          {settings.contactEmail && (
+            <p className="mt-3 text-sm text-muted">{settings.contactEmail}</p>
+          )}
+          {settings.contactPhone && (
+            <p className="text-sm text-muted">{settings.contactPhone}</p>
+          )}
         </div>
         <div>
           <p className="font-semibold text-ink">Legal & Info</p>
@@ -110,22 +110,15 @@ export async function PublicFooter() {
             <Link href="/refund-policy" className="text-muted hover:text-primary-600">Refund Policy</Link>
           </div>
         </div>
-        <div>
-          <p className="font-semibold text-ink">Portals</p>
-          <div className="mt-3 flex flex-col gap-2 text-sm">
-            <Link href="/login" className="text-muted hover:text-primary-600">Applicant Login</Link>
-            <Link href="/login" className="text-muted hover:text-primary-600">Admin (/admin)</Link>
-            <Link href="/login" className="text-muted hover:text-primary-600">Staff (/staff)</Link>
-            <Link href="/login" className="text-muted hover:text-primary-600">Reviewer (/reviewer)</Link>
-          </div>
-          {settings.contactEmail && (
-            <p className="mt-4 text-sm text-muted">{settings.contactEmail}</p>
-          )}
-        </div>
       </div>
-      <div className="mx-auto mt-10 max-w-7xl border-t border-[#e8e2d6] pt-6 text-center text-sm text-muted">
-        {settings.footerText ||
-          `© ${new Date().getFullYear()} Vaidya Gogate Memorial Foundation. All rights reserved.`}
+      <div className="mx-auto mt-8 max-w-7xl border-t border-[#e8e2d6] pt-5 text-center text-sm text-muted">
+        <p>
+          {settings.footerText ||
+            `© ${new Date().getFullYear()} Vaidya Gogate Memorial Foundation. All rights reserved.`}
+        </p>
+        <p className="mt-1">
+          Developed by Capture Visual Studios · Vaidya Gogate Memorial Foundation Copyrights
+        </p>
       </div>
     </footer>
   );
@@ -135,25 +128,35 @@ export async function NoticesSection() {
   const notices = await getActiveNotices();
   if (notices.length === 0) return null;
 
+  const visibleNotices = notices.slice(0, 4);
+
   return (
-    <section id="notices" className="mx-auto max-w-7xl px-6 py-16">
-      <h2 className="section-title">Notices & Announcements</h2>
-      <p className="mt-2 text-muted">Important updates for fellowship applicants</p>
-      <div className="mt-8 space-y-4">
-        {notices.map((notice) => (
-          <div
-            key={notice.id}
-            className="card border-l-4 border-l-gold bg-gold-soft/30"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="font-semibold text-ink">{notice.title}</h3>
-              <span className="rounded-full bg-gold/15 px-3 py-0.5 text-xs font-semibold text-gold">
-                {new Date(notice.publishedAt).toLocaleDateString("en-IN")}
-              </span>
+    <section id="notices" className="border-y border-[#e8e2d6] bg-[#faf8f3] px-6 py-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 className="text-lg font-bold text-ink">Notices</h2>
+          <span className="text-xs text-muted">{visibleNotices.length} update{visibleNotices.length !== 1 ? "s" : ""}</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {visibleNotices.map((notice) => (
+            <div
+              key={notice.id}
+              className="rounded-xl border border-[#e8e2d6] bg-white px-4 py-3 shadow-sm"
+              title={notice.content}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="line-clamp-1 text-sm font-semibold text-ink">{notice.title}</h3>
+                <span className="shrink-0 text-[10px] font-medium text-muted">
+                  {new Date(notice.publishedAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-soft">{notice.content}</p>
             </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">{notice.content}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

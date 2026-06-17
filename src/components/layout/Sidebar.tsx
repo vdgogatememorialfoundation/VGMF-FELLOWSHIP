@@ -20,6 +20,7 @@ import {
   PenLine,
   FormInput,
   Globe,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -45,6 +46,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/forms", label: "Form Builder", icon: FormInput },
     { href: "/admin/applications", label: "Applications", icon: ClipboardList },
     { href: "/admin/applicants", label: "Applicants", icon: Users },
+    { href: "/admin/users", label: "Portal Users", icon: UserCog },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },
     { href: "/admin/reports", label: "Reports", icon: FileBarChart },
   ],
@@ -116,7 +118,7 @@ export function Sidebar({ user, portal }: SidebarProps) {
           <p className="text-xs text-gray-500">User ID</p>
           <p className="text-sm font-medium text-gray-900">{user.userId}</p>
         </div>
-        <form action="/api/auth/logout" method="GET">
+        <form action={`/api/auth/logout?portal=${portal}`} method="GET">
           <button
             type="submit"
             className="sidebar-link w-full text-red-600 hover:bg-red-50 hover:text-red-700"
@@ -130,7 +132,7 @@ export function Sidebar({ user, portal }: SidebarProps) {
   );
 }
 
-export function TopBar({ user }: { user: SessionUser }) {
+export function TopBar({ user, portal }: { user: SessionUser; portal: PortalType }) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
       <p className="text-sm text-gray-500">
@@ -142,7 +144,7 @@ export function TopBar({ user }: { user: SessionUser }) {
           <p className="text-xs text-gray-500">{user.email}</p>
         </div>
         <Link
-          href={user.role === "APPLICANT" ? "/applicant/profile" : "/admin/profile"}
+          href={`/${portal}/profile`}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-700 transition hover:bg-primary-200"
         >
           <User className="h-5 w-5" />

@@ -13,7 +13,11 @@ export async function GET() {
     where: { userId: user.id },
   });
 
-  return NextResponse.json({ profile, userId: user.userId });
+  return NextResponse.json({
+    profile,
+    userId: user.userId,
+    email: user.email,
+  });
 }
 
 export async function PUT(request: NextRequest) {

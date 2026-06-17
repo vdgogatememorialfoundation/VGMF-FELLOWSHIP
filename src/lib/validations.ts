@@ -26,6 +26,42 @@ export const verifyOtpSchema = z.object({
 export const loginSchema = z.object({
   identifier: z.string().min(1, "Email or phone is required"),
   password: z.string().min(1, "Password is required"),
+  portal: z.enum(["applicant", "admin", "staff", "reviewer", "trustee"]).optional(),
+});
+
+const passwordFields = {
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+};
+
+export const adminCreateApplicantSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    phone: z.string().min(10, "Phone must be at least 10 digits").optional().or(z.literal("")),
+    ...passwordFields,
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const adminCreateUserSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    phone: z.string().min(10, "Phone must be at least 10 digits").optional().or(z.literal("")),
+    role: z.enum(["ADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"]),
+    ...passwordFields,
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const adminUpdateUserSchema = z.object({
+  id: z.string().min(1),
+  isActive: z.boolean().optional(),
 });
 
 export const profileSchema = z.object({

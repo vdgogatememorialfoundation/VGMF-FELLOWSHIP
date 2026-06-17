@@ -1,6 +1,6 @@
 import prisma from "./db";
 import type { NotificationChannel } from "@prisma/client";
-import { sendNotificationEmail } from "./email";
+import { sendNotificationEmail, sendApplicationConfirmationEmail } from "./email";
 import { sendWhatsAppMessage } from "./whatsapp";
 
 export async function createNotification(
@@ -33,12 +33,39 @@ export async function createNotification(
   return notification;
 }
 
-export async function notifyApplicationSubmitted(userId: string, appNumber: string) {
-  await createNotification(
-    userId,
-    "Application Submitted",
-    `Your fellowship application ${appNumber} has been submitted successfully. We will review it shortly.`
-  );
+export async function notifyApplicationSubmitted(
+  userId: string,
+  appNumber: string,
+  applicantEmail?: string
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  const name = user?.profile?.name ?? user?.email ?? "Applicant";
+  const email = applicantEmail || user?.email;
+  const message = `Your fellowship application has been submitted successfully. Your 12-digit application number is ${appNumber}. Use this number to track your application status.`;
+
+  await prisma.notification.create({
+    data: {
+      userId,
+      title: "Application Submitted",
+      message,
+      channel: "EMAIL",
+    },
+  });
+
+  if (email) {
+    await sendApplicationConfirmationEmail(email, name, appNumber);
+  }
+
+  if (user?.phone) {
+    await sendWhatsAppMessage(
+      user.phone,
+      `*VGMF Fellowship Application Submitted*\n\nYour 12-digit application number:\n*${appNumber}*\n\nSave this number to track your application status.`
+    );
+  }
 }
 
 export async function notifyStatusChange(

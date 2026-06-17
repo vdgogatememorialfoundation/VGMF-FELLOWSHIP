@@ -1,9 +1,7 @@
-import { ApplicantLayout as ApplicantShell } from "@/components/layout/PortalLayout";
-
-export default async function ApplicantRootLayout({
+export default function ApplicantRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <ApplicantShell>{children}</ApplicantShell>;
+  return children;
 }
