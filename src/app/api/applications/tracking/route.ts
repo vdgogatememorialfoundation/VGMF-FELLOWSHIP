@@ -19,6 +19,7 @@ import {
   getFellowshipPendingActions,
 } from "@/lib/fellowship-tracking";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
+import { ensureTrackingApplicationState } from "@/lib/tracking-repair";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,6 +36,8 @@ export async function GET() {
       statusHistory: { orderBy: { createdAt: "desc" } },
       documents: { orderBy: { uploadedAt: "asc" } },
       interview: true,
+      trusteeApproval: true,
+      budget: true,
       fellowship: {
         include: {
           installments: true,
@@ -50,8 +53,11 @@ export async function GET() {
 
   const payload = await Promise.all(
     applications.map(async (app) => {
-      const fellowshipStage = app.fellowship?.currentStage ?? null;
-      const milestoneStates = getMilestoneStates(app.status, fellowshipStage);
+      const repaired = await ensureTrackingApplicationState(app);
+      const effectiveStatus = repaired.status;
+      const fellowship = repaired.fellowship;
+      const fellowshipStage = fellowship?.currentStage ?? null;
+      const milestoneStates = getMilestoneStates(effectiveStatus, fellowshipStage);
       const fellowshipStepStates = fellowshipStage
         ? getFellowshipStepStates(fellowshipStage)
         : null;
@@ -59,43 +65,45 @@ export async function GET() {
       let pendingActions: ReturnType<typeof getFellowshipPendingActions> = [];
       let installment1Requirements: Awaited<ReturnType<typeof getInstallmentRequirementStatus>> = [];
 
-      if (app.fellowship) {
-        installment1Requirements = await getInstallmentRequirementStatus(
-          app.fellowship,
-          1
-        );
+      if (fellowship) {
+        installment1Requirements = await getInstallmentRequirementStatus(fellowship, 1);
         const fellowRequirements = installment1Requirements.filter((r) => r.source === "fellow");
         pendingActions = getFellowshipPendingActions({
-          currentStage: app.fellowship.currentStage,
-          bankSubmitted: Boolean(app.fellowship.bankSubmittedAt),
-          bankVerified: Boolean(app.fellowship.bankVerifiedAt),
+          currentStage: fellowship.currentStage,
+          bankSubmitted: Boolean(fellowship.bankSubmittedAt),
+          bankVerified: Boolean(fellowship.bankVerifiedAt),
           installment1DocsComplete: fellowRequirements.every((r) => r.satisfied),
-          hasPendingQuarterly: app.fellowship.progressReports.some(
+          hasPendingQuarterly: fellowship.progressReports?.some(
             (r) => r.status === "REVISION_REQUIRED"
-          ),
+          ) ?? false,
         });
       }
 
-      const displayStatus =
-        fellowshipStage && fellowshipStage !== "COMPLETED"
-          ? getFellowshipStageLabel(fellowshipStage)
-          : app.status === "COMPLETED" && fellowshipStage === "COMPLETED"
-            ? "Fellowship Completed"
-            : getLifecycleStatusLabel(app.status);
+      const displayStatus = fellowshipStage
+        ? fellowshipStage === "COMPLETED"
+          ? "Fellowship Completed"
+          : getFellowshipStageLabel(fellowshipStage)
+        : getLifecycleStatusLabel(effectiveStatus);
+
+      const showInterview =
+        Boolean(app.interview) &&
+        !fellowship &&
+        getMilestoneIndex(effectiveStatus, fellowshipStage) < 6;
 
       return {
         id: app.id,
         applicationNumber: app.applicationNumber,
         formattedNumber: formatApplicationNumber(app.applicationNumber),
-        status: app.status,
+        status: effectiveStatus,
         displayStatus,
-        adminPhase: getAdminPhase(app.status),
-        progress: getMilestoneProgress(app.status, fellowshipStage),
-        pipelineIndex: getMilestoneIndex(app.status, fellowshipStage),
+        adminPhase: getAdminPhase(effectiveStatus),
+        progress: getMilestoneProgress(effectiveStatus, fellowshipStage),
+        pipelineIndex: getMilestoneIndex(effectiveStatus, fellowshipStage),
         milestoneStates,
-        fellowshipSteps: fellowshipStage ? APPLICANT_FELLOWSHIP_STEPS : null,
+        fellowshipSteps: fellowship ? APPLICANT_FELLOWSHIP_STEPS : null,
         fellowshipStepStates,
         pendingActions,
+        showInterview,
         rejectionReason: app.rejectionReason,
         adminNotes: app.adminNotes,
         queryNotes: app.queryNotes,
@@ -128,21 +136,20 @@ export async function GET() {
               panelMembers: app.interview.panelMembers,
             }
           : null,
-        fellowship: app.fellowship
+        fellowship: fellowship
           ? {
-              fellowshipId: app.fellowship.fellowshipId,
-              currentStage: app.fellowship.currentStage,
+              fellowshipId: fellowship.fellowshipId,
+              currentStage: fellowship.currentStage,
               stageLabel:
-                FELLOWSHIP_STAGE_LABELS[app.fellowship.currentStage] ??
-                app.fellowship.currentStage,
-              mentor: app.fellowship.mentor,
-              institution: app.fellowship.institution,
-              sanctionedAmount: app.fellowship.sanctionedAmount,
-              bankSubmitted: Boolean(app.fellowship.bankSubmittedAt),
-              bankVerified: Boolean(app.fellowship.bankVerifiedAt),
-              isActive: app.fellowship.isActive,
-              isCompleted: app.fellowship.isCompleted,
-              installmentsReleased: app.fellowship.installments.filter(
+                FELLOWSHIP_STAGE_LABELS[fellowship.currentStage] ?? fellowship.currentStage,
+              mentor: fellowship.mentor,
+              institution: fellowship.institution,
+              sanctionedAmount: fellowship.sanctionedAmount,
+              bankSubmitted: Boolean(fellowship.bankSubmittedAt),
+              bankVerified: Boolean(fellowship.bankVerifiedAt),
+              isActive: fellowship.isActive,
+              isCompleted: fellowship.isCompleted,
+              installmentsReleased: fellowship.installments.filter(
                 (i) => i.status === "RELEASED"
               ).length,
               installment1Requirements: installment1Requirements.map((r) => ({

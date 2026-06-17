@@ -67,6 +67,7 @@ type TrackedApplication = {
     href: string;
     urgent?: boolean;
   }>;
+  showInterview?: boolean;
   rejectionReason: string | null;
   queryNotes?: string | null;
   submittedAt: string | null;
@@ -506,7 +507,7 @@ export function ApplicationTracker() {
                 </div>
               </section>
 
-              {app.interview && (
+              {app.showInterview && app.interview && (
                 <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
                   <h3 className="font-semibold text-violet-800">Interview scheduled</h3>
                   <p className="mt-1 text-sm text-violet-700">

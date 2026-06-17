@@ -59,11 +59,19 @@ export const APPLICANT_MILESTONES: ApplicantMilestone[] = [
     description: "Fellowship sanctioned and funding in progress",
     statuses: ["SELECTED", "AGREEMENT_PENDING", "COMPLETED"],
     fellowshipStages: [
+      "AGREEMENT_PENDING",
+      "BANK_VERIFICATION",
       "SANCTIONED",
       "INSTALLMENT_1_RELEASED",
+      "QUARTERLY_REVIEW_1",
+      "QUARTERLY_REVIEW_2",
       "MID_TERM_REVIEW",
       "INSTALLMENT_2_RELEASED",
+      "QUARTERLY_REVIEW_3",
+      "QUARTERLY_REVIEW_4",
       "FINAL_SUBMISSION",
+      "FINANCIAL_VERIFICATION",
+      "FINAL_PRESENTATION",
       "INSTALLMENT_3_RELEASED",
       "COMPLETED",
     ],
@@ -202,27 +210,28 @@ export function getMilestoneIndex(
 ): number {
   if (TERMINAL_STATUSES.includes(status) && status !== "SUSPENDED") return -1;
 
-  if (fellowshipStage === "COMPLETED") {
+  if (fellowshipStage) {
+    if (fellowshipStage === "COMPLETED") {
+      return APPLICANT_MILESTONES.length - 1;
+    }
+    for (let i = APPLICANT_MILESTONES.length - 1; i >= 0; i--) {
+      if (APPLICANT_MILESTONES[i].fellowshipStages?.includes(fellowshipStage)) {
+        return i;
+      }
+    }
+    return APPLICANT_MILESTONES.length - 1;
+  }
+
+  if (status === "COMPLETED") {
     return APPLICANT_MILESTONES.length - 1;
   }
 
   for (let i = APPLICANT_MILESTONES.length - 1; i >= 0; i--) {
     const m = APPLICANT_MILESTONES[i];
-    if (m.statuses.includes(status) && status !== "COMPLETED") return i;
-    if (
-      fellowshipStage &&
-      m.fellowshipStages?.includes(fellowshipStage) &&
-      ["SELECTED", "AGREEMENT_PENDING", "COMPLETED"].includes(status)
-    ) {
-      return i;
-    }
+    if (m.statuses.includes(status)) return i;
   }
 
-  if (status === "COMPLETED" && fellowshipStage) {
-    return APPLICANT_MILESTONES.length - 1;
-  }
-
-  if (status === "SCRUTINY" || status === "QUERY_RAISED" || status === "QUERY_RESPONDED") return 0;
+  if (status === "SCRUTINY" || status === "QUERY_RAISED" || status === "QUERY_RESPONDED") return 1;
   if (status === "DRAFT" || status === "INCOMPLETE") return -2;
   return 0;
 }
@@ -244,7 +253,9 @@ export function getMilestoneProgress(
     return Math.min(99, Math.round((base + slice * fellowshipPart) * 100));
   }
 
-  if (status === "COMPLETED" && !fellowshipStage) return 100;
+  if (status === "COMPLETED" && !fellowshipStage) {
+    return 100;
+  }
 
   return Math.round(((idx + 1) / APPLICANT_MILESTONES.length) * 100);
 }
