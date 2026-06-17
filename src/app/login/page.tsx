@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Leaf } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,16 +21,17 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
+        credentials: "include",
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error);
+        setError(data.error || "Login failed");
         return;
       }
 
-      router.push(data.redirect);
+      window.location.href = data.redirect;
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -40,24 +40,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 text-lg font-bold text-white">
-              V
+          <Link href="/" className="inline-flex flex-col items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-lg">
+              <Leaf className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold text-ink">Vaidya Gogate Memorial Foundation</p>
+              <p className="text-sm text-muted">Fellowship Portal 2026</p>
             </div>
           </Link>
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">Sign In</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Vaidya Gogate Memorial Foundation Fellowship Portal 2026
+          <h1 className="mt-6 text-2xl font-bold text-ink">Sign In</h1>
+          <p className="mt-2 text-sm text-muted">
+            Applicant, Admin, Staff, or Reviewer login
           </p>
         </div>
 
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+              <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>
             )}
 
             <Input
@@ -65,7 +69,7 @@ export default function LoginPage() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="email@example.com or +91XXXXXXXXXX"
+              placeholder="admin@vaidyagogate.org"
               required
             />
 
@@ -82,10 +86,16 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-medium text-primary-600 hover:text-primary-700">
-              Register as Applicant
+          <div className="mt-6 rounded-xl bg-primary-50 p-4 text-xs text-ink-soft">
+            <p className="font-semibold text-ink">Admin access</p>
+            <p className="mt-1">Email: admin@vaidyagogate.org</p>
+            <p>After first deploy, admin is auto-created. Contact support if login fails.</p>
+          </div>
+
+          <p className="mt-6 text-center text-sm text-muted">
+            New applicant?{" "}
+            <Link href="/register" className="font-semibold text-primary-600 hover:text-primary-700">
+              Create account
             </Link>
           </p>
         </div>

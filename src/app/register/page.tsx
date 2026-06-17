@@ -123,7 +123,7 @@ export default function RegisterPage() {
       }
 
       setUserId(data.user.userId);
-      setTimeout(() => router.push(data.redirect), 2000);
+      window.location.href = data.redirect;
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

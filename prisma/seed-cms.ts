@@ -1,6 +1,39 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+async function hashPassword(password: string) {
+  return bcrypt.hash(password, 12);
+}
+
+async function seedAdmin() {
+  const passwordHash = await hashPassword("Admin@2026");
+
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@vaidyagogate.org" },
+    update: {
+      passwordHash,
+      role: "ADMIN",
+      isActive: true,
+    },
+    create: {
+      userId: "VGMF-2026-00001",
+      email: "admin@vaidyagogate.org",
+      passwordHash,
+      role: "ADMIN",
+      profile: { create: { name: "VGMF Admin" } },
+    },
+  });
+
+  await prisma.profile.upsert({
+    where: { userId: admin.id },
+    update: { name: "VGMF Admin" },
+    create: { userId: admin.id, name: "VGMF Admin" },
+  });
+
+  console.log("Admin user ready: admin@vaidyagogate.org");
+}
 
 const DEFAULT_PAGES = [
   {
@@ -71,9 +104,16 @@ const DEFAULT_FIELDS = [
 ];
 
 async function main() {
+  await seedAdmin();
+
   await prisma.siteSettings.upsert({
     where: { id: "default" },
-    update: {},
+    update: {
+      siteName: "Vaidya Gogate Memorial Foundation Fellowship Portal 2026",
+      siteTagline: "Advancing Ayurvedic Research & Viddhakarma Studies",
+      contactEmail: "info@vaidyagogate.org",
+      contactPhone: "+91 9876543210",
+    },
     create: {
       id: "default",
       siteName: "Vaidya Gogate Memorial Foundation Fellowship Portal 2026",
@@ -84,6 +124,7 @@ async function main() {
       heroSubtitle: "Apply for research fellowships in Ayurvedic medicine with grants up to ₹75,000.",
       footerText: "© 2026 Vaidya Gogate Memorial Foundation. All rights reserved.",
       contactEmail: "info@vaidyagogate.org",
+      contactPhone: "+91 9876543210",
     },
   });
 
