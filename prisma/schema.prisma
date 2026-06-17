@@ -559,6 +559,10 @@ model SiteSettings {
   contactEmail          String?  @map("contact_email")
   contactPhone          String?  @map("contact_phone")
   contactAddress        String?  @map("contact_address")
+  signupEnabled         Boolean  @default(true) @map("signup_enabled")
+  loginEnabled          Boolean  @default(true) @map("login_enabled")
+  signupDisabledMessage String?  @map("signup_disabled_message") @db.Text
+  loginDisabledMessage  String?  @map("login_disabled_message") @db.Text
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")

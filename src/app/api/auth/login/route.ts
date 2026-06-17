@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
+import { assertApplicantLoginEnabled } from "@/lib/access-control";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { identifier, password, portal } = parsed.data;
+
+    if (portal === "applicant") {
+      const loginCheck = await assertApplicantLoginEnabled();
+      if (!loginCheck.allowed) {
+        return NextResponse.json({ error: loginCheck.message }, { status: 403 });
+      }
+    }
 
     const user = await prisma.user.findFirst({
       where: {

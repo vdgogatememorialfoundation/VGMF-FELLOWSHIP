@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession, getPortalPath } from "@/lib/auth";
+import { getAccessControl } from "@/lib/access-control";
 import { PortalLoginForm } from "@/components/auth/PortalLoginForm";
+import { AuthDisabledPanel } from "@/components/auth/AuthDisabledPanel";
 import { PortalLayout } from "@/components/layout/PortalLayout";
 import type { PortalType } from "@/lib/portal";
 import { PORTAL_ALLOWED_ROLES } from "@/lib/portal";
@@ -15,9 +17,24 @@ export async function PortalGate({
   showRegisterLink?: boolean;
 }) {
   const user = await getSession();
+  const access = await getAccessControl();
 
   if (!user) {
-    return <PortalLoginForm portal={portal} showRegisterLink={showRegisterLink} />;
+    if (portal === "applicant" && !access.loginEnabled) {
+      return (
+        <AuthDisabledPanel
+          title="Applicant Login Disabled"
+          message={access.loginDisabledMessage}
+        />
+      );
+    }
+
+    return (
+      <PortalLoginForm
+        portal={portal}
+        showRegisterLink={showRegisterLink && access.signupEnabled}
+      />
+    );
   }
 
   const allowedRoles = PORTAL_ALLOWED_ROLES[portal];

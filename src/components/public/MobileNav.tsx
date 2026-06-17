@@ -7,9 +7,10 @@ import type { NavLink } from "@/lib/site-content";
 
 interface MobileNavProps {
   links: NavLink[];
+  signupEnabled?: boolean;
 }
 
-export function MobileNav({ links }: MobileNavProps) {
+export function MobileNav({ links, signupEnabled = true }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -46,13 +47,15 @@ export function MobileNav({ links }: MobileNavProps) {
                   {item.label}
                 </Link>
               ))}
-              <Link
-                href="/register"
-                onClick={() => setOpen(false)}
-                className="btn-primary mt-4 text-center"
-              >
-                Apply Now
-              </Link>
+              {signupEnabled && (
+                <Link
+                  href="/register"
+                  onClick={() => setOpen(false)}
+                  className="btn-primary mt-4 text-center"
+                >
+                  Apply Now
+                </Link>
+              )}
             </nav>
           </div>
         </div>

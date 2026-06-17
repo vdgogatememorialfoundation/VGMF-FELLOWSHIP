@@ -42,13 +42,22 @@ export default async function HomePage() {
                 {settings.heroSubtitle}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/register" className="btn-gold gap-2 px-8 py-3.5 text-base">
-                  Start Application
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/#highlights" className="btn-secondary px-8 py-3.5 text-base">
-                  Explore programme
-                </Link>
+                {settings.signupEnabled ? (
+                  <>
+                    <Link href="/register" className="btn-gold gap-2 px-8 py-3.5 text-base">
+                      Start Application
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link href="/#highlights" className="btn-secondary px-8 py-3.5 text-base">
+                      Explore programme
+                    </Link>
+                  </>
+                ) : (
+                  <Link href="/#highlights" className="btn-gold gap-2 px-8 py-3.5 text-base">
+                    Explore programme
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
               </div>
               <div className="mt-10 flex flex-wrap gap-3">
                 {settings.heroStats.map((stat) => (
@@ -177,10 +186,16 @@ export default async function HomePage() {
           </div>
 
           <div className="mt-10 text-center">
-            <Link href="/register" className="btn-primary gap-2 px-10 py-3.5 text-base">
-              Register for Fellowship 2026
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {settings.signupEnabled ? (
+              <Link href="/register" className="btn-primary gap-2 px-10 py-3.5 text-base">
+                Register for Fellowship 2026
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <p className="text-sm font-medium text-muted">
+                Registration is currently closed. See official notices for updates.
+              </p>
+            )}
           </div>
         </div>
       </section>

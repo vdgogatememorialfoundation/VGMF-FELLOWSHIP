@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendOtpSchema } from "@/lib/validations";
 import { createAndSendOtp } from "@/lib/otp";
+import { assertSignupEnabled } from "@/lib/access-control";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { channel, phone, email, purpose } = parsed.data;
+
+    if (purpose === "REGISTER") {
+      const signupCheck = await assertSignupEnabled();
+      if (!signupCheck.allowed) {
+        return NextResponse.json({ error: signupCheck.message }, { status: 403 });
+      }
+    }
+
     const result = await createAndSendOtp({ channel, phone, email, purpose });
 
     if (!result.success) {

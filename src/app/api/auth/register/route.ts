@@ -11,9 +11,15 @@ import { registerSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/notifications";
 import { sendWelcomeEmail } from "@/lib/email";
 import { isEmailOtpVerified, isPhoneOtpVerified } from "@/lib/otp";
+import { assertSignupEnabled } from "@/lib/access-control";
 
 export async function POST(request: NextRequest) {
   try {
+    const signupCheck = await assertSignupEnabled();
+    if (!signupCheck.allowed) {
+      return NextResponse.json({ error: signupCheck.message }, { status: 403 });
+    }
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 

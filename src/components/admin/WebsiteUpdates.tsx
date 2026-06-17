@@ -13,6 +13,7 @@ import { SECRET_MASK } from "@/lib/site-content";
 
 const TABS = [
   { id: "branding", label: "Branding" },
+  { id: "access", label: "Signup & Login" },
   { id: "header", label: "Header & Nav" },
   { id: "footer", label: "Footer" },
   { id: "homepage", label: "Homepage" },
@@ -69,6 +70,10 @@ interface SiteSettingsState {
   contactEmail?: string;
   contactPhone?: string;
   contactAddress?: string;
+  signupEnabled?: boolean;
+  loginEnabled?: boolean;
+  signupDisabledMessage?: string;
+  loginDisabledMessage?: string;
 }
 
 interface Notice {
@@ -314,6 +319,46 @@ export function WebsiteUpdates() {
           <Input label="Contact Phone" value={settings.contactPhone || ""} onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })} />
           <Input label="Contact Address" value={settings.contactAddress || ""} onChange={(e) => setSettings({ ...settings, contactAddress: e.target.value })} />
           <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Branding</Button>
+        </div>
+      )}
+
+      {activeTab === "access" && (
+        <div className="card space-y-4">
+          <h2 className="font-semibold">Applicant Signup & Login</h2>
+          <p className="text-sm text-gray-600">
+            Control public applicant registration and login. Admin, staff, reviewer, and trustee portals are not affected.
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={settings.signupEnabled !== false}
+              onChange={(e) => setSettings({ ...settings, signupEnabled: e.target.checked })}
+            />
+            Enable applicant signup (public registration at /register)
+          </label>
+          <Textarea
+            label="Message when signup is disabled"
+            value={settings.signupDisabledMessage || ""}
+            onChange={(e) => setSettings({ ...settings, signupDisabledMessage: e.target.value })}
+            placeholder="New applicant registration is currently closed..."
+          />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={settings.loginEnabled !== false}
+              onChange={(e) => setSettings({ ...settings, loginEnabled: e.target.checked })}
+            />
+            Enable applicant login (/applicant portal)
+          </label>
+          <Textarea
+            label="Message when login is disabled"
+            value={settings.loginDisabledMessage || ""}
+            onChange={(e) => setSettings({ ...settings, loginDisabledMessage: e.target.value })}
+            placeholder="Applicant login is temporarily unavailable..."
+          />
+          <Button loading={loading} onClick={() => saveSection("settings", settings)}>
+            Save Access Settings
+          </Button>
         </div>
       )}
 

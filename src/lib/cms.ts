@@ -62,6 +62,10 @@ const DEFAULT_SITE_SETTINGS = {
   contactEmail: "info@vaidyagogate.org",
   contactPhone: "+91-9876543210",
   contactAddress: "Vaidya Gogate Memorial Foundation, India",
+  signupEnabled: true,
+  loginEnabled: true,
+  signupDisabledMessage: null as string | null,
+  loginDisabledMessage: null as string | null,
   updatedAt: new Date(),
 };
 
@@ -103,6 +107,10 @@ export type SiteContent = {
   contactEmail: string;
   contactPhone: string;
   contactAddress: string;
+  signupEnabled: boolean;
+  loginEnabled: boolean;
+  signupDisabledMessage: string | null;
+  loginDisabledMessage: string | null;
   updatedAt?: Date;
 };
 
@@ -153,6 +161,10 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     contactEmail: settings.contactEmail || DEFAULT_SITE_SETTINGS.contactEmail,
     contactPhone: settings.contactPhone || DEFAULT_SITE_SETTINGS.contactPhone,
     contactAddress: settings.contactAddress || DEFAULT_SITE_SETTINGS.contactAddress,
+    signupEnabled: settings.signupEnabled ?? true,
+    loginEnabled: settings.loginEnabled ?? true,
+    signupDisabledMessage: settings.signupDisabledMessage,
+    loginDisabledMessage: settings.loginDisabledMessage,
   };
 }
 

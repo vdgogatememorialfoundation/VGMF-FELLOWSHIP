@@ -42,13 +42,15 @@ export async function PublicHeader() {
               </span>
             )}
           </div>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-primary-700"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Apply / Register
-          </Link>
+          {settings.signupEnabled && (
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-primary-700"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Apply / Register
+            </Link>
+          )}
         </div>
       </div>
 
@@ -93,12 +95,14 @@ export async function PublicHeader() {
                 {item.label}
               </Link>
             ))}
-            <Link href="/register" className="btn-primary ml-2 text-sm">
-              Apply Now
-            </Link>
+            {settings.signupEnabled && (
+              <Link href="/register" className="btn-primary ml-2 text-sm">
+                Apply Now
+              </Link>
+            )}
           </nav>
 
-          <MobileNav links={navLinks} />
+          <MobileNav links={navLinks} signupEnabled={settings.signupEnabled} />
         </div>
       </header>
     </div>
@@ -123,7 +127,9 @@ export async function PublicFooter() {
           <div>
             <p className="font-display font-bold">Quick links</p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-white/70">
-              {settings.footerQuickLinks.map((link) => (
+              {settings.footerQuickLinks
+                .filter((link) => settings.signupEnabled || link.href !== "/register")
+                .map((link) => (
                 <Link key={link.href} href={link.href} className="hover:text-gold">
                   {link.label}
                 </Link>
