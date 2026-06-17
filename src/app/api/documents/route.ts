@@ -52,6 +52,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
+    const existingDoc = await prisma.applicationDocument.findFirst({
+      where: { applicationId, type: docType as never },
+    });
+
+    if (
+      existingDoc &&
+      existingDoc.status !== "RESUBMIT_REQUIRED" &&
+      app.status !== "DRAFT" &&
+      app.status !== "SCRUTINY" &&
+      app.status !== "SUBMITTED"
+    ) {
+      return NextResponse.json(
+        { error: "Document cannot be replaced at this stage" },
+        { status: 403 }
+      );
+    }
+
     const uploadDir = path.join(process.cwd(), "public", "uploads", applicationId);
     await mkdir(uploadDir, { recursive: true });
 
@@ -61,10 +78,6 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     const relativePath = `/uploads/${applicationId}/${fileName}`;
-
-    const existingDoc = await prisma.applicationDocument.findFirst({
-      where: { applicationId, type: docType as never },
-    });
 
     const document = existingDoc
       ? await prisma.applicationDocument.update({

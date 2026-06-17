@@ -149,7 +149,7 @@ export async function syncApplicationFromFormSubmission(
   data: FormData,
   existingApplicationId?: string | null
 ) {
-  const fields = buildApplicationFields(data, "SUBMITTED");
+  const fields = buildApplicationFields(data, "SCRUTINY");
 
   if (existingApplicationId) {
     const existing = await prisma.application.findUnique({
@@ -160,11 +160,21 @@ export async function syncApplicationFromFormSubmission(
       where: { id: existingApplicationId, userId },
       data: {
         ...fields,
+        status: "SCRUTINY",
         statusHistory: {
-          create: {
-            fromStatus: existing?.status ?? "DRAFT",
-            toStatus: "SUBMITTED",
-            notes: "Application submitted via fellowship form",
+          createMany: {
+            data: [
+              {
+                fromStatus: existing?.status ?? "DRAFT",
+                toStatus: "SUBMITTED",
+                notes: "Application submitted via fellowship form",
+              },
+              {
+                fromStatus: "SUBMITTED",
+                toStatus: "SCRUTINY",
+                notes: "Queued for administrative scrutiny and document verification",
+              },
+            ],
           },
         },
       },
@@ -186,10 +196,20 @@ export async function syncApplicationFromFormSubmission(
       applicationNumber,
       userId,
       ...fields,
+      status: "SCRUTINY",
       statusHistory: {
-        create: {
-          toStatus: "SUBMITTED",
-          notes: "Application submitted via fellowship form",
+        createMany: {
+          data: [
+            {
+              toStatus: "SUBMITTED",
+              notes: "Application submitted via fellowship form",
+            },
+            {
+              fromStatus: "SUBMITTED",
+              toStatus: "SCRUTINY",
+              notes: "Queued for administrative scrutiny and document verification",
+            },
+          ],
         },
       },
     },

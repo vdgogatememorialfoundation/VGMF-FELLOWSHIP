@@ -32,7 +32,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   applicant: [
     { href: "/applicant", label: "Dashboard", icon: LayoutDashboard },
     { href: "/applicant/forms", label: "Forms", icon: FileText },
-    { href: "/applicant/status", label: "Applicant State", icon: Activity },
+    { href: "/applicant/status", label: "Application Tracking", icon: Activity },
     { href: "/applicant/support", label: "Support", icon: HelpCircle },
   ],
   admin: [

@@ -37,6 +37,8 @@ export const RESEARCH_AREAS = [
 export const APPLICATION_STATUSES = [
   { value: "DRAFT", label: "Draft", color: "bg-gray-100 text-gray-800" },
   { value: "SUBMITTED", label: "Submitted", color: "bg-blue-100 text-blue-800" },
+  { value: "SCRUTINY", label: "Under Scrutiny", color: "bg-amber-100 text-amber-900" },
+  { value: "SCRUTINY_APPROVED", label: "Scrutiny Approved", color: "bg-teal-100 text-teal-800" },
   { value: "UNDER_REVIEW", label: "Under Review", color: "bg-yellow-100 text-yellow-800" },
   { value: "SHORTLISTED", label: "Shortlisted", color: "bg-purple-100 text-purple-800" },
   { value: "INTERVIEW_SCHEDULED", label: "Interview Scheduled", color: "bg-indigo-100 text-indigo-800" },

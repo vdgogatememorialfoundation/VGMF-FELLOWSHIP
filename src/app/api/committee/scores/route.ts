@@ -66,7 +66,7 @@ export async function GET() {
   }
 
   const applications = await prisma.application.findMany({
-    where: { status: { in: ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"] } },
+    where: { status: { in: ["SCRUTINY", "SCRUTINY_APPROVED", "SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"] } },
     include: {
       user: { include: { profile: true } },
       researchProposal: true,

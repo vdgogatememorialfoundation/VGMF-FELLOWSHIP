@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
+import { validateStatusTransition } from "@/lib/application-workflow";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -59,10 +60,28 @@ export async function PATCH(request: NextRequest) {
 
     const existing = await prisma.application.findUnique({
       where: { id: applicationId },
+      include: { documents: true },
     });
 
     if (!existing) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
+
+    const validationError = validateStatusTransition(
+      existing.status,
+      status,
+      existing.documents.map((doc) => ({
+        id: doc.id,
+        type: doc.type,
+        status: doc.status,
+        fileName: doc.fileName,
+        filePath: doc.filePath,
+        rejectionReason: doc.rejectionReason,
+      }))
+    );
+
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const application = await prisma.application.update({

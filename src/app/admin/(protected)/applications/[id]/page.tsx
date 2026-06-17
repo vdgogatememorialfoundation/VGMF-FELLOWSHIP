@@ -2,161 +2,366 @@
 
 import { useState, useEffect, use } from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import { formatCurrency, SCORING_CRITERIA } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { formatApplicationNumber } from "@/lib/application-number";
+import {
+  canApproveScrutiny,
+  getNextActions,
+  getDocumentLabel,
+  allDocumentsApproved,
+} from "@/lib/application-workflow";
+
+type ApplicationDocument = {
+  id: string;
+  type: string;
+  status: string;
+  filePath: string;
+  fileName: string;
+  rejectionReason?: string | null;
+};
+
+type ApplicationData = {
+  id: string;
+  applicationNumber: string;
+  status: string;
+  name: string;
+  email: string;
+  mobile: string;
+  bamsCollege: string;
+  currentDesignation: string;
+  registrationCouncil: string;
+  registrationNumber: string;
+  city: string;
+  state: string;
+  pincode: string;
+  rejectionReason?: string | null;
+  adminNotes?: string | null;
+  researchProposal: Record<string, string> | null;
+  budget: { total: number } | null;
+  documents: ApplicationDocument[];
+  committeeScores: Array<{ totalScore: number; committeeUser: { profile: { name: string } | null } }>;
+  statusHistory: Array<{
+    id: string;
+    fromStatus: string | null;
+    toStatus: string;
+    notes: string | null;
+    createdAt: string;
+  }>;
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  SCRUTINY: "Move to Scrutiny",
+  SCRUTINY_APPROVED: "Approve Scrutiny (Final)",
+  UNDER_REVIEW: "Send to Committee",
+  SHORTLISTED: "Shortlist",
+  INTERVIEW_SCHEDULED: "Schedule Interview",
+  SELECTED: "Select Fellow",
+  REJECTED: "Reject",
+  WAITLISTED: "Waitlist",
+};
 
 export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [app, setApp] = useState<Record<string, unknown> | null>(null);
+  const [app, setApp] = useState<ApplicationData | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [adminNotes, setAdminNotes] = useState("");
   const [docRejection, setDocRejection] = useState("");
   const [selectedDoc, setSelectedDoc] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetch(`/api/admin/applications?id=${id}`)
-      .then((r) => r.json())
-      .then((data) => setApp(data.application));
-  }, [id]);
-
-  async function updateStatus(status: string) {
-    await fetch("/api/admin/applications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ applicationId: id, status, rejectionReason }),
-    });
+  async function reload() {
     const res = await fetch(`/api/admin/applications?id=${id}`);
     const data = await res.json();
     setApp(data.application);
   }
 
-  async function rejectDocument(documentId: string) {
-    await fetch("/api/documents", {
+  useEffect(() => {
+    reload();
+    const timer = setInterval(reload, 15000);
+    return () => clearInterval(timer);
+  }, [id]);
+
+  async function updateStatus(status: string) {
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const res = await fetch("/api/admin/applications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        applicationId: id,
+        status,
+        rejectionReason: status === "REJECTED" ? rejectionReason : undefined,
+        adminNotes,
+      }),
+    });
+
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to update status");
+      return;
+    }
+
+    setMessage(`Status updated to ${status.replace(/_/g, " ")}`);
+    await reload();
+  }
+
+  async function reviewDocument(documentId: string, status: string, reason?: string) {
+    setLoading(true);
+    setError("");
+
+    const res = await fetch("/api/documents", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         documentId,
-        status: "RESUBMIT_REQUIRED",
-        rejectionReason: docRejection,
+        status,
+        rejectionReason: reason,
       }),
     });
-    const res = await fetch(`/api/admin/applications?id=${id}`);
+
     const data = await res.json();
-    setApp(data.application);
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to update document");
+      return;
+    }
+
     setSelectedDoc("");
     setDocRejection("");
+    setMessage(`Document marked as ${status.replace(/_/g, " ")}`);
+    await reload();
   }
 
-  if (!app) return <p className="py-12 text-center text-gray-500">Loading...</p>;
+  if (!app) return <p className="py-12 text-center text-gray-500">Loading application...</p>;
 
-  const application = app as {
-    applicationNumber: string;
-    status: string;
-    name: string;
-    email: string;
-    mobile: string;
-    bamsCollege: string;
-    currentDesignation: string;
-    researchProposal: Record<string, string> | null;
-    budget: Record<string, number> | null;
-    documents: Array<{ id: string; type: string; status: string; filePath: string; fileName: string }>;
-    committeeScores: Array<{ totalScore: number; committeeUser: { profile: { name: string } | null } }>;
-  };
+  const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents);
+  const nextActions = getNextActions(app.status as never);
+  const docsApproved = allDocumentsApproved(app.documents);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{application.applicationNumber}</h1>
-          <p className="text-gray-600">{application.name}</p>
+          <h1 className="font-mono text-2xl font-bold tracking-wide">{app.applicationNumber}</h1>
+          {/^\d{12}$/.test(app.applicationNumber) && (
+            <p className="text-sm text-gray-500">{formatApplicationNumber(app.applicationNumber)}</p>
+          )}
+          <p className="mt-1 text-gray-600">{app.name}</p>
         </div>
-        <StatusBadge status={application.status} />
+        <StatusBadge status={app.status} />
       </div>
+
+      {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
+
+      {app.status === "SCRUTINY" && (
+        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5">
+          <h2 className="font-semibold text-amber-900">Administrative Scrutiny</h2>
+          <p className="mt-1 text-sm text-amber-800">
+            Verify all applicant details and approve each document. Final scrutiny approval is only
+            available when every document is approved.
+          </p>
+          <p className="mt-2 text-sm font-medium text-amber-900">
+            Documents approved: {app.documents.filter((d) => d.status === "APPROVED").length} /{" "}
+            {app.documents.length}
+          </p>
+          {!scrutinyCheck.ok && (
+            <p className="mt-2 text-sm text-amber-700">{scrutinyCheck.reason}</p>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="card space-y-3">
           <h2 className="font-semibold">Personal & Professional</h2>
-          <div className="text-sm space-y-1">
-            <p><strong>Email:</strong> {application.email}</p>
-            <p><strong>Mobile:</strong> {application.mobile}</p>
-            <p><strong>BAMS College:</strong> {application.bamsCollege}</p>
-            <p><strong>Designation:</strong> {application.currentDesignation}</p>
+          <div className="space-y-1 text-sm">
+            <p><strong>Email:</strong> {app.email}</p>
+            <p><strong>Mobile:</strong> {app.mobile}</p>
+            <p><strong>Location:</strong> {app.city}, {app.state} — {app.pincode}</p>
+            <p><strong>BAMS College:</strong> {app.bamsCollege}</p>
+            <p><strong>Designation:</strong> {app.currentDesignation}</p>
+            <p><strong>Registration:</strong> {app.registrationCouncil} — {app.registrationNumber}</p>
           </div>
         </div>
 
-        {application.researchProposal && (
+        {app.researchProposal && (
           <div className="card space-y-3">
             <h2 className="font-semibold">Research Proposal</h2>
-            <div className="text-sm space-y-1">
-              <p><strong>Title:</strong> {application.researchProposal.projectTitle}</p>
-              <p><strong>Area:</strong> {application.researchProposal.researchArea?.replace(/_/g, " ")}</p>
-              <p><strong>Objectives:</strong> {application.researchProposal.objectives}</p>
+            <div className="space-y-1 text-sm">
+              <p><strong>Title:</strong> {app.researchProposal.projectTitle}</p>
+              <p><strong>Area:</strong> {app.researchProposal.researchArea?.replace(/_/g, " ")}</p>
+              <p><strong>Objectives:</strong> {app.researchProposal.objectives}</p>
             </div>
           </div>
         )}
 
-        {application.budget && (
+        {app.budget && (
           <div className="card space-y-3">
             <h2 className="font-semibold">Budget</h2>
             <p className="text-lg font-bold text-primary-600">
-              Total: {formatCurrency(application.budget.total)}
+              Total: {formatCurrency(app.budget.total)}
             </p>
           </div>
         )}
 
-        <div className="card space-y-3">
-          <h2 className="font-semibold">Documents</h2>
-          {application.documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{doc.type.replace(/_/g, " ")}</p>
-                <a href={doc.filePath} target="_blank" className="text-xs text-primary-600 hover:underline">
-                  {doc.fileName}
-                </a>
+        <div className="card space-y-4 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Document Scrutiny</h2>
+            {docsApproved && (
+              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                All documents approved
+              </span>
+            )}
+          </div>
+          {app.documents.length === 0 ? (
+            <p className="text-sm text-gray-500">No documents uploaded yet.</p>
+          ) : (
+            app.documents.map((doc) => (
+              <div
+                key={doc.id}
+                className={`rounded-xl border p-4 ${
+                  doc.status === "RESUBMIT_REQUIRED"
+                    ? "border-orange-200 bg-orange-50"
+                    : doc.status === "APPROVED"
+                      ? "border-green-200 bg-green-50/40"
+                      : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{getDocumentLabel(doc.type)}</p>
+                    <a
+                      href={doc.filePath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary-600 hover:underline"
+                    >
+                      {doc.fileName}
+                    </a>
+                    {doc.rejectionReason && (
+                      <p className="mt-1 text-xs text-orange-700">Reason: {doc.rejectionReason}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <DocStatusBadge status={doc.status} />
+                    {doc.status !== "APPROVED" && (
+                      <Button
+                        variant="secondary"
+                        className="px-2 py-1 text-xs"
+                        loading={loading}
+                        onClick={() => reviewDocument(doc.id, "APPROVED")}
+                      >
+                        Approve
+                      </Button>
+                    )}
+                    <Button
+                      variant="secondary"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => setSelectedDoc(doc.id)}
+                    >
+                      Request resubmit
+                    </Button>
+                  </div>
+                </div>
+                {selectedDoc === doc.id && (
+                  <div className="mt-3 space-y-2 border-t pt-3">
+                    <Textarea
+                      label="Reason for resubmission"
+                      value={docRejection}
+                      onChange={(e) => setDocRejection(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="danger"
+                        loading={loading}
+                        onClick={() =>
+                          reviewDocument(doc.id, "RESUBMIT_REQUIRED", docRejection)
+                        }
+                      >
+                        Send back to applicant
+                      </Button>
+                      <Button variant="secondary" onClick={() => setSelectedDoc("")}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={doc.status} />
-                <Button variant="secondary" className="text-xs px-2 py-1" onClick={() => setSelectedDoc(doc.id)}>
-                  Reject
-                </Button>
-              </div>
-            </div>
-          ))}
-          {selectedDoc && (
-            <div className="space-y-2 border-t pt-3">
-              <Textarea
-                label="Rejection Reason"
-                value={docRejection}
-                onChange={(e) => setDocRejection(e.target.value)}
-              />
-              <Button variant="danger" onClick={() => rejectDocument(selectedDoc)}>
-                Request Resubmission
-              </Button>
-            </div>
+            ))
           )}
         </div>
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-semibold">Update Status</h2>
+        <h2 className="font-semibold">Status & Final Approval</h2>
         <Textarea
-          label="Rejection Reason / Notes"
+          label="Admin notes"
+          value={adminNotes}
+          onChange={(e) => setAdminNotes(e.target.value)}
+        />
+        <Textarea
+          label="Rejection reason (required when rejecting)"
           value={rejectionReason}
           onChange={(e) => setRejectionReason(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          {["UNDER_REVIEW", "SHORTLISTED", "INTERVIEW_SCHEDULED", "SELECTED", "REJECTED", "WAITLISTED"].map((s) => (
-            <Button key={s} variant="secondary" onClick={() => updateStatus(s)}>
-              {s.replace(/_/g, " ")}
-            </Button>
-          ))}
+          {nextActions.map((action) => {
+            const isScrutinyApprove = action === "SCRUTINY_APPROVED";
+            const disabled = isScrutinyApprove && !scrutinyCheck.ok;
+            return (
+              <Button
+                key={action}
+                variant={action === "REJECTED" ? "danger" : "secondary"}
+                disabled={disabled}
+                loading={loading}
+                onClick={() => updateStatus(action)}
+              >
+                {ACTION_LABELS[action] ?? action.replace(/_/g, " ")}
+              </Button>
+            );
+          })}
+          {nextActions.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No further status transitions available from this stage.
+            </p>
+          )}
         </div>
       </div>
 
-      {application.committeeScores?.length > 0 && (
+      {app.statusHistory?.length > 0 && (
         <div className="card">
-          <h2 className="font-semibold mb-3">Committee Scores</h2>
-          {application.committeeScores.map((score, i) => (
+          <h2 className="mb-3 font-semibold">Status History</h2>
+          <div className="space-y-3">
+            {app.statusHistory.map((entry) => (
+              <div key={entry.id} className="border-b pb-3 text-sm last:border-0">
+                <p className="font-medium">
+                  {entry.fromStatus ? `${entry.fromStatus} → ` : ""}
+                  {entry.toStatus.replace(/_/g, " ")}
+                </p>
+                {entry.notes && <p className="text-gray-600">{entry.notes}</p>}
+                <p className="text-xs text-gray-400">
+                  {new Date(entry.createdAt).toLocaleString("en-IN")}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {app.committeeScores?.length > 0 && (
+        <div className="card">
+          <h2 className="mb-3 font-semibold">Committee Scores</h2>
+          {app.committeeScores.map((score, i) => (
             <div key={i} className="flex justify-between border-b py-2 text-sm last:border-0">
               <span>{score.committeeUser.profile?.name ?? "Committee Member"}</span>
               <span className="font-medium">{score.totalScore}/100</span>

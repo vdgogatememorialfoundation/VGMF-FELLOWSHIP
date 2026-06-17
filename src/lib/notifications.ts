@@ -144,6 +144,8 @@ export async function notifyApplicationSubmitted(
 const STATUS_MESSAGES: Record<string, string> = {
   DRAFT: "Your application has been saved as a draft. You can continue editing before final submission.",
   SUBMITTED: "Your application has been submitted and is awaiting review.",
+  SCRUTINY: "Your application is under administrative scrutiny. Documents and details are being verified.",
+  SCRUTINY_APPROVED: "Scrutiny completed successfully. Your application will proceed to committee review.",
   UNDER_REVIEW: "Your application is now under review by the committee.",
   SHORTLISTED: "Congratulations! Your application has been shortlisted.",
   INTERVIEW_SCHEDULED: "An interview has been scheduled for your application.",
