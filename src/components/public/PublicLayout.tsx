@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, Calendar, UserPlus } from "lucide-react";
+import { Mail, Phone, Calendar, UserPlus, MapPin, ExternalLink } from "lucide-react";
 import { getSiteSettings, getActiveNotices } from "@/lib/cms";
 import { getNoticeAttachmentUrl, hasNoticeAttachment } from "@/lib/notice-assets";
 import { AnnouncementTicker } from "./AnnouncementTicker";
@@ -72,7 +72,7 @@ export async function PublicHeader() {
                 className="h-11 w-11 rounded-2xl object-contain"
               />
             ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 to-primary-800 text-sm font-extrabold text-white shadow-lg">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 text-sm font-extrabold text-primary-700 shadow-sm">
                 VG
               </div>
             )}
@@ -114,49 +114,122 @@ export async function PublicFooter() {
   const settings = await getSiteSettings();
 
   return (
-    <footer id="contact" className="relative overflow-hidden border-t border-[#e4ede8] bg-ink px-6 py-14 text-white">
-      <div className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl" />
-      <div className="relative mx-auto max-w-7xl">
-        <div className="grid gap-10 md:grid-cols-3">
-          <div>
-            <p className="font-display text-xl font-extrabold">{settings.headerOrgName}</p>
-            <p className="mt-3 text-sm text-white/70">{settings.siteTagline}</p>
+    <footer
+      id="contact"
+      className="relative overflow-hidden border-t border-[#e4ede8] bg-gradient-to-b from-white via-[#fafdfb] to-[#f4faf7]"
+    >
+      <div className="pointer-events-none absolute -left-16 bottom-0 h-48 w-48 rounded-full bg-primary-100/40 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-gold/10 blur-3xl" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-14">
+        <div className="grid gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <div className="flex items-center gap-3">
+              {settings.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={settings.logoUrl}
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 rounded-2xl object-contain"
+                />
+              ) : (
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-100 text-sm font-extrabold text-primary-700">
+                  VG
+                </div>
+              )}
+              <div>
+                <p className="font-display text-lg font-extrabold text-ink">
+                  {settings.headerOrgName}
+                </p>
+                <p className="text-sm text-muted">{settings.siteTagline}</p>
+              </div>
+            </div>
             {settings.footerAboutText && (
-              <p className="mt-4 text-sm text-white/60">{settings.footerAboutText}</p>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-soft">
+                {settings.footerAboutText}
+              </p>
             )}
+            <div className="mt-5 space-y-2 text-sm text-ink-soft">
+              {settings.contactEmail && (
+                <a
+                  href={`mailto:${settings.contactEmail}`}
+                  className="flex items-center gap-2 hover:text-primary-700"
+                >
+                  <Mail className="h-4 w-4 text-primary-500" />
+                  {settings.contactEmail}
+                </a>
+              )}
+              {settings.contactPhone && (
+                <a
+                  href={`tel:${settings.contactPhone}`}
+                  className="flex items-center gap-2 hover:text-primary-700"
+                >
+                  <Phone className="h-4 w-4 text-primary-500" />
+                  {settings.contactPhone}
+                </a>
+              )}
+              {settings.contactAddress && (
+                <p className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                  <span>{settings.contactAddress}</span>
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="font-display font-bold">Quick links</p>
-            <div className="mt-4 flex flex-col gap-2 text-sm text-white/70">
+
+          <div className="lg:col-span-3">
+            <p className="font-display text-sm font-bold uppercase tracking-wide text-ink">
+              Quick links
+            </p>
+            <nav className="mt-4 flex flex-col gap-2.5">
               {settings.footerQuickLinks
                 .filter((link) => settings.signupEnabled || link.href !== "/register")
                 .map((link) => (
-                <Link key={link.href} href={link.href} className="hover:text-gold">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm text-ink-soft transition hover:text-primary-700"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline"
+              >
+                Applicant login
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </nav>
           </div>
-          <div>
-            <p className="font-display font-bold">Legal & contact</p>
-            <div className="mt-4 flex flex-col gap-2 text-sm text-white/70">
+
+          <div className="lg:col-span-4">
+            <p className="font-display text-sm font-bold uppercase tracking-wide text-ink">
+              Legal & policies
+            </p>
+            <nav className="mt-4 flex flex-col gap-2.5">
               {settings.footerLegalLinks.map((link) => (
-                <Link key={link.href} href={link.href} className="hover:text-gold">
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm text-ink-soft transition hover:text-primary-700"
+                >
                   {link.label}
                 </Link>
               ))}
-              {settings.contactEmail && <span>{settings.contactEmail}</span>}
-              {settings.contactPhone && <span>{settings.contactPhone}</span>}
-            </div>
+            </nav>
           </div>
         </div>
-        <div className="mt-12 border-t border-white/10 pt-6 text-center text-sm text-white/55">
-          <p>
+
+        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-[#e8f0ec] pt-8 text-center sm:flex-row sm:text-left">
+          <p className="text-sm text-muted">
             {settings.footerText ||
               `© ${new Date().getFullYear()} Vaidya Gogate Memorial Foundation. All rights reserved.`}
           </p>
           {settings.footerDeveloperCredit && (
-            <p className="mt-2">{settings.footerDeveloperCredit}</p>
+            <p className="text-xs text-muted">{settings.footerDeveloperCredit}</p>
           )}
         </div>
       </div>

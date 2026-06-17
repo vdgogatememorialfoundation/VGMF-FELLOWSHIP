@@ -56,7 +56,7 @@ const DEFAULT_SITE_SETTINGS = {
   navLinks: DEFAULT_NAV_LINKS,
   footerQuickLinks: DEFAULT_FOOTER_QUICK_LINKS,
   footerLegalLinks: DEFAULT_FOOTER_LEGAL_LINKS,
-  footerAboutText: "Advancing Ayurveda since 1972",
+      footerAboutText: "Advancing Ayurvedic research and Viddhakarma studies since 1972. Fellowship grants up to ₹75,000 for qualified practitioners.",
   footerDeveloperCredit:
     "Developed by Capture Visual Studios · Vaidya Gogate Memorial Foundation Copyrights",
   footerText: "© 2026 Vaidya Gogate Memorial Foundation. All rights reserved.",

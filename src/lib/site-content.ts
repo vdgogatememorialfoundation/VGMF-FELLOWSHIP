@@ -27,10 +27,12 @@ export const DEFAULT_FOOTER_QUICK_LINKS: NavLink[] = [
   { href: "/#notices", label: "Official notices" },
   { href: "/register", label: "Start application" },
   { href: "/about", label: "About foundation" },
+  { href: "/applicant/status", label: "Track application" },
 ];
 
 export const DEFAULT_FOOTER_LEGAL_LINKS: NavLink[] = [
   { href: "/terms", label: "Terms & Conditions" },
+  { href: "/undertaking", label: "Applicant Undertaking" },
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/refund-policy", label: "Refund Policy" },
 ];
