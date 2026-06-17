@@ -74,6 +74,11 @@ const DEFAULT_SITE_SETTINGS = {
   welcomeWhatsappEnabled: false,
   alertsEmailEnabled: true,
   alertsWhatsappEnabled: true,
+  statusNotifyEmailEnabled: true,
+  statusNotifyWhatsappEnabled: true,
+  maintenanceModeEnabled: false,
+  maintenanceMessage: null as string | null,
+  maintenanceAllowPortals: true,
   updatedAt: new Date(),
 };
 
@@ -127,6 +132,11 @@ export type SiteContent = {
   welcomeWhatsappEnabled: boolean;
   alertsEmailEnabled: boolean;
   alertsWhatsappEnabled: boolean;
+  statusNotifyEmailEnabled: boolean;
+  statusNotifyWhatsappEnabled: boolean;
+  maintenanceModeEnabled: boolean;
+  maintenanceMessage: string | null;
+  maintenanceAllowPortals: boolean;
   updatedAt?: Date;
 };
 
@@ -189,6 +199,11 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     welcomeWhatsappEnabled: settings.welcomeWhatsappEnabled ?? false,
     alertsEmailEnabled: settings.alertsEmailEnabled ?? true,
     alertsWhatsappEnabled: settings.alertsWhatsappEnabled ?? true,
+    statusNotifyEmailEnabled: settings.statusNotifyEmailEnabled ?? true,
+    statusNotifyWhatsappEnabled: settings.statusNotifyWhatsappEnabled ?? true,
+    maintenanceModeEnabled: settings.maintenanceModeEnabled ?? false,
+    maintenanceMessage: settings.maintenanceMessage,
+    maintenanceAllowPortals: settings.maintenanceAllowPortals ?? true,
   };
 }
 

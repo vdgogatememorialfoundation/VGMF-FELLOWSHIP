@@ -25,6 +25,11 @@ export async function getAccessControl() {
     welcomeWhatsappEnabled: settings.welcomeWhatsappEnabled,
     alertsEmailEnabled: settings.alertsEmailEnabled,
     alertsWhatsappEnabled: settings.alertsWhatsappEnabled,
+    statusNotifyEmailEnabled: settings.statusNotifyEmailEnabled,
+    statusNotifyWhatsappEnabled: settings.statusNotifyWhatsappEnabled,
+    maintenanceModeEnabled: settings.maintenanceModeEnabled,
+    maintenanceMessage: settings.maintenanceMessage,
+    maintenanceAllowPortals: settings.maintenanceAllowPortals,
   };
 }
 

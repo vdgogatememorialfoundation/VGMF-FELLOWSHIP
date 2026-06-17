@@ -82,6 +82,11 @@ interface SiteSettingsState {
   welcomeWhatsappEnabled?: boolean;
   alertsEmailEnabled?: boolean;
   alertsWhatsappEnabled?: boolean;
+  statusNotifyEmailEnabled?: boolean;
+  statusNotifyWhatsappEnabled?: boolean;
+  maintenanceModeEnabled?: boolean;
+  maintenanceMessage?: string;
+  maintenanceAllowPortals?: boolean;
 }
 
 interface Notice {
@@ -190,6 +195,7 @@ export function WebsiteUpdates() {
     linkUrl: "",
     linkLabel: "",
     expiresAt: "",
+    notifyApplicants: false,
   });
 
   const [testPhone, setTestPhone] = useState("");
@@ -333,6 +339,39 @@ export function WebsiteUpdates() {
       {activeTab === "access" && (
         <div className="space-y-6">
           <div className="card space-y-4">
+            <h2 className="font-semibold">Site Maintenance Mode</h2>
+            <p className="text-sm text-gray-600">
+              Show a maintenance page on the public website (homepage, content pages, and registration).
+              Admin and staff portals remain accessible.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.maintenanceModeEnabled === true}
+                onChange={(e) => setSettings({ ...settings, maintenanceModeEnabled: e.target.checked })}
+              />
+              Enable public site maintenance mode
+            </label>
+            <Textarea
+              label="Maintenance message"
+              value={settings.maintenanceMessage || ""}
+              onChange={(e) => setSettings({ ...settings, maintenanceMessage: e.target.value })}
+              placeholder="The VGMF Fellowship Portal is undergoing scheduled maintenance..."
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.maintenanceAllowPortals !== false}
+                onChange={(e) => setSettings({ ...settings, maintenanceAllowPortals: e.target.checked })}
+              />
+              Keep applicant portal accessible during maintenance
+            </label>
+            <p className="text-xs text-gray-500">
+              Uncheck to block unauthenticated access to /applicant during maintenance.
+            </p>
+          </div>
+
+          <div className="card space-y-4">
             <h2 className="font-semibold">Applicant Signup & Login</h2>
             <p className="text-sm text-gray-600">
               Control public applicant registration and login. Admin, staff, reviewer, and trustee portals are not affected.
@@ -391,9 +430,33 @@ export function WebsiteUpdates() {
           </div>
 
           <div className="card space-y-4">
-            <h2 className="font-semibold">Emails & WhatsApp Notifications</h2>
+            <h2 className="font-semibold">Status & Update Notifications</h2>
             <p className="text-sm text-gray-600">
-              Control automated messages for welcome, application submission, and portal alerts.
+              Email and WhatsApp alerts when application status changes, documents are reviewed,
+              interviews are scheduled, installments are released, or site notices are broadcast.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.statusNotifyEmailEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, statusNotifyEmailEnabled: e.target.checked })}
+              />
+              Send status & update emails
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.statusNotifyWhatsappEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, statusNotifyWhatsappEnabled: e.target.checked })}
+              />
+              Send status & update WhatsApp messages
+            </label>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="font-semibold">General Portal Alerts</h2>
+            <p className="text-sm text-gray-600">
+              Control automated messages for welcome, application submission, and other portal alerts.
             </p>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -433,7 +496,7 @@ export function WebsiteUpdates() {
                 checked={settings.alertsEmailEnabled !== false}
                 onChange={(e) => setSettings({ ...settings, alertsEmailEnabled: e.target.checked })}
               />
-              Send portal alert emails (status updates, interviews, installments, etc.)
+              Send general portal alert emails (support tickets, admin messages)
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -441,7 +504,7 @@ export function WebsiteUpdates() {
                 checked={settings.alertsWhatsappEnabled !== false}
                 onChange={(e) => setSettings({ ...settings, alertsWhatsappEnabled: e.target.checked })}
               />
-              Send portal alert WhatsApp messages
+              Send general portal alert WhatsApp messages
             </label>
           </div>
 
@@ -583,9 +646,17 @@ export function WebsiteUpdates() {
               <Input label="Link URL" value={noticeForm.linkUrl} onChange={(e) => setNoticeForm({ ...noticeForm, linkUrl: e.target.value })} />
               <Input label="Link label" value={noticeForm.linkLabel} onChange={(e) => setNoticeForm({ ...noticeForm, linkLabel: e.target.value })} />
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={noticeForm.notifyApplicants}
+                onChange={(e) => setNoticeForm({ ...noticeForm, notifyApplicants: e.target.checked })}
+              />
+              Notify all applicants via email & WhatsApp when publishing this notice
+            </label>
             <Button onClick={async () => {
               await saveSection("notice", { ...noticeForm, linkUrl: noticeForm.linkUrl || null, linkLabel: noticeForm.linkLabel || null, expiresAt: noticeForm.expiresAt ? new Date(noticeForm.expiresAt).toISOString() : null, isActive: true });
-              setNoticeForm({ title: "", content: "", category: "EVENT", priority: 0, linkUrl: "", linkLabel: "", expiresAt: "" });
+              setNoticeForm({ title: "", content: "", category: "EVENT", priority: 0, linkUrl: "", linkLabel: "", expiresAt: "", notifyApplicants: false });
             }}>Publish Notice</Button>
           </div>
 

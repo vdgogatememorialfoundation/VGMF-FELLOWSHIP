@@ -4,6 +4,18 @@ import prisma from "@/lib/db";
 import { getIntegrationSettingsForAdmin } from "@/lib/integrations";
 import { resolveSecret } from "@/lib/site-content";
 import { saveSiteAsset, resolveLogoUrl, resolveFaviconUrl } from "@/lib/site-assets";
+import { notifySiteNotice } from "@/lib/notifications";
+
+async function broadcastNoticeToApplicants(title: string, content: string) {
+  const applicants = await prisma.user.findMany({
+    where: { role: "APPLICANT", isActive: true },
+    select: { id: true },
+  });
+
+  await Promise.all(
+    applicants.map((applicant) => notifySiteNotice(applicant.id, title, content))
+  );
+}
 
 async function requireAdmin() {
   const user = await getSession();
@@ -136,6 +148,11 @@ export async function PUT(request: NextRequest) {
         where: { id: data.id },
         data: updateData,
       });
+
+      if (data.notifyApplicants && notice.isActive) {
+        void broadcastNoticeToApplicants(notice.title, notice.content);
+      }
+
       return NextResponse.json({ notice });
     }
 
@@ -151,6 +168,11 @@ export async function PUT(request: NextRequest) {
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
       },
     });
+
+    if (data.notifyApplicants && notice.isActive) {
+      void broadcastNoticeToApplicants(notice.title, notice.content);
+    }
+
     return NextResponse.json({ notice });
   }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublicHeader, PublicFooter, NoticesSection } from "@/components/public/PublicLayout";
+import { PublicMaintenanceGate } from "@/components/public/PublicMaintenanceGate";
 import { FaqSection } from "@/components/public/FaqSection";
 import { getSiteSettings } from "@/lib/cms";
 import { getIcon } from "@/lib/icons";
@@ -17,6 +18,7 @@ export default async function HomePage() {
   const settings = await getSiteSettings();
 
   return (
+    <PublicMaintenanceGate>
     <div className="min-h-screen mesh-bg">
       <PublicHeader />
 
@@ -258,5 +260,6 @@ export default async function HomePage() {
 
       <PublicFooter />
     </div>
+    </PublicMaintenanceGate>
   );
 }

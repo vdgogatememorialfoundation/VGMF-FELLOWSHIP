@@ -571,6 +571,11 @@ model SiteSettings {
   welcomeWhatsappEnabled           Boolean @default(false) @map("welcome_whatsapp_enabled")
   alertsEmailEnabled               Boolean @default(true) @map("alerts_email_enabled")
   alertsWhatsappEnabled            Boolean @default(true) @map("alerts_whatsapp_enabled")
+  statusNotifyEmailEnabled         Boolean @default(true) @map("status_notify_email_enabled")
+  statusNotifyWhatsappEnabled      Boolean @default(true) @map("status_notify_whatsapp_enabled")
+  maintenanceModeEnabled           Boolean @default(false) @map("maintenance_mode_enabled")
+  maintenanceMessage               String? @map("maintenance_message") @db.Text
+  maintenanceAllowPortals          Boolean @default(true) @map("maintenance_allow_portals")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")

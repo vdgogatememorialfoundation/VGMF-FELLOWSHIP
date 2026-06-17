@@ -3,7 +3,7 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { notifyDocumentResubmit } from "@/lib/notifications";
+import { notifyDocumentReviewed } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
@@ -77,13 +77,12 @@ export async function PATCH(request: NextRequest) {
       include: { application: true },
     });
 
-    if (status === "RESUBMIT_REQUIRED" && rejectionReason) {
-      await notifyDocumentResubmit(
-        document.application.userId,
-        document.type,
-        rejectionReason
-      );
-    }
+    await notifyDocumentReviewed(
+      document.application.userId,
+      document.type,
+      status,
+      rejectionReason
+    );
 
     return NextResponse.json({ success: true, document });
   } catch (error) {

@@ -82,7 +82,12 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
-    await notifyStatusChange(existing.userId, existing.applicationNumber, status);
+    await notifyStatusChange(
+      existing.userId,
+      existing.applicationNumber,
+      status,
+      { fromStatus: existing.status }
+    );
 
     return NextResponse.json({ success: true, application });
   } catch (error) {

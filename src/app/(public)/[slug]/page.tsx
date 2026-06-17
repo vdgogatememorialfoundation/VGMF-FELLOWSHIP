@@ -1,4 +1,5 @@
 import { PublicHeader, PublicFooter } from "@/components/public/PublicLayout";
+import { PublicMaintenanceGate } from "@/components/public/PublicMaintenanceGate";
 import { getCmsPage } from "@/lib/cms";
 import { notFound } from "next/navigation";
 import type { CmsPageSlug } from "@prisma/client";
@@ -23,6 +24,7 @@ export default async function CmsPublicPage({
   if (!page || !page.isPublished) notFound();
 
   return (
+    <PublicMaintenanceGate>
     <div className="min-h-screen mesh-bg">
       <PublicHeader />
       <main className="mx-auto max-w-4xl px-5 py-16 sm:px-6">
@@ -35,5 +37,6 @@ export default async function CmsPublicPage({
       </main>
       <PublicFooter />
     </div>
+    </PublicMaintenanceGate>
   );
 }

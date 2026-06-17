@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { getSession, getPortalPath } from "@/lib/auth";
 import { getAccessControl } from "@/lib/access-control";
+import { getMaintenanceSettings, isApplicantPortalMaintenanceActive } from "@/lib/maintenance";
 import { PortalLoginForm } from "@/components/auth/PortalLoginForm";
 import { AuthDisabledPanel } from "@/components/auth/AuthDisabledPanel";
+import { MaintenancePage } from "@/components/public/MaintenancePage";
 import { PortalLayout } from "@/components/layout/PortalLayout";
 import type { PortalType } from "@/lib/portal";
 import { PORTAL_ALLOWED_ROLES } from "@/lib/portal";
@@ -20,6 +22,16 @@ export async function PortalGate({
   const access = await getAccessControl();
 
   if (!user) {
+    if (portal === "applicant" && (await isApplicantPortalMaintenanceActive())) {
+      const maintenance = await getMaintenanceSettings();
+      return (
+        <MaintenancePage
+          message={maintenance.message}
+          showPortalHint={false}
+        />
+      );
+    }
+
     if (portal === "applicant" && !access.loginEnabled) {
       return (
         <AuthDisabledPanel
