@@ -1,6 +1,27 @@
 import { randomInt } from "crypto";
 import prisma from "./db";
 
+const APPLICATION_SUFFIX_MIN = 10_000_000;
+const APPLICATION_SUFFIX_MAX = 99_999_999;
+
+async function generateUniqueApplicationNumber(maxAttempts = 30): Promise<string> {
+  const year = new Date().getFullYear();
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const suffix = String(randomInt(APPLICATION_SUFFIX_MIN, APPLICATION_SUFFIX_MAX + 1));
+    const applicationNumber = `${year}${suffix}`;
+
+    const existing = await prisma.application.findUnique({
+      where: { applicationNumber },
+      select: { id: true },
+    });
+
+    if (!existing) return applicationNumber;
+  }
+
+  throw new Error("Failed to generate unique application number");
+}
+
 const MIN_12_DIGIT = 100_000_000_000;
 const MAX_12_DIGIT = 999_999_999_999;
 
@@ -25,12 +46,7 @@ export async function generateUserId(): Promise<string> {
   });
 }
 
+/** YYYY + 8 random digits — unique, non-sequential (e.g. 202684729153) */
 export async function generateApplicationNumber(): Promise<string> {
-  return generateUnique12DigitId(async (applicationNumber) => {
-    const existing = await prisma.application.findUnique({
-      where: { applicationNumber },
-      select: { id: true },
-    });
-    return Boolean(existing);
-  });
+  return generateUniqueApplicationNumber();
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -42,6 +43,7 @@ export default function ApplicantFellowshipPage() {
   const [data, setData] = useState<{
     fellowship: FellowshipData | null;
     applicationNumber: string;
+    message?: string;
   } | null>(null);
   const [quarter, setQuarter] = useState("1");
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -84,7 +86,15 @@ export default function ApplicantFellowshipPage() {
       <div className="card py-12 text-center">
         <h1 className="text-xl font-semibold text-gray-900">My Fellowship</h1>
         <p className="mt-2 text-gray-600">
-          No active fellowship yet. This section opens after trustee approval and selection.
+          {data.message ||
+            "No active fellowship yet. This section opens after trustee approval and selection."}
+        </p>
+        <p className="mt-4 text-sm text-gray-500">
+          If you were recently selected, refresh this page in a few minutes or check{" "}
+          <Link href="/applicant/status" className="text-primary-700 underline">
+            Application Tracking
+          </Link>
+          .
         </p>
       </div>
     );
@@ -163,7 +173,6 @@ export default function ApplicantFellowshipPage() {
       return;
     }
     setMessage("Bank details submitted for verification");
-    setBankAccount("");
     reload();
   }
 
@@ -349,7 +358,17 @@ export default function ApplicantFellowshipPage() {
         </div>
       )}
 
-      {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
+      {message && (
+        <div
+          className={`rounded-lg p-3 text-sm ${
+            message.toLowerCase().includes("fail") || message.toLowerCase().includes("error")
+              ? "bg-red-50 text-red-700"
+              : "bg-green-50 text-green-700"
+          }`}
+        >
+          {message}
+        </div>
+      )}
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <strong>Publication acknowledgment:</strong> &ldquo;This research was supported by Vd. Gogate

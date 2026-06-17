@@ -19,7 +19,7 @@ import {
   getFellowshipPendingActions,
 } from "@/lib/fellowship-tracking";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
-import { ensureTrackingApplicationState } from "@/lib/tracking-repair";
+import { repairApplicationIfNeeded } from "@/lib/fellowship-access";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -53,9 +53,10 @@ export async function GET() {
 
   const payload = await Promise.all(
     applications.map(async (app) => {
-      const repaired = await ensureTrackingApplicationState(app);
-      const effectiveStatus = repaired.status;
-      const fellowship = repaired.fellowship;
+      try {
+      const repaired = await repairApplicationIfNeeded(app);
+      const effectiveStatus = repaired.status as typeof app.status;
+      const fellowship = repaired.fellowship ?? app.fellowship;
       const fellowshipStage = fellowship?.currentStage ?? null;
       const milestoneStates = getMilestoneStates(effectiveStatus, fellowshipStage);
       const fellowshipStepStates = fellowshipStage
@@ -161,6 +162,26 @@ export async function GET() {
             }
           : null,
       };
+      } catch (error) {
+        console.error("Tracking payload error for application", app.id, error);
+        return {
+          id: app.id,
+          applicationNumber: app.applicationNumber,
+          formattedNumber: formatApplicationNumber(app.applicationNumber),
+          status: app.status,
+          displayStatus: getLifecycleStatusLabel(app.status),
+          progress: 0,
+          pipelineIndex: 0,
+          milestoneStates: getMilestoneStates(app.status, null),
+          documents: [],
+          statusHistory: [],
+          interview: null,
+          fellowship: null,
+          pendingActions: [],
+          showInterview: false,
+          trackingError: "Unable to load full tracking data",
+        };
+      }
     })
   );
 

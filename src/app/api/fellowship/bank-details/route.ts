@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureApplicantFellowship, getFellowshipForApplicant } from "@/lib/fellowship-access";
 
 function maskAccountNumber(value: string) {
   if (value.length <= 4) return value;
   return `${"*".repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
+}
+
+function normalizeIfsc(value: string) {
+  return value.replace(/\s+/g, "").toUpperCase();
 }
 
 export async function GET() {
@@ -13,20 +18,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const fellowship = await prisma.fellowship.findFirst({
-    where: { application: { userId: user.id } },
-    select: {
-      id: true,
-      bankAccountHolder: true,
-      bankName: true,
-      bankAccountNumber: true,
-      bankIfsc: true,
-      bankBranch: true,
-      bankSubmittedAt: true,
-      bankVerifiedAt: true,
-      currentStage: true,
-    },
-  });
+  const fellowship = await getFellowshipForApplicant(user.id);
 
   if (!fellowship) {
     return NextResponse.json({ bankDetails: null });
@@ -34,6 +26,7 @@ export async function GET() {
 
   return NextResponse.json({
     bankDetails: {
+      fellowshipId: fellowship.id,
       accountHolder: fellowship.bankAccountHolder,
       bankName: fellowship.bankName,
       accountNumber: fellowship.bankAccountNumber
@@ -60,40 +53,54 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { fellowshipId, accountHolder, bankName, accountNumber, ifsc, branch } = body;
 
-    if (!fellowshipId || !accountHolder?.trim() || !bankName?.trim() || !accountNumber?.trim() || !ifsc?.trim()) {
+    if (!accountHolder?.trim() || !bankName?.trim() || !ifsc?.trim()) {
       return NextResponse.json(
-        { error: "Account holder, bank name, account number, and IFSC are required" },
+        { error: "Account holder, bank name, and IFSC are required" },
         { status: 400 }
       );
     }
 
-    const fellowship = await prisma.fellowship.findFirst({
-      where: {
-        id: fellowshipId,
-        application: { userId: user.id },
-      },
-    });
+    const fellowship = fellowshipId
+      ? await getFellowshipForApplicant(user.id, fellowshipId)
+      : (await ensureApplicantFellowship(user.id)).fellowship;
 
     if (!fellowship) {
-      return NextResponse.json({ error: "Fellowship not found" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "No fellowship found yet. Please wait for trustee approval or contact the Foundation admin.",
+        },
+        { status: 404 }
+      );
     }
 
-    const normalizedIfsc = String(ifsc).trim().toUpperCase();
+    const normalizedIfsc = normalizeIfsc(String(ifsc));
     if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(normalizedIfsc)) {
-      return NextResponse.json({ error: "Enter a valid IFSC code" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Enter a valid 11-character IFSC code (e.g. SBIN0001234)" },
+        { status: 400 }
+      );
     }
 
-    const accountDigits = String(accountNumber).replace(/\D/g, "");
-    if (accountDigits.length < 9 || accountDigits.length > 18) {
-      return NextResponse.json({ error: "Enter a valid bank account number" }, { status: 400 });
+    const accountDigits = String(accountNumber || "").replace(/\D/g, "");
+    const resolvedAccount =
+      accountDigits.length >= 9
+        ? accountDigits
+        : fellowship.bankAccountNumber || "";
+
+    if (resolvedAccount.length < 9 || resolvedAccount.length > 18) {
+      return NextResponse.json(
+        { error: "Enter a valid bank account number (9–18 digits)" },
+        { status: 400 }
+      );
     }
 
     const updated = await prisma.fellowship.update({
-      where: { id: fellowshipId },
+      where: { id: fellowship.id },
       data: {
         bankAccountHolder: String(accountHolder).trim(),
         bankName: String(bankName).trim(),
-        bankAccountNumber: accountDigits,
+        bankAccountNumber: resolvedAccount,
         bankIfsc: normalizedIfsc,
         bankBranch: branch?.trim() || null,
         bankSubmittedAt: new Date(),
@@ -108,6 +115,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       bankDetails: {
+        fellowshipId: updated.id,
         isSubmitted: true,
         isVerified: false,
         currentStage: updated.currentStage,
@@ -115,6 +123,16 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Bank details error:", error);
-    return NextResponse.json({ error: "Failed to save bank details" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to save bank details";
+    return NextResponse.json(
+      {
+        error:
+          message.includes("Unknown arg") || message.includes("column")
+            ? "Bank details could not be saved — database sync pending. Please try again shortly."
+            : "Failed to save bank details. Please check all fields and try again.",
+        detail: process.env.NODE_ENV !== "production" ? message : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

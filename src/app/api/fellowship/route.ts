@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { ensureApplicantFellowship } from "@/lib/fellowship-access";
 
 export async function GET() {
   const user = await getSession();
@@ -10,30 +11,20 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const application = await prisma.application.findFirst({
-    where: { userId: user.id, status: { in: ["SELECTED", "AGREEMENT_PENDING", "COMPLETED"] } },
-    include: {
-      fellowship: {
-        include: {
-          installments: { orderBy: { installmentNo: "asc" } },
-          progressReports: { orderBy: [{ year: "desc" }, { quarter: "desc" }] },
-          midTermReviews: { orderBy: { reviewedAt: "desc" } },
-          finalSubmission: true,
-          financeRecords: true,
-        },
-      },
-      interview: true,
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  const { application, fellowship } = await ensureApplicantFellowship(user.id);
 
-  if (!application?.fellowship) {
-    return NextResponse.json({ fellowship: null });
+  if (!fellowship || !application) {
+    return NextResponse.json({
+      fellowship: null,
+      message:
+        "No active fellowship yet. This section opens after trustee approval and fellowship award.",
+    });
   }
 
   return NextResponse.json({
-    fellowship: application.fellowship,
+    fellowship,
     applicationNumber: application.applicationNumber,
+    applicationStatus: application.status,
   });
 }
 
@@ -57,7 +48,7 @@ export async function POST(request: NextRequest) {
     const fellowship = await prisma.fellowship.findFirst({
       where: {
         id: fellowshipId,
-        application: { userId: user.id, status: { in: ["SELECTED", "AGREEMENT_PENDING", "COMPLETED"] } },
+        application: { userId: user.id },
       },
     });
 

@@ -120,6 +120,10 @@ export function validateStatusTransition(
     return "Application is marked completed only when the fellowship reaches final closure (Installment 3 released)";
   }
 
+  if (from === "COMPLETED" && to === "AGREEMENT_PENDING") {
+    return null;
+  }
+
   const allowed = ALLOWED_TRANSITIONS[from];
   if (!allowed?.includes(to)) {
     return `Cannot move from ${getLifecycleStatusLabel(from)} to ${getLifecycleStatusLabel(to)}`;
