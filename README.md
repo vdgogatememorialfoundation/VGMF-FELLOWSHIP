@@ -53,6 +53,49 @@ A comprehensive fellowship management system for the Viddhakarma Global Medical 
 - PostgreSQL (Neon)
 - JWT session auth
 
+## Deploy on Render
+
+This project is configured for [Render](https://render.com), not Vercel.
+
+### 1. Push to GitHub
+
+Repository: [vdgogatememorialfoundation/VGMF-FELLOWSHIP](https://github.com/vdgogatememorialfoundation/VGMF-FELLOWSHIP)
+
+### 2. Create Render Web Service
+
+1. Go to [Render Dashboard](https://dashboard.render.com)
+2. Click **New +** → **Blueprint** (uses `render.yaml`) or **Web Service**
+3. Connect the GitHub repo `vdgogatememorialfoundation/VGMF-FELLOWSHIP`
+4. Render will detect the `render.yaml` blueprint automatically
+
+### 3. Set Environment Variables
+
+In Render → your service → **Environment**:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Your Neon PostgreSQL connection string |
+| `JWT_SECRET` | A long random secret (Render can auto-generate) |
+| `NEXT_PUBLIC_APP_URL` | Your Render app URL, e.g. `https://vgmf-fellowship-portal.onrender.com` |
+
+### 4. Deploy
+
+- **Build command:** `npm install && npx prisma db push && npm run build`
+- **Start command:** `npm start`
+
+After the first successful deploy, seed admin users (one-time):
+
+```bash
+npm run db:seed
+```
+
+Run this locally with `DATABASE_URL` pointing to your production Neon database, or use Render Shell.
+
+### Notes
+
+- File uploads are stored on the server disk and are **not persistent** on Render free tier. For production, use S3 or similar object storage.
+- `prisma db push` runs on each deploy to keep the schema in sync with Neon.
+
 ## GitHub
 
 Repository: https://github.com/vdgogatememorialfoundation/VGMF-FELLOWSHIP
