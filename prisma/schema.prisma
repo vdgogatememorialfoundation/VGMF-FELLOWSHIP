@@ -1,0 +1,476 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  APPLICANT
+  ADMIN
+  STAFF
+  COMMITTEE
+  TRUSTEE
+  FINANCE
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  SELECTED
+  REJECTED
+  WAITLISTED
+}
+
+enum DocumentType {
+  CV
+  REGISTRATION_CERTIFICATE
+  RESEARCH_PROPOSAL_PDF
+  BUDGET_PROPOSAL_PDF
+  TIMELINE_PDF
+  ETHICAL_CLEARANCE
+  PUBLICATIONS
+  RECOMMENDATION_LETTER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RESUBMIT_REQUIRED
+}
+
+enum ResearchArea {
+  MUSCULOSKELETAL_DISORDERS
+  PAIN_MANAGEMENT
+  NEUROLOGICAL_DISORDERS
+  COMPARATIVE_STUDIES
+  MECHANISM_BASED_RESEARCH
+  CLASSICAL_DOCUMENTATION
+  PROTOCOL_DEVELOPMENT
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum ProgressReportStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REVISION_REQUIRED
+}
+
+enum InstallmentStatus {
+  PENDING
+  APPROVED
+  RELEASED
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+  BOTH
+}
+
+model User {
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  email         String   @unique
+  phone         String?  @unique
+  passwordHash  String   @map("password_hash")
+  role          UserRole @default(APPLICANT)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  profile              Profile?
+  applications         Application[]
+  committeeScores      CommitteeScore[]
+  committeeRemarks     CommitteeRemark[]
+  trusteeApprovals     TrusteeApproval[]
+  notifications        Notification[]
+  sessions             Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  name      String
+  dob       DateTime?
+  gender    Gender?
+  address   String?
+  city      String?
+  state     String?
+  country   String?  @default("India")
+  pincode   String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Application {
+  id                    String            @id @default(cuid())
+  applicationNumber     String            @unique @map("application_number")
+  userId                String            @map("user_id")
+  status                ApplicationStatus @default(DRAFT)
+  rejectionReason       String?           @map("rejection_reason")
+  adminNotes            String?           @map("admin_notes")
+
+  // Personal Details
+  name                  String
+  dob                   DateTime
+  gender                Gender
+  address               String
+  city                  String
+  state                 String
+  country               String            @default("India")
+  pincode               String
+  mobile                String
+  email                 String
+
+  // Professional Details
+  bamsCollege           String            @map("bams_college")
+  yearOfPassing         Int               @map("year_of_passing")
+  mdMsPhdDetails        String?           @map("md_ms_phd_details")
+  currentDesignation    String            @map("current_designation")
+  institutionName       String            @map("institution_name")
+  registrationCouncil   String            @map("registration_council")
+  registrationNumber    String            @map("registration_number")
+  yearsOfPractice       Int               @map("years_of_practice")
+  viddhakarmaExperience String?           @map("viddhakarma_experience")
+  publicationsSummary   String?           @map("publications_summary")
+
+  submittedAt           DateTime?         @map("submitted_at")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  researchProposal  ResearchProposal?
+  budget            Budget?
+  documents         ApplicationDocument[]
+  committeeScores   CommitteeScore[]
+  committeeRemarks  CommitteeRemark[]
+  interview         Interview?
+  trusteeApproval   TrusteeApproval?
+  fellowship        Fellowship?
+  statusHistory     ApplicationStatusHistory[]
+
+  @@map("applications")
+}
+
+model ApplicationStatusHistory {
+  id            String            @id @default(cuid())
+  applicationId String            @map("application_id")
+  fromStatus    ApplicationStatus? @map("from_status")
+  toStatus      ApplicationStatus @map("to_status")
+  changedBy     String?           @map("changed_by")
+  notes         String?
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("application_status_history")
+}
+
+model ResearchProposal {
+  id                String       @id @default(cuid())
+  applicationId     String       @unique @map("application_id")
+  projectTitle      String       @map("project_title")
+  researchArea      ResearchArea @map("research_area")
+  researchAreaOther String?      @map("research_area_other")
+  objectives        String
+  methodology       String
+  sampleSize        String       @map("sample_size")
+  studyDuration     String       @map("study_duration")
+  expectedOutcomes  String       @map("expected_outcomes")
+  budgetSummary     String       @map("budget_summary")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("research_proposals")
+}
+
+model Budget {
+  id            String   @id @default(cuid())
+  applicationId String   @unique @map("application_id")
+  equipment     Float    @default(0)
+  consumables   Float    @default(0)
+  travel        Float    @default(0)
+  documentation Float    @default(0)
+  publication   Float    @default(0)
+  other         Float    @default(0)
+  total         Float    @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("budgets")
+}
+
+model ApplicationDocument {
+  id              String         @id @default(cuid())
+  applicationId   String         @map("application_id")
+  type            DocumentType
+  fileName        String         @map("file_name")
+  filePath        String         @map("file_path")
+  fileSize        Int            @map("file_size")
+  mimeType        String         @map("mime_type")
+  status          DocumentStatus @default(PENDING)
+  rejectionReason String?        @map("rejection_reason")
+  uploadedAt      DateTime       @default(now()) @map("uploaded_at")
+  reviewedAt      DateTime?      @map("reviewed_at")
+  reviewedBy      String?        @map("reviewed_by")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("application_documents")
+}
+
+model CommitteeScore {
+  id              String   @id @default(cuid())
+  applicationId   String   @map("application_id")
+  committeeUserId String   @map("committee_user_id")
+  scientificMerit Float    @map("scientific_merit")
+  innovation      Float
+  feasibility     Float
+  budgetJustification Float @map("budget_justification")
+  viddhakarmaRelevance Float @map("viddhakarma_relevance")
+  totalScore      Float    @map("total_score")
+  remarks         String?
+  isShortlisted   Boolean  @default(false) @map("is_shortlisted")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  committeeUser User        @relation(fields: [committeeUserId], references: [id])
+
+  @@unique([applicationId, committeeUserId])
+  @@map("committee_scores")
+}
+
+model CommitteeRemark {
+  id              String   @id @default(cuid())
+  applicationId   String   @map("application_id")
+  committeeUserId String   @map("committee_user_id")
+  remark          String
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  committeeUser User        @relation(fields: [committeeUserId], references: [id])
+
+  @@map("committee_remarks")
+}
+
+model Interview {
+  id            String   @id @default(cuid())
+  applicationId String   @unique @map("application_id")
+  scheduledDate DateTime @map("scheduled_date")
+  scheduledTime String   @map("scheduled_time")
+  meetingLink   String   @map("meeting_link")
+  panelMembers  String   @map("panel_members")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+model TrusteeApproval {
+  id              String   @id @default(cuid())
+  applicationId   String   @unique @map("application_id")
+  trusteeUserId   String   @map("trustee_user_id")
+  approved        Boolean
+  remarks         String?
+  digitalSignature String? @map("digital_signature")
+  approvedAt      DateTime @default(now()) @map("approved_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  trusteeUser User        @relation(fields: [trusteeUserId], references: [id])
+
+  @@map("trustee_approvals")
+}
+
+model Fellowship {
+  id               String   @id @default(cuid())
+  fellowshipId     String   @unique @map("fellowship_id")
+  applicationId    String   @unique @map("application_id")
+  fellowName       String   @map("fellow_name")
+  projectTitle     String   @map("project_title")
+  sanctionedAmount Float    @map("sanctioned_amount")
+  duration         String
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  awardLetterPath  String?  @map("award_letter_path")
+  isActive         Boolean  @default(true) @map("is_active")
+  isCompleted      Boolean  @default(false) @map("is_completed")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  application      Application       @relation(fields: [applicationId], references: [id])
+  installments     FundInstallment[]
+  progressReports  ProgressReport[]
+  midTermReviews   MidTermReview[]
+  finalSubmission  FinalSubmission?
+  financeRecords   FinanceRecord?
+  certificates     Certificate[]
+
+  @@map("fellowships")
+}
+
+model FundInstallment {
+  id              String            @id @default(cuid())
+  fellowshipId    String            @map("fellowship_id")
+  installmentNo   Int               @map("installment_no")
+  percentage      Float
+  amount          Float
+  status          InstallmentStatus @default(PENDING)
+  paymentDate     DateTime?         @map("payment_date")
+  transactionId   String?           @map("transaction_id")
+  approvalNotes   String?           @map("approval_notes")
+  releasedAt      DateTime?         @map("released_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@unique([fellowshipId, installmentNo])
+  @@map("fund_installments")
+}
+
+model ProgressReport {
+  id              String               @id @default(cuid())
+  fellowshipId    String               @map("fellowship_id")
+  quarter         Int
+  year            Int
+  reportPath      String?              @map("report_path")
+  caseRecordsPath String?              @map("case_records_path")
+  photosPath      String?              @map("photos_path")
+  publicationsPath String?             @map("publications_path")
+  status          ProgressReportStatus @default(SUBMITTED)
+  reviewNotes     String?              @map("review_notes")
+  submittedAt     DateTime             @default(now()) @map("submitted_at")
+  reviewedAt      DateTime?            @map("reviewed_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@unique([fellowshipId, quarter, year])
+  @@map("progress_reports")
+}
+
+model MidTermReview {
+  id              String   @id @default(cuid())
+  fellowshipId    String   @map("fellowship_id")
+  reviewerId      String   @map("reviewer_id")
+  progressScore   Float    @map("progress_score")
+  remarks         String?
+  nextInstallmentApproved Boolean @default(false) @map("next_installment_approved")
+  reviewedAt      DateTime @default(now()) @map("reviewed_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@map("mid_term_reviews")
+}
+
+model FinalSubmission {
+  id                    String   @id @default(cuid())
+  fellowshipId          String   @unique @map("fellowship_id")
+  finalReportPath       String?  @map("final_report_path")
+  manuscriptPath        String?  @map("manuscript_path")
+  utilizationCertPath   String?  @map("utilization_cert_path")
+  billsVouchersPath     String?  @map("bills_vouchers_path")
+  presentationPath      String?  @map("presentation_path")
+  status                ProgressReportStatus @default(SUBMITTED)
+  submittedAt           DateTime @default(now()) @map("submitted_at")
+  reviewedAt            DateTime? @map("reviewed_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@map("final_submissions")
+}
+
+model FinanceRecord {
+  id                    String   @id @default(cuid())
+  fellowshipId          String   @unique @map("fellowship_id")
+  sanctionedAmount      Float    @map("sanctioned_amount")
+  releasedAmount        Float    @default(0) @map("released_amount")
+  balanceAmount         Float    @map("balance_amount")
+  utilizationCertPath   String?  @map("utilization_cert_path")
+  pendingDocuments      String?  @map("pending_documents")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@map("finance_records")
+}
+
+model Certificate {
+  id              String   @id @default(cuid())
+  fellowshipId    String   @map("fellowship_id")
+  type            String
+  filePath        String   @map("file_path")
+  digitalSignature String? @map("digital_signature")
+  issuedAt        DateTime @default(now()) @map("issued_at")
+
+  fellowship Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@map("certificates")
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String              @map("user_id")
+  title     String
+  message   String
+  channel   NotificationChannel @default(BOTH)
+  isRead    Boolean             @default(false) @map("is_read")
+  sentAt    DateTime            @default(now()) @map("sent_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  subject   String
+  message   String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("support_tickets")
+}
