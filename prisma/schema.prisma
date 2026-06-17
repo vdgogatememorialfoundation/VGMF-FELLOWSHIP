@@ -617,18 +617,21 @@ enum NoticeCategory {
 }
 
 model Notice {
-  id          String         @id @default(cuid())
-  title       String
-  content     String         @db.Text
-  category    NoticeCategory @default(GENERAL)
-  linkUrl     String?        @map("link_url")
-  linkLabel   String?        @map("link_label")
-  isActive    Boolean        @default(true) @map("is_active")
-  priority    Int            @default(0)
-  publishedAt DateTime       @default(now()) @map("published_at")
-  expiresAt   DateTime?      @map("expires_at")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  id                 String         @id @default(cuid())
+  title              String
+  content            String         @db.Text
+  category           NoticeCategory @default(GENERAL)
+  linkUrl            String?        @map("link_url")
+  linkLabel          String?        @map("link_label")
+  attachmentFileName String?        @map("attachment_file_name")
+  attachmentMimeType String?        @map("attachment_mime_type")
+  attachmentData     String?        @map("attachment_data") @db.Text
+  isActive           Boolean        @default(true) @map("is_active")
+  priority           Int            @default(0)
+  publishedAt        DateTime       @default(now()) @map("published_at")
+  expiresAt          DateTime?      @map("expires_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
 
   @@map("notices")
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail, Phone, Calendar, UserPlus } from "lucide-react";
 import { getSiteSettings, getActiveNotices } from "@/lib/cms";
+import { getNoticeAttachmentUrl, hasNoticeAttachment } from "@/lib/notice-assets";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 import { OfficialNotices, OfficialNoticesEmpty, type PublicNotice } from "./OfficialNotices";
 import { MobileNav } from "./MobileNav";
@@ -174,6 +175,10 @@ export async function NoticesSection() {
     category: (notice.category ?? "GENERAL") as PublicNotice["category"],
     linkUrl: notice.linkUrl,
     linkLabel: notice.linkLabel,
+    attachmentUrl: hasNoticeAttachment(notice)
+      ? getNoticeAttachmentUrl(notice.id)
+      : null,
+    attachmentFileName: notice.attachmentFileName,
     priority: notice.priority,
     publishedAt: notice.publishedAt.toISOString(),
     expiresAt: notice.expiresAt?.toISOString() ?? null,

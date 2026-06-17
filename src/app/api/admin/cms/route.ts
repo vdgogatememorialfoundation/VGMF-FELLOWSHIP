@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
+import type { NoticeCategory } from "@prisma/client";
 import { getIntegrationSettingsForAdmin } from "@/lib/integrations";
 import { resolveSecret, isMaskedSecret } from "@/lib/site-content";
 import { saveSiteAsset, resolveLogoUrl, resolveFaviconUrl } from "@/lib/site-assets";
 import { notifySiteNotice } from "@/lib/notifications";
+import {
+  formatNoticeForAdmin,
+  parseNoticeAttachment,
+} from "@/lib/notice-assets";
 
 async function broadcastNoticeToApplicants(title: string, content: string) {
   const applicants = await prisma.user.findMany({
@@ -30,7 +35,9 @@ export async function GET() {
   const [settings, pages, notices, forms, integrations] = await Promise.all([
     prisma.siteSettings.findUnique({ where: { id: "default" } }),
     prisma.cmsPage.findMany({ orderBy: { slug: "asc" } }),
-    prisma.notice.findMany({ orderBy: { priority: "desc" } }),
+    prisma.notice.findMany({ orderBy: { priority: "desc" } }).then((rows) =>
+      rows.map((notice) => formatNoticeForAdmin(notice))
+    ),
     prisma.formTemplate.findMany({
       include: { fields: { orderBy: { order: "asc" } } },
     }),
@@ -147,7 +154,7 @@ export async function PUT(request: NextRequest) {
         void broadcastNoticeToApplicants(notice.title, notice.content);
       }
 
-      return NextResponse.json({ notice });
+      return NextResponse.json({ notice: formatNoticeForAdmin(notice) });
     }
 
     const notice = await prisma.notice.create({
@@ -157,6 +164,9 @@ export async function PUT(request: NextRequest) {
         category: data.category ?? "GENERAL",
         linkUrl: data.linkUrl ?? null,
         linkLabel: data.linkLabel ?? null,
+        attachmentFileName: data.attachmentFileName ?? null,
+        attachmentMimeType: data.attachmentMimeType ?? null,
+        attachmentData: data.attachmentData ?? null,
         isActive: data.isActive ?? true,
         priority: data.priority ?? 0,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
@@ -167,7 +177,7 @@ export async function PUT(request: NextRequest) {
       void broadcastNoticeToApplicants(notice.title, notice.content);
     }
 
-    return NextResponse.json({ notice });
+    return NextResponse.json({ notice: formatNoticeForAdmin(notice) });
   }
 
   if (section === "form-template") {
@@ -233,6 +243,57 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const formData = await request.formData();
+  const section = formData.get("section") as string | null;
+
+  if (section === "notice") {
+    try {
+      const title = String(formData.get("title") || "").trim();
+      const content = String(formData.get("content") || "").trim();
+
+      if (!title) {
+        return NextResponse.json({ error: "Notice title is required" }, { status: 400 });
+      }
+
+      const attachment = formData.get("attachment");
+      let attachmentFields: Record<string, string | null> = {
+        attachmentFileName: null,
+        attachmentMimeType: null,
+        attachmentData: null,
+      };
+
+      if (attachment instanceof File && attachment.size > 0) {
+        attachmentFields = await parseNoticeAttachment(attachment);
+      }
+
+      const expiresAtRaw = String(formData.get("expiresAt") || "").trim();
+      const notifyApplicants = formData.get("notifyApplicants") === "true";
+
+      const notice = await prisma.notice.create({
+        data: {
+          title,
+          content,
+          category: (String(formData.get("category") || "GENERAL") as NoticeCategory),
+          linkUrl: String(formData.get("linkUrl") || "").trim() || null,
+          linkLabel: String(formData.get("linkLabel") || "").trim() || null,
+          priority: Number(formData.get("priority") || 0),
+          expiresAt: expiresAtRaw ? new Date(expiresAtRaw) : null,
+          isActive: true,
+          ...attachmentFields,
+        },
+      });
+
+      if (notifyApplicants) {
+        void broadcastNoticeToApplicants(notice.title, notice.content);
+      }
+
+      return NextResponse.json({ notice: formatNoticeForAdmin(notice) });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to publish notice";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
   const logo = formData.get("logo") as File | null;
   const favicon = formData.get("favicon") as File | null;
 

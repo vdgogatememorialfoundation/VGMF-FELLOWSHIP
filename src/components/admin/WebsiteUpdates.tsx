@@ -98,6 +98,9 @@ interface Notice {
   isActive: boolean;
   priority: number;
   expiresAt?: string | null;
+  hasAttachment?: boolean;
+  attachmentUrl?: string | null;
+  attachmentFileName?: string | null;
 }
 
 interface Integrations {
@@ -196,6 +199,8 @@ export function WebsiteUpdates() {
     expiresAt: "",
     notifyApplicants: false,
   });
+  const [noticeFile, setNoticeFile] = useState<File | null>(null);
+  const [noticeFileKey, setNoticeFileKey] = useState(0);
 
   const [testPhone, setTestPhone] = useState("");
   const [testEmail, setTestEmail] = useState("");
@@ -241,6 +246,60 @@ export function WebsiteUpdates() {
       zeptomailToken: integrations.zeptomailToken.trim() || undefined,
       whatsappToken: integrations.whatsappToken.trim() || undefined,
     });
+  }
+
+  async function publishNotice() {
+    if (!noticeForm.title.trim()) {
+      setError("Notice title is required");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const formData = new FormData();
+    formData.append("section", "notice");
+    formData.append("title", noticeForm.title.trim());
+    formData.append("content", noticeForm.content.trim());
+    formData.append("category", noticeForm.category);
+    formData.append("priority", String(noticeForm.priority));
+    formData.append("linkUrl", noticeForm.linkUrl.trim());
+    formData.append("linkLabel", noticeForm.linkLabel.trim());
+    formData.append("notifyApplicants", String(noticeForm.notifyApplicants));
+    if (noticeForm.expiresAt) {
+      formData.append("expiresAt", new Date(noticeForm.expiresAt).toISOString());
+    }
+    if (noticeFile) {
+      formData.append("attachment", noticeFile);
+    }
+
+    const res = await fetch("/api/admin/cms", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to publish notice");
+      return;
+    }
+
+    setMessage("Notice published successfully!");
+    setNoticeForm({
+      title: "",
+      content: "",
+      category: "EVENT",
+      priority: 0,
+      linkUrl: "",
+      linkLabel: "",
+      expiresAt: "",
+      notifyApplicants: false,
+    });
+    setNoticeFile(null);
+    setNoticeFileKey((key) => key + 1);
+    load();
   }
 
   async function saveSection(section: string, data: unknown) {
@@ -661,6 +720,24 @@ export function WebsiteUpdates() {
               <Input label="Link URL" value={noticeForm.linkUrl} onChange={(e) => setNoticeForm({ ...noticeForm, linkUrl: e.target.value })} />
               <Input label="Link label" value={noticeForm.linkLabel} onChange={(e) => setNoticeForm({ ...noticeForm, linkLabel: e.target.value })} />
             </div>
+            <div>
+              <label className="label-field">Attachment (optional)</label>
+              <input
+                key={noticeFileKey}
+                type="file"
+                accept=".pdf,.doc,.docx,image/*"
+                className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700"
+                onChange={(e) => setNoticeFile(e.target.files?.[0] ?? null)}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                PDF, Word, or image up to 5 MB. Stored securely and shown as a download on the public notices section.
+              </p>
+              {noticeFile && (
+                <p className="mt-1 text-xs font-medium text-primary-700">
+                  Selected: {noticeFile.name} ({(noticeFile.size / 1024).toFixed(0)} KB)
+                </p>
+              )}
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -669,10 +746,7 @@ export function WebsiteUpdates() {
               />
               Notify all applicants via email & WhatsApp when publishing this notice
             </label>
-            <Button onClick={async () => {
-              await saveSection("notice", { ...noticeForm, linkUrl: noticeForm.linkUrl || null, linkLabel: noticeForm.linkLabel || null, expiresAt: noticeForm.expiresAt ? new Date(noticeForm.expiresAt).toISOString() : null, isActive: true });
-              setNoticeForm({ title: "", content: "", category: "EVENT", priority: 0, linkUrl: "", linkLabel: "", expiresAt: "", notifyApplicants: false });
-            }}>Publish Notice</Button>
+            <Button loading={loading} onClick={publishNotice}>Publish Notice</Button>
           </div>
 
           <div className="card">
@@ -686,6 +760,16 @@ export function WebsiteUpdates() {
                       <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{getNoticeCategoryLabel(n.category ?? "GENERAL")}</span>
                     </div>
                     <p className="mt-1 text-sm text-gray-600 line-clamp-2">{n.content}</p>
+                    {n.hasAttachment && n.attachmentUrl && (
+                      <a
+                        href={n.attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block text-xs font-medium text-primary-600 hover:underline"
+                      >
+                        {n.attachmentFileName || "View attachment"}
+                      </a>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="secondary" className="text-xs" onClick={() => saveSection("notice", { id: n.id, isActive: !n.isActive })}>{n.isActive ? "Deactivate" : "Activate"}</Button>

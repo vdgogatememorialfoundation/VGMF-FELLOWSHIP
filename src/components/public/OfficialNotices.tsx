@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Megaphone, Pin, Sparkles, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { Megaphone, Pin, Sparkles, ChevronDown, ChevronUp, ExternalLink, Paperclip } from "lucide-react";
 import {
   NOTICE_CATEGORIES,
   NOTICE_CATEGORY_STYLES,
@@ -19,6 +19,8 @@ export interface PublicNotice {
   category: NoticeCategory;
   linkUrl: string | null;
   linkLabel: string | null;
+  attachmentUrl?: string | null;
+  attachmentFileName?: string | null;
   priority: number;
   publishedAt: string;
   expiresAt: string | null;
@@ -99,6 +101,17 @@ function NoticeItem({ notice }: { notice: PublicNotice }) {
             {notice.linkLabel || "Learn more"}
             <ExternalLink className="h-3 w-3" />
           </Link>
+        )}
+        {notice.attachmentUrl && (
+          <a
+            href={notice.attachmentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"
+          >
+            <Paperclip className="h-3 w-3" />
+            {notice.attachmentFileName || "Download attachment"}
+          </a>
         )}
       </div>
     </article>
