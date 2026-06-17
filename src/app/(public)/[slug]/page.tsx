@@ -23,12 +23,13 @@ export default async function CmsPublicPage({
   if (!page || !page.isPublished) notFound();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mesh-bg">
       <PublicHeader />
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">{page.title}</h1>
+      <main className="mx-auto max-w-4xl px-5 py-16 sm:px-6">
+        <span className="section-badge">Foundation</span>
+        <h1 className="section-title mt-4">{page.title}</h1>
         <div
-          className="prose prose-green mt-8 max-w-none rounded-3xl border border-primary-100 bg-white p-8 text-ink-soft shadow-sm prose-headings:font-display prose-headings:font-extrabold"
+          className="prose prose-green mt-10 max-w-none rounded-3xl border border-[#e4ede8] bg-white p-8 text-ink-soft shadow-sm prose-headings:font-display prose-headings:font-bold"
           dangerouslySetInnerHTML={{ __html: page.content.replace(/\n/g, "<br/>") }}
         />
       </main>

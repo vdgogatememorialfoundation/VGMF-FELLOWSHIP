@@ -2,10 +2,11 @@
 
 export function AnnouncementTicker({ text }: { text: string }) {
   return (
-    <div className="border-b border-primary-800/30 bg-gradient-to-r from-[#0d3b2f] via-primary-700 to-[#145a47] text-white">
-      <div className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-2">
-        <span className="shrink-0 rounded-lg bg-gradient-to-r from-gold to-[#f59e0b] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-ink">
-          Live ✦
+    <div className="border-b border-primary-800/30 bg-gradient-to-r from-primary-800 via-primary-700 to-primary-800 text-white">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-5 py-2 sm:px-6">
+        <span className="relative shrink-0 rounded-lg bg-gold px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white shadow">
+          <span className="absolute -left-0.5 -top-0.5 h-2 w-2 animate-ping rounded-full bg-lime-pop opacity-75" />
+          Live
         </span>
         <div className="overflow-hidden flex-1">
           <div className="animate-marquee whitespace-nowrap text-sm font-semibold">
@@ -22,7 +23,7 @@ export function AnnouncementTicker({ text }: { text: string }) {
         }
         .animate-marquee {
           display: inline-block;
-          animation: marquee 24s linear infinite;
+          animation: marquee 26s linear infinite;
         }
       `}</style>
     </div>
