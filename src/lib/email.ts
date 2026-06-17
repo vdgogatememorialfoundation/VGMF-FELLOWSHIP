@@ -1,6 +1,6 @@
 import { getIntegrationConfig } from "./integrations";
 
-const ZEPTOMAIL_API_URL = "https://api.zeptomail.com/v1.1/email";
+const DEFAULT_ZEPTOMAIL_API_URL = "https://api.zeptomail.com/v1.1/email";
 
 interface SendEmailOptions {
   to: string;
@@ -10,13 +10,41 @@ interface SendEmailOptions {
   text?: string;
 }
 
+export type EmailSendResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "not_configured" | "api_error" | "network_error";
+      detail?: string;
+    };
+
 export { isEmailConfigured } from "./integrations";
 
-export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
+function getZeptoMailApiUrl() {
+  return process.env.ZEPTOMAIL_API_URL || DEFAULT_ZEPTOMAIL_API_URL;
+}
+
+function formatZeptoMailError(body: string): string | undefined {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { message?: string; details?: Array<{ message?: string }> };
+      message?: string;
+    };
+    return (
+      parsed.error?.details?.[0]?.message ||
+      parsed.error?.message ||
+      parsed.message
+    );
+  } catch {
+    return body.slice(0, 200) || undefined;
+  }
+}
+
+export async function sendEmail(options: SendEmailOptions): Promise<EmailSendResult> {
   const config = await getIntegrationConfig();
   if (!config.email.token || !config.email.fromEmail) {
     console.warn("ZeptoMail not configured — skipping email send");
-    return false;
+    return { ok: false, reason: "not_configured" };
   }
 
   const authToken = config.email.token.startsWith("Zoho-enczapikey")
@@ -24,7 +52,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     : `Zoho-enczapikey ${config.email.token}`;
 
   try {
-    const response = await fetch(ZEPTOMAIL_API_URL, {
+    const response = await fetch(getZeptoMailApiUrl(), {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -49,19 +77,25 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
     if (!response.ok) {
       const error = await response.text();
+      const detail = formatZeptoMailError(error);
       console.error("ZeptoMail error:", error);
-      return false;
+      return { ok: false, reason: "api_error", detail };
     }
 
-    return true;
+    return { ok: true };
   } catch (error) {
     console.error("ZeptoMail send failed:", error);
-    return false;
+    return {
+      ok: false,
+      reason: "network_error",
+      detail: error instanceof Error ? error.message : "Network error",
+    };
   }
 }
 
-export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
-  const appName = process.env.ZEPTOMAIL_FROM_NAME || "VGMF Fellowship Portal";
+export async function sendOtpEmail(to: string, code: string): Promise<EmailSendResult> {
+  const config = await getIntegrationConfig();
+  const appName = config.email.fromName || "VGMF Fellowship Portal";
 
   return sendEmail({
     to,
@@ -84,7 +118,7 @@ export async function sendWelcomeEmail(
   to: string,
   name: string,
   userId: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   return sendEmail({
@@ -109,7 +143,7 @@ export async function sendApplicationConfirmationEmail(
   to: string,
   name: string,
   applicationNumber: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const formattedNumber =
     applicationNumber.length === 12
@@ -146,7 +180,7 @@ export async function sendAccountCreatedEmail(
   userId: string,
   roleLabel: string,
   loginPath: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   return sendEmail({
@@ -172,7 +206,7 @@ export async function sendNotificationEmail(
   name: string,
   title: string,
   message: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   return sendEmail({
     to,
     toName: name,

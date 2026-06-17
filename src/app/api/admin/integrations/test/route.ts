@@ -36,8 +36,12 @@ export async function POST(request: NextRequest) {
       text: "ZeptoMail integration test successful.",
     });
 
-    if (!sent) {
-      return NextResponse.json({ error: "Failed to send test email" }, { status: 500 });
+    if (!sent.ok) {
+      const message =
+        sent.reason === "not_configured"
+          ? "Email (ZeptoMail) is not configured."
+          : sent.detail || "Failed to send test email";
+      return NextResponse.json({ error: message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: `Test email sent to ${email}` });

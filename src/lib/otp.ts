@@ -89,13 +89,26 @@ export async function createAndSendOtp(params: {
   const normalizedEmail = normalizeEmail(params.email);
   await invalidatePreviousOtps({ email: normalizedEmail, purpose });
   const code = await storeOtp({ email: normalizedEmail, purpose });
-  const sent = await sendOtpEmail(normalizedEmail, code);
+  const result = await sendOtpEmail(normalizedEmail, code);
 
-  if (!sent && process.env.NODE_ENV === "production") {
-    return { success: false, error: "Failed to send OTP via email" };
+  if (!result.ok && process.env.NODE_ENV === "production") {
+    if (result.reason === "not_configured") {
+      return {
+        success: false,
+        error:
+          "Email OTP is not available right now. The administrator must configure ZeptoMail in Admin → Website Updates → API Settings.",
+      };
+    }
+
+    return {
+      success: false,
+      error: result.detail
+        ? `Failed to send OTP via email: ${result.detail}`
+        : "Failed to send OTP via email. Please try again in a few minutes.",
+    };
   }
 
-  if (!sent) {
+  if (!result.ok) {
     logDevOtp(normalizedEmail, code);
   }
 
