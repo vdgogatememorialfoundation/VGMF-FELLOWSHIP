@@ -6,6 +6,117 @@ import { generateUndertakingPdf } from "@/lib/undertaking-pdf";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
+
+function parseBoolean(value: FormDataEntryValue | boolean | null | undefined): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return false;
+  return value === "true" || value === "1" || value === "on";
+}
+
+async function readSignatureBuffer(
+  request: NextRequest
+): Promise<
+  | { ok: true; body: Record<string, unknown>; signatureBuffer: Buffer }
+  | { ok: false; error: string; status: number }
+> {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const applicationId = String(formData.get("applicationId") || "");
+    const fullName = String(formData.get("fullName") || "");
+    const agreeFellowshipRules = parseBoolean(formData.get("agreeFellowshipRules"));
+    const certifyInfoCorrect = parseBoolean(formData.get("certifyInfoCorrect"));
+    const agreeFundUtilization = parseBoolean(formData.get("agreeFundUtilization"));
+    const signatureType = String(formData.get("signatureType") || "draw");
+    const signatureFile = formData.get("signature");
+
+    if (!applicationId || !fullName.trim()) {
+      return { ok: false, error: "Application and full name are required", status: 400 };
+    }
+
+    if (!agreeFellowshipRules || !certifyInfoCorrect || !agreeFundUtilization) {
+      return { ok: false, error: "All undertaking declarations must be accepted", status: 400 };
+    }
+
+    if (!(signatureFile instanceof File) || signatureFile.size === 0) {
+      return { ok: false, error: "A valid signature image is required", status: 400 };
+    }
+
+    if (signatureFile.size > MAX_SIGNATURE_BYTES) {
+      return { ok: false, error: "Signature image must be 5 MB or smaller", status: 400 };
+    }
+
+    const signatureBuffer = Buffer.from(await signatureFile.arrayBuffer());
+    return {
+      ok: true,
+      signatureBuffer,
+      body: {
+        applicationId,
+        fullName,
+        agreeFellowshipRules,
+        certifyInfoCorrect,
+        agreeFundUtilization,
+        signatureType,
+      },
+    };
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return { ok: false, error: "Invalid request body", status: 400 };
+  }
+
+  const {
+    applicationId,
+    fullName,
+    agreeFellowshipRules,
+    certifyInfoCorrect,
+    agreeFundUtilization,
+    signatureDataUrl,
+    signatureType,
+  } = body;
+
+  if (!applicationId || !String(fullName || "").trim()) {
+    return { ok: false, error: "Application and full name are required", status: 400 };
+  }
+
+  if (!agreeFellowshipRules || !certifyInfoCorrect || !agreeFundUtilization) {
+    return { ok: false, error: "All undertaking declarations must be accepted", status: 400 };
+  }
+
+  if (!signatureDataUrl || !String(signatureDataUrl).startsWith("data:image/")) {
+    return { ok: false, error: "A valid signature image is required", status: 400 };
+  }
+
+  const base64 = String(signatureDataUrl).replace(/^data:image\/\w+;base64,/, "");
+  const signatureBuffer = Buffer.from(base64, "base64");
+
+  if (signatureBuffer.length === 0) {
+    return { ok: false, error: "Signature image could not be processed", status: 400 };
+  }
+
+  if (signatureBuffer.length > MAX_SIGNATURE_BYTES) {
+    return { ok: false, error: "Signature image must be 5 MB or smaller", status: 400 };
+  }
+
+  return {
+    ok: true,
+    signatureBuffer,
+    body: {
+      applicationId,
+      fullName,
+      agreeFellowshipRules,
+      certifyInfoCorrect,
+      agreeFundUtilization,
+      signatureType,
+    },
+  };
+}
+
 export async function GET(request: NextRequest) {
   const user = await getSession();
   if (!user) {
@@ -82,28 +193,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const parsed = await readSignatureBuffer(request);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+
     const {
       applicationId,
       fullName,
-      agreeFellowshipRules,
-      certifyInfoCorrect,
-      agreeFundUtilization,
-      signatureDataUrl,
       signatureType,
-    } = body;
-
-    if (!applicationId || !fullName?.trim()) {
-      return NextResponse.json({ error: "Application and full name are required" }, { status: 400 });
-    }
-
-    if (!agreeFellowshipRules || !certifyInfoCorrect || !agreeFundUtilization) {
-      return NextResponse.json({ error: "All undertaking declarations must be accepted" }, { status: 400 });
-    }
-
-    if (!signatureDataUrl || !String(signatureDataUrl).startsWith("data:image/")) {
-      return NextResponse.json({ error: "A valid signature image is required" }, { status: 400 });
-    }
+    } = parsed.body as {
+      applicationId: string;
+      fullName: string;
+      signatureType?: string;
+    };
+    const signatureBuffer = parsed.signatureBuffer;
 
     const application = await prisma.application.findFirst({
       where: { id: applicationId, userId: user.id },
@@ -120,9 +224,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const base64 = String(signatureDataUrl).replace(/^data:image\/\w+;base64,/, "");
-    const signatureBuffer = Buffer.from(base64, "base64");
 
     const sigDir = path.join(process.cwd(), "public", "uploads", applicationId, "signatures");
     await mkdir(sigDir, { recursive: true });
@@ -166,6 +267,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, undertaking });
   } catch (error) {
     console.error("Undertaking submit error:", error);
-    return NextResponse.json({ error: "Failed to submit undertaking" }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : "Failed to submit undertaking";
+    const isDev = process.env.NODE_ENV !== "production";
+    return NextResponse.json(
+      {
+        error: isDev ? message : "Failed to submit undertaking. Please try a smaller signature image or draw your signature instead.",
+        detail: isDev && error instanceof Error ? error.stack : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

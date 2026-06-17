@@ -2,6 +2,14 @@ import PDFDocument from "pdfkit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { readFile } from "fs/promises";
+import { existsSync } from "fs";
+
+function ensurePdfkitFonts() {
+  const fontDir = path.join(process.cwd(), "node_modules", "pdfkit", "js", "data");
+  if (existsSync(fontDir)) {
+    process.env.PDFKIT_FONT_PATH = fontDir;
+  }
+}
 
 const UNDERTAKING_BODY = `I, the undersigned applicant, hereby submit this Digital Undertaking for the Viddhakarma Research Fellowship administered by Vd. Gogate Memorial Foundation, Pune.
 
@@ -24,6 +32,8 @@ type GenerateUndertakingPdfParams = {
 export async function generateUndertakingPdf(
   params: GenerateUndertakingPdfParams
 ): Promise<string> {
+  ensurePdfkitFonts();
+
   const uploadDir = path.join(
     process.cwd(),
     "public",

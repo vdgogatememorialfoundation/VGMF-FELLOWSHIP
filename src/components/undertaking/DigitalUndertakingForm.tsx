@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SignaturePad } from "@/components/undertaking/SignaturePad";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { compressSignatureDataUrl } from "@/lib/signature-image";
 
 type UndertakingRecord = {
   id: string;
@@ -86,29 +87,35 @@ export function DigitalUndertakingForm() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/undertaking", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        applicationId: application.id,
-        fullName: fullName.trim(),
-        agreeFellowshipRules: agreeRules,
-        certifyInfoCorrect: certifyCorrect,
-        agreeFundUtilization: agreeFunds,
-        signatureDataUrl,
-        signatureType: signatureMode === "upload" ? "upload" : "draw",
-      }),
-    });
+    try {
+      const signatureBlob = await compressSignatureDataUrl(signatureDataUrl);
+      const formData = new FormData();
+      formData.append("applicationId", application.id);
+      formData.append("fullName", fullName.trim());
+      formData.append("agreeFellowshipRules", agreeRules ? "true" : "false");
+      formData.append("certifyInfoCorrect", certifyCorrect ? "true" : "false");
+      formData.append("agreeFundUtilization", agreeFunds ? "true" : "false");
+      formData.append("signatureType", signatureMode === "upload" ? "upload" : "draw");
+      formData.append("signature", signatureBlob, "signature.png");
 
-    const data = await res.json();
-    setLoading(false);
+      const res = await fetch("/api/undertaking", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!res.ok) {
-      setError(data.error || "Failed to submit undertaking");
-      return;
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        setError(data.error || "Failed to submit undertaking");
+        return;
+      }
+
+      reload();
+    } catch (err) {
+      setLoading(false);
+      setError(err instanceof Error ? err.message : "Failed to submit undertaking");
     }
-
-    reload();
   }
 
   if (pageLoading) {
