@@ -53,7 +53,19 @@ export function normalizeAppUrl(url: string | null | undefined): string {
   if (!raw) return "http://localhost:3000";
 
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-  return withProtocol.replace(/\/$/, "");
+  const normalized = withProtocol.replace(/\/$/, "");
+
+  try {
+    const parsed = new URL(normalized);
+    const host = parsed.hostname.toLowerCase();
+    if (host === "0.0.0.0" || host === "127.0.0.1") {
+      return normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+    }
+  } catch {
+    return "http://localhost:3000";
+  }
+
+  return normalized;
 }
 
 export async function getIntegrationConfig(): Promise<IntegrationConfig> {
