@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessageDetailed, sendWhatsAppOtp } from "@/lib/whatsapp";
 import { isEmailConfigured, isWhatsAppConfigured } from "@/lib/integrations";
 
 export async function POST(request: NextRequest) {
@@ -62,13 +62,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sent = await sendWhatsAppMessage(
+    const sent = await sendWhatsAppMessageDetailed(
       target,
       "VGMF Fellowship Portal — WhatsApp integration test successful."
     );
 
-    if (!sent) {
-      return NextResponse.json({ error: "Failed to send test WhatsApp message" }, { status: 500 });
+    if (!sent.ok) {
+      const otpTest = await sendWhatsAppOtp(target, "123456");
+      if (!otpTest.ok) {
+        return NextResponse.json(
+          {
+            error:
+              sent.error ||
+              otpTest.error ||
+              "Failed to send WhatsApp test message. Verify token, Phone Number ID, and OTP template in API Settings.",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `OTP template test sent to ${target} (code 123456). Plain text is blocked by Meta outside the 24-hour window.`,
+      });
     }
 
     return NextResponse.json({ success: true, message: `Test message sent to ${target}` });

@@ -5,7 +5,7 @@ import {
   sendApplicationConfirmationEmail,
   sendWelcomeEmail,
 } from "./email";
-import { sendWhatsAppMessage } from "./whatsapp";
+import { sendWhatsAppForEvent } from "./whatsapp";
 import { getAccessControl } from "./access-control";
 import { getStatusLabel } from "./utils";
 
@@ -49,7 +49,7 @@ export async function dispatchNotification(
   }
 
   if (sendWhatsapp && user.phone) {
-    await sendWhatsAppMessage(user.phone, `*${title}*\n\n${message}`);
+    await sendWhatsAppForEvent("PORTAL_ALERT", user.phone, [`*${title}*`, message]);
   }
 }
 
@@ -74,7 +74,7 @@ export async function dispatchStatusUpdate(
   }
 
   if (access.statusNotifyWhatsappEnabled && user.phone) {
-    await sendWhatsAppMessage(user.phone, `*${title}*\n\n${message}`);
+    await sendWhatsAppForEvent("STATUS_UPDATE", user.phone, [title, message]);
   }
 }
 
@@ -101,10 +101,11 @@ export async function sendWelcomeNotifications(
   }
 
   if (access.welcomeWhatsappEnabled && user?.phone) {
-    await sendWhatsAppMessage(
-      user.phone,
-      `*Welcome to VGMF Fellowship Portal*\n\nDear ${name}, your account is ready.\nYour User ID: *${userUserId}*\n\nLog in to complete your fellowship application.`
-    );
+    await sendWhatsAppForEvent("ACCOUNT_CREATED", user.phone, [
+      name,
+      userUserId,
+      "Log in to complete your fellowship application.",
+    ]);
   }
 }
 
@@ -134,10 +135,11 @@ export async function notifyApplicationSubmitted(
   }
 
   if (user?.phone && access.applicationNotifyWhatsappEnabled) {
-    await sendWhatsAppMessage(
-      user.phone,
-      `*VGMF Fellowship Application Submitted*\n\nYour 12-digit application number:\n*${appNumber}*\n\nSave this number to track your application status.`
-    );
+    await sendWhatsAppForEvent("APPLICATION_SUBMITTED", user.phone, [
+      name,
+      appNumber,
+      "Save this number to track your application status.",
+    ]);
   }
 }
 

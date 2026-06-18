@@ -69,13 +69,18 @@ export async function createAndSendOtp(params: {
     const normalizedPhone = normalizePhone(params.phone);
     await invalidatePreviousOtps({ phone: normalizedPhone, purpose });
     const code = await storeOtp({ phone: normalizedPhone, purpose });
-    const sent = await sendWhatsAppOtp(normalizedPhone, code);
+    const result = await sendWhatsAppOtp(normalizedPhone, code);
 
-    if (!sent && process.env.NODE_ENV === "production") {
-      return { success: false, error: "Failed to send OTP via WhatsApp" };
+    if (!result.ok && process.env.NODE_ENV === "production") {
+      return {
+        success: false,
+        error:
+          result.error ||
+          "Failed to send OTP via WhatsApp. Check Admin → API Settings → Meta WhatsApp and OTP template name.",
+      };
     }
 
-    if (!sent) {
+    if (!result.ok) {
       logDevOtp(normalizedPhone, code);
     }
 
