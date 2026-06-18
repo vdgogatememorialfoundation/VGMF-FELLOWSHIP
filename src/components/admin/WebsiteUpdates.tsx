@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { NOTICE_CATEGORIES, getNoticeCategoryLabel } from "@/lib/notices";
 import type { NoticeCategory } from "@/lib/notices";
 import type { NavLink, FaqItem, HeroStat, SnapshotItem, HighlightTile, JourneyStep } from "@/lib/site-content";
+import type { NotificationEventTemplate } from "@/lib/notification-templates";
+import { IntegrationsSettingsPanel } from "@/components/admin/IntegrationsSettingsPanel";
 
 const TABS = [
   { id: "branding", label: "Branding" },
@@ -115,6 +117,11 @@ interface Integrations {
   whatsappOtpTemplateName: string;
   whatsappOtpTemplateLanguage: string;
   whatsappApiVersion: string;
+  whatsappBusinessAccountId: string;
+  whatsappWebhookVerifyToken: string;
+  emailOtpSubject: string;
+  whatsappWebhookUrl?: string;
+  notificationTemplates: NotificationEventTemplate[];
   diditApiKey: string;
   diditWebhookSecret: string;
   diditWorkflowIdIdentity: string;
@@ -253,13 +260,56 @@ export function WebsiteUpdates() {
   async function saveIntegrations() {
     if (!integrations) return;
 
-    await saveSection("integrations", {
-      ...integrations,
-      zeptomailToken: integrations.zeptomailToken.trim() || undefined,
-      whatsappToken: integrations.whatsappToken.trim() || undefined,
-      diditApiKey: integrations.diditApiKey.trim() || undefined,
-      diditWebhookSecret: integrations.diditWebhookSecret.trim() || undefined,
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const settingsRes = await fetch("/api/admin/cms", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        section: "settings",
+        data: {
+          signupOtpEmailEnabled: settings.signupOtpEmailEnabled,
+          signupOtpWhatsappEnabled: settings.signupOtpWhatsappEnabled,
+          applicationNotifyEmailEnabled: settings.applicationNotifyEmailEnabled,
+          applicationNotifyWhatsappEnabled: settings.applicationNotifyWhatsappEnabled,
+          welcomeEmailEnabled: settings.welcomeEmailEnabled,
+          welcomeWhatsappEnabled: settings.welcomeWhatsappEnabled,
+          alertsEmailEnabled: settings.alertsEmailEnabled,
+          alertsWhatsappEnabled: settings.alertsWhatsappEnabled,
+          statusNotifyEmailEnabled: settings.statusNotifyEmailEnabled,
+          statusNotifyWhatsappEnabled: settings.statusNotifyWhatsappEnabled,
+        },
+      }),
     });
+
+    const integrationsRes = await fetch("/api/admin/cms", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        section: "integrations",
+        data: {
+          ...integrations,
+          zeptomailToken: integrations.zeptomailToken.trim() || undefined,
+          whatsappToken: integrations.whatsappToken.trim() || undefined,
+          diditApiKey: integrations.diditApiKey.trim() || undefined,
+          diditWebhookSecret: integrations.diditWebhookSecret.trim() || undefined,
+        },
+      }),
+    });
+
+    setLoading(false);
+
+    if (!settingsRes.ok || !integrationsRes.ok) {
+      const settingsData = await settingsRes.json().catch(() => ({}));
+      const integrationsData = await integrationsRes.json().catch(() => ({}));
+      setError(settingsData.error || integrationsData.error || "Failed to save settings");
+      return;
+    }
+
+    setMessage("API and notification settings saved successfully!");
+    load();
   }
 
   async function publishNotice() {
@@ -817,130 +867,20 @@ export function WebsiteUpdates() {
       )}
 
       {activeTab === "integrations" && integrations && (
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className={`rounded-lg border p-4 ${integrations.status.emailConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
-              <p className="font-semibold">ZeptoMail Email</p>
-              <p className="text-sm text-gray-600">{integrations.status.emailConfigured ? "Configured" : "Not configured"} · Source: {integrations.status.emailSource}</p>
-            </div>
-            <div className={`rounded-lg border p-4 ${integrations.status.whatsappConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
-              <p className="font-semibold">Meta WhatsApp</p>
-              <p className="text-sm text-gray-600">{integrations.status.whatsappConfigured ? "Configured" : "Not configured"} · Source: {integrations.status.whatsappSource}</p>
-            </div>
-            <div className={`rounded-lg border p-4 ${integrations.status.diditConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
-              <p className="font-semibold">Didit Verification</p>
-              <p className="text-sm text-gray-600">{integrations.status.diditConfigured ? "Configured" : "Not configured"} · Source: {integrations.status.diditSource}</p>
-            </div>
-          </div>
-
-          <div className="card space-y-4">
-            <h2 className="font-semibold">General</h2>
-            <Input label="App URL (NEXT_PUBLIC_APP_URL)" value={integrations.appUrl} onChange={(e) => setIntegrations({ ...integrations, appUrl: e.target.value })} />
-          </div>
-
-          <div className="card space-y-4">
-            <h2 className="font-semibold">ZeptoMail (Email & OTP)</h2>
-            <p className="text-sm text-gray-600">
-              India ZeptoMail accounts use the <code className="text-xs">api.zeptomail.in</code> endpoint automatically.
-              Paste the full Send Mail Token from Agent → SMTP/API (including <code className="text-xs">Zoho-enczapikey</code> prefix if shown).
-            </p>
-            {integrations.status.emailConfigured && (
-              <p className="text-sm text-green-700">Send Mail Token is saved. Leave the field empty below to keep it.</p>
-            )}
-            <Input
-              label="Send Mail Token"
-              type="password"
-              value={integrations.zeptomailToken}
-              placeholder={integrations.status.emailConfigured ? "Leave empty to keep saved token" : "Paste full ZeptoMail Send Mail Token"}
-              onChange={(e) => setIntegrations({ ...integrations, zeptomailToken: e.target.value })}
-            />
-            <Input label="From Email" value={integrations.zeptomailFromEmail} onChange={(e) => setIntegrations({ ...integrations, zeptomailFromEmail: e.target.value })} />
-            <Input label="From Name" value={integrations.zeptomailFromName} onChange={(e) => setIntegrations({ ...integrations, zeptomailFromName: e.target.value })} />
-            <div className="flex gap-2">
-              <Input label="Test email address" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} />
-              <Button type="button" variant="secondary" className="self-end" loading={loading} onClick={() => testIntegration("email")}>Send test</Button>
-            </div>
-          </div>
-
-          <div className="card space-y-4">
-            <h2 className="font-semibold">Meta WhatsApp (OTP & Alerts)</h2>
-            {integrations.status.whatsappConfigured && (
-              <p className="text-sm text-green-700">WhatsApp token is saved. Leave the field empty below to keep it.</p>
-            )}
-            <Input
-              label="Permanent Access Token"
-              type="password"
-              value={integrations.whatsappToken}
-              placeholder={integrations.status.whatsappConfigured ? "Leave empty to keep saved token" : "Paste Meta WhatsApp token"}
-              onChange={(e) => setIntegrations({ ...integrations, whatsappToken: e.target.value })}
-            />
-            <Input label="Phone Number ID" value={integrations.whatsappPhoneNumberId} onChange={(e) => setIntegrations({ ...integrations, whatsappPhoneNumberId: e.target.value })} />
-            <Input label="OTP Template Name" value={integrations.whatsappOtpTemplateName} onChange={(e) => setIntegrations({ ...integrations, whatsappOtpTemplateName: e.target.value })} />
-            <Input label="OTP Template Language" value={integrations.whatsappOtpTemplateLanguage} onChange={(e) => setIntegrations({ ...integrations, whatsappOtpTemplateLanguage: e.target.value })} />
-            <Input label="API Version" value={integrations.whatsappApiVersion} onChange={(e) => setIntegrations({ ...integrations, whatsappApiVersion: e.target.value })} />
-            <div className="flex gap-2">
-              <Input label="Test phone (91XXXXXXXXXX)" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
-              <Button type="button" variant="secondary" className="self-end" loading={loading} onClick={() => testIntegration("whatsapp")}>Send test</Button>
-            </div>
-          </div>
-
-          <div className="card space-y-4">
-            <h2 className="font-semibold">Didit Identity Verification</h2>
-            <p className="text-sm text-gray-600">
-              Configure Didit for applicant KYC during scrutiny, bank account verification during fellowship,
-              and optional undertaking identity checks. Register webhook URL in Didit Console:{" "}
-              <code className="text-xs">{integrations.appUrl ? `${integrations.appUrl.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}` : "https://your-domain"}/api/didit/webhook</code>
-            </p>
-            {integrations.status.diditConfigured && (
-              <p className="text-sm text-green-700">Didit credentials are saved. Leave secret fields empty to keep them.</p>
-            )}
-            <Input
-              label="Didit API Key"
-              type="password"
-              value={integrations.diditApiKey}
-              placeholder={integrations.status.diditConfigured ? "Leave empty to keep saved key" : "Paste DIDIT_API_KEY"}
-              onChange={(e) => setIntegrations({ ...integrations, diditApiKey: e.target.value })}
-            />
-            <Input
-              label="Didit Webhook Secret"
-              type="password"
-              value={integrations.diditWebhookSecret}
-              placeholder={integrations.status.diditConfigured ? "Leave empty to keep saved secret" : "Paste DIDIT_WEBHOOK_SECRET"}
-              onChange={(e) => setIntegrations({ ...integrations, diditWebhookSecret: e.target.value })}
-            />
-            <Input
-              label="Workflow ID — Applicant identity (SCRUTINY)"
-              value={integrations.diditWorkflowIdIdentity}
-              onChange={(e) => setIntegrations({ ...integrations, diditWorkflowIdIdentity: e.target.value })}
-            />
-            <Input
-              label="Workflow ID — Bank account verification"
-              value={integrations.diditWorkflowIdBank}
-              onChange={(e) => setIntegrations({ ...integrations, diditWorkflowIdBank: e.target.value })}
-            />
-            <Input
-              label="Workflow ID — Undertaking identity (optional)"
-              value={integrations.diditWorkflowIdUndertaking}
-              onChange={(e) => setIntegrations({ ...integrations, diditWorkflowIdUndertaking: e.target.value })}
-            />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={integrations.diditRequireIdentityForScrutiny}
-                onChange={(e) =>
-                  setIntegrations({
-                    ...integrations,
-                    diditRequireIdentityForScrutiny: e.target.checked,
-                  })
-                }
-              />
-              Require Didit identity verification before admin can approve document scrutiny
-            </label>
-          </div>
-
-          <p className="text-xs text-gray-500">Settings saved here override environment variables. Secret fields are never shown after save — leave them empty to keep the current token.</p>
-          <Button loading={loading} onClick={saveIntegrations}>Save API Settings</Button>
-        </div>
+        <IntegrationsSettingsPanel
+          integrations={integrations}
+          notificationSettings={settings}
+          testEmail={testEmail}
+          testPhone={testPhone}
+          loading={loading}
+          onIntegrationsChange={setIntegrations}
+          onNotificationSettingsChange={(next) => setSettings({ ...settings, ...next })}
+          onTestEmailChange={setTestEmail}
+          onTestPhoneChange={setTestPhone}
+          onSave={saveIntegrations}
+          onTestEmail={() => testIntegration("email")}
+          onTestWhatsapp={() => testIntegration("whatsapp")}
+        />
       )}
     </div>
   );

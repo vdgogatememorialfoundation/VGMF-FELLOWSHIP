@@ -1,5 +1,8 @@
 import prisma from "./db";
 import { maskSecret } from "./site-content";
+import {
+  mergeNotificationTemplates,
+} from "./notification-templates";
 
 export interface EmailIntegrationConfig {
   token: string | null;
@@ -10,9 +13,12 @@ export interface EmailIntegrationConfig {
 export interface WhatsAppIntegrationConfig {
   token: string | null;
   phoneNumberId: string | null;
+  businessAccountId: string | null;
+  webhookVerifyToken: string | null;
   otpTemplateName: string;
   otpTemplateLanguage: string;
   apiVersion: string;
+  defaultTemplateLanguage: string;
 }
 
 export interface IntegrationConfig {
@@ -65,6 +71,10 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
       token: db?.whatsappToken || process.env.WHATSAPP_TOKEN || null,
       phoneNumberId:
         db?.whatsappPhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || null,
+      businessAccountId:
+        db?.whatsappBusinessAccountId || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || null,
+      webhookVerifyToken:
+        db?.whatsappWebhookVerifyToken || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || null,
       otpTemplateName:
         db?.whatsappOtpTemplateName ||
         process.env.WHATSAPP_OTP_TEMPLATE_NAME ||
@@ -75,6 +85,10 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
         "en",
       apiVersion:
         db?.whatsappApiVersion || process.env.WHATSAPP_API_VERSION || "v22.0",
+      defaultTemplateLanguage:
+        db?.whatsappOtpTemplateLanguage ||
+        process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE ||
+        "en",
     },
     didit: {
       apiKey: db?.diditApiKey || process.env.DIDIT_API_KEY || null,
@@ -130,6 +144,14 @@ export async function getIntegrationSettingsForAdmin() {
     whatsappOtpTemplateName: config.whatsapp.otpTemplateName,
     whatsappOtpTemplateLanguage: config.whatsapp.otpTemplateLanguage,
     whatsappApiVersion: config.whatsapp.apiVersion,
+    whatsappBusinessAccountId:
+      db?.whatsappBusinessAccountId || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || "",
+    whatsappWebhookVerifyToken:
+      db?.whatsappWebhookVerifyToken || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "",
+    emailOtpSubject:
+      db?.emailOtpSubject || "Verify your email — VGMF Fellowship Portal",
+    notificationTemplates: mergeNotificationTemplates(db?.notificationTemplatesJson),
+    whatsappWebhookUrl: `${normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL)}/api/webhooks/whatsapp`,
     diditApiKey: maskSecret(db?.diditApiKey || process.env.DIDIT_API_KEY),
     diditWebhookSecret: maskSecret(db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET),
     diditWorkflowIdIdentity:
