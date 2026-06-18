@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       sessionId: session.session_id,
-      verificationUrl: session.verification_url,
+      verificationUrl: session.url || session.verification_url,
       status: session.status,
       reused: false,
     });

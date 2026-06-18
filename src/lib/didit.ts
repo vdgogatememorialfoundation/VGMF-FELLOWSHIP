@@ -8,9 +8,42 @@ const DIDIT_API_BASE = "https://verification.didit.me";
 export type DiditSessionResponse = {
   session_id: string;
   session_token?: string;
-  verification_url: string;
+  url: string;
+  verification_url?: string;
   status: string;
 };
+
+function getSessionVerificationUrl(session: DiditSessionResponse): string {
+  return session.url || session.verification_url || "";
+}
+
+function extractDiditError(payload: unknown, status: number): string {
+  if (!payload || typeof payload !== "object") {
+    return `Didit session creation failed (${status})`;
+  }
+
+  const record = payload as Record<string, unknown>;
+  if (typeof record.detail === "string" && record.detail.trim()) {
+    return record.detail;
+  }
+  if (Array.isArray(record.detail)) {
+    const parts = record.detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && "msg" in item) {
+          return String((item as { msg?: unknown }).msg ?? item);
+        }
+        return JSON.stringify(item);
+      })
+      .filter(Boolean);
+    if (parts.length > 0) return parts.join("; ");
+  }
+  if (typeof record.message === "string" && record.message.trim()) {
+    return record.message;
+  }
+
+  return `Didit session creation failed (${status})`;
+}
 
 export type DiditWebhookPayload = {
   session_id: string;
@@ -34,17 +67,22 @@ export async function getDiditConfig(): Promise<DiditConfig> {
   const db = await prisma.integrationSettings.findUnique({ where: { id: "default" } });
 
   return {
-    apiKey: db?.diditApiKey || process.env.DIDIT_API_KEY || null,
-    webhookSecret: db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET || null,
+    apiKey: (db?.diditApiKey || process.env.DIDIT_API_KEY || null)?.trim() || null,
+    webhookSecret:
+      (db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET || null)?.trim() || null,
     workflowIdIdentity:
-      db?.diditWorkflowIdIdentity ||
-      process.env.DIDIT_WORKFLOW_ID ||
-      process.env.DIDIT_WORKFLOW_ID_IDENTITY ||
-      null,
+      (
+        db?.diditWorkflowIdIdentity ||
+        process.env.DIDIT_WORKFLOW_ID ||
+        process.env.DIDIT_WORKFLOW_ID_IDENTITY ||
+        null
+      )?.trim() || null,
     workflowIdBank:
-      db?.diditWorkflowIdBank || process.env.DIDIT_WORKFLOW_ID_BANK || null,
+      (db?.diditWorkflowIdBank || process.env.DIDIT_WORKFLOW_ID_BANK || null)?.trim() || null,
     workflowIdUndertaking:
-      db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || null,
+      (
+        db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || null
+      )?.trim() || null,
     requireIdentityForScrutiny:
       db?.diditRequireIdentityForScrutiny ??
       process.env.DIDIT_REQUIRE_IDENTITY_FOR_SCRUTINY === "true",
@@ -117,20 +155,84 @@ export function mapDiditStatus(status: string): import("@prisma/client").DiditVe
 export function verifyDiditWebhookSignature(
   rawBody: string,
   signatureHeader: string | null,
-  webhookSecret: string
+  webhookSecret: string,
+  timestampHeader?: string | null
 ): boolean {
   if (!signatureHeader?.trim()) return false;
 
-  const expected = createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
   const received = signatureHeader.trim().toLowerCase();
 
-  if (expected.length !== received.length) return false;
+  if (timestampHeader) {
+    const timestamp = parseInt(timestampHeader, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (!Number.isFinite(timestamp) || Math.abs(now - timestamp) > 300) {
+      return false;
+    }
+  }
+
+  let expectedRaw = "";
+  let expectedCanonical = "";
 
   try {
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+    expectedRaw = createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+
+    const parsed = JSON.parse(rawBody) as unknown;
+    const canonical = JSON.stringify(sortWebhookKeys(shortenWebhookFloats(parsed)));
+    expectedCanonical = createHmac("sha256", webhookSecret)
+      .update(canonical, "utf8")
+      .digest("hex");
   } catch {
     return false;
   }
+
+  for (const expected of [expectedCanonical, expectedRaw]) {
+    if (expected.length !== received.length) continue;
+    try {
+      if (timingSafeEqual(Buffer.from(expected), Buffer.from(received))) {
+        return true;
+      }
+    } catch {
+      // try next format
+    }
+  }
+
+  return false;
+}
+
+function shortenWebhookFloats(data: unknown): unknown {
+  if (Array.isArray(data)) {
+    return data.map(shortenWebhookFloats);
+  }
+  if (data !== null && typeof data === "object") {
+    return Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).map(([key, value]) => [
+        key,
+        shortenWebhookFloats(value),
+      ])
+    );
+  }
+  if (typeof data === "number" && Number.isFinite(data) && Number.isInteger(data)) {
+    return data;
+  }
+  if (typeof data === "number" && Number.isFinite(data) && data % 1 === 0) {
+    return Math.trunc(data);
+  }
+  return data;
+}
+
+function sortWebhookKeys(data: unknown): unknown {
+  if (Array.isArray(data)) {
+    return data.map(sortWebhookKeys);
+  }
+  if (data !== null && typeof data === "object") {
+    return Object.keys(data as Record<string, unknown>)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, key) => {
+        acc[key] = sortWebhookKeys((data as Record<string, unknown>)[key]);
+        return acc;
+      }, {});
+  }
+  return data;
 }
 
 export async function createDiditSession(input: {
@@ -167,25 +269,26 @@ export async function createDiditSession(input: {
 
   const payload = (await response.json().catch(() => null)) as
     | DiditSessionResponse
-    | { detail?: string; message?: string }
+    | { detail?: string | unknown[]; message?: string }
     | null;
 
   if (!response.ok || !payload || !("session_id" in payload)) {
-    const message =
-      (payload && "detail" in payload && payload.detail) ||
-      (payload && "message" in payload && payload.message) ||
-      `Didit session creation failed (${response.status})`;
-    throw new Error(String(message));
+    throw new Error(extractDiditError(payload, response.status));
   }
 
   const session = payload as DiditSessionResponse;
+  const verificationUrl = getSessionVerificationUrl(session);
+  if (!verificationUrl) {
+    throw new Error("Didit response did not include a verification URL");
+  }
+
   const mappedStatus = mapDiditStatus(session.status);
 
   const record = await prisma.diditVerificationSession.create({
     data: {
       diditSessionId: session.session_id,
       sessionToken: session.session_token ?? null,
-      verificationUrl: session.verification_url,
+      verificationUrl,
       purpose: input.purpose,
       status: mappedStatus,
       vendorData: input.vendorData,
@@ -195,7 +298,7 @@ export async function createDiditSession(input: {
     },
   });
 
-  return { recordId: record.id, session };
+  return { recordId: record.id, session: { ...session, url: verificationUrl } };
 }
 
 export async function getLatestDiditSession(input: {

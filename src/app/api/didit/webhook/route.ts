@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
   }
 
   const signature = request.headers.get("x-signature-v2");
-  if (!verifyDiditWebhookSignature(rawBody, signature, config.webhookSecret)) {
+  const timestamp = request.headers.get("x-timestamp");
+  if (!verifyDiditWebhookSignature(rawBody, signature, config.webhookSecret, timestamp)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 

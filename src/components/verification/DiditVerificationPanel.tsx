@@ -116,13 +116,14 @@ export function DiditVerificationPanel({
         return;
       }
 
-      if (!data.verificationUrl) {
-        setError("Verification URL missing from Didit response");
+      const verificationUrl = data.verificationUrl || data.url;
+      if (!verificationUrl) {
+        setError(data.error || "Verification URL missing from Didit response");
         return;
       }
 
       setPolling(true);
-      DiditSdk.shared.startVerification({ url: data.verificationUrl });
+      DiditSdk.shared.startVerification({ url: verificationUrl });
       await loadStatus();
     } finally {
       setLoading(false);
