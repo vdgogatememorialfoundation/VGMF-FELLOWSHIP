@@ -11,6 +11,19 @@ import type {
 } from "@/lib/notification-templates";
 import { applyEmailOnlyAlertChannels, applyRecommendedMetaTemplates } from "@/lib/notification-templates";
 
+function buildWhatsAppWebhookUrl(appUrl: string): string {
+  if (!appUrl?.trim()) return "";
+  const base = appUrl.trim().startsWith("http") ? appUrl.trim() : `https://${appUrl.trim()}`;
+  return `${base.replace(/\/$/, "")}/api/webhooks/whatsapp`;
+}
+
+function appUrlFromWebhookUrl(webhookUrl: string): string {
+  const trimmed = webhookUrl.trim().replace(/\/$/, "");
+  if (!trimmed) return "";
+  const withoutPath = trimmed.replace(/\/api\/webhooks\/whatsapp\/?$/i, "");
+  return withoutPath || trimmed;
+}
+
 type IntegrationsState = {
   appUrl: string;
   zeptomailToken: string;
@@ -152,9 +165,21 @@ export function IntegrationsSettingsPanel({
     }
   }
 
-  const webhookUrl =
-    integrations.whatsappWebhookUrl ||
-    `${integrations.appUrl?.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}/api/webhooks/whatsapp`;
+  const webhookUrl = buildWhatsAppWebhookUrl(integrations.appUrl) || integrations.whatsappWebhookUrl || "";
+
+  async function copyWebhookUrl() {
+    const url = buildWhatsAppWebhookUrl(integrations.appUrl) || webhookUrl;
+    if (!url) {
+      setCheckMessage("Set App URL first to generate the webhook URL.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCheckMessage("Webhook URL copied. Paste it in Meta → WhatsApp → Configuration → Webhook.");
+    } catch {
+      setCheckMessage(url);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -193,8 +218,12 @@ export function IntegrationsSettingsPanel({
         <Input
           label="App URL"
           value={integrations.appUrl}
+          placeholder="https://fellowship.vaidyagogate.org"
           onChange={(e) => onIntegrationsChange({ ...integrations, appUrl: e.target.value })}
         />
+        <p className="text-xs text-gray-500">
+          Used for login links, Didit callbacks, and the default WhatsApp webhook URL below.
+        </p>
       </div>
 
       <div className="card space-y-4">
@@ -250,7 +279,30 @@ export function IntegrationsSettingsPanel({
           </div>
         </div>
 
-        <Input label="Webhook URL (register in Meta)" value={webhookUrl} readOnly />
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Input
+              label="Webhook URL (register in Meta)"
+              value={webhookUrl}
+              placeholder="https://fellowship.vaidyagogate.org/api/webhooks/whatsapp"
+              onChange={(e) => {
+                const nextWebhook = e.target.value;
+                const nextAppUrl = appUrlFromWebhookUrl(nextWebhook);
+                onIntegrationsChange({
+                  ...integrations,
+                  appUrl: nextAppUrl || integrations.appUrl,
+                });
+              }}
+            />
+          </div>
+          <Button type="button" variant="secondary" className="mb-0.5 shrink-0" onClick={copyWebhookUrl}>
+            Copy URL
+          </Button>
+        </div>
+        <p className="text-xs text-gray-500">
+          Edit this URL or App URL above — both stay in sync. Use the same verify token in Meta and in the field below,
+          then click Save.
+        </p>
         {integrations.status.whatsappConfigured && (
           <p className="text-sm text-green-700">WhatsApp token is saved. Leave empty below to keep it.</p>
         )}

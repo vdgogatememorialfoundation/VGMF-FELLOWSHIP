@@ -293,6 +293,7 @@ export function WebsiteUpdates() {
           ...integrations,
           zeptomailToken: integrations.zeptomailToken.trim() || undefined,
           whatsappToken: integrations.whatsappToken.trim() || undefined,
+          whatsappWebhookVerifyToken: integrations.whatsappWebhookVerifyToken.trim() || undefined,
           diditApiKey: integrations.diditApiKey.trim() || undefined,
           diditWebhookSecret: integrations.diditWebhookSecret.trim() || undefined,
         },
