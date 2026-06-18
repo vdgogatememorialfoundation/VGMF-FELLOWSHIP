@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { awardFellowship } from "@/lib/fellowship-service";
 import { notifyStatusChange } from "@/lib/notifications";
 import { BUDGET_MAX } from "@/lib/utils";
+import { getAssignedApplicationIds } from "@/lib/review-workflow";
 
 export async function GET() {
   const user = await getSession();
@@ -11,8 +12,11 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const assignedIds = await getAssignedApplicationIds(user.id, "TRUSTEE");
+
   const applications = await prisma.application.findMany({
     where: {
+      id: { in: assignedIds.length > 0 ? assignedIds : [] },
       status: {
         in: [
           "SHORTLISTED",
@@ -22,6 +26,8 @@ export async function GET() {
           "WAITLISTED",
           "AGREEMENT_PENDING",
           "SELECTED",
+          "QUERY_RAISED",
+          "QUERY_RESPONDED",
         ],
       },
     },
@@ -34,6 +40,7 @@ export async function GET() {
       trusteeApproval: true,
       fellowship: true,
       interview: true,
+      applicationQueries: { orderBy: { createdAt: "desc" }, take: 3 },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -74,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Trustee decision already recorded" }, { status: 400 });
     }
 
-    if (!["SHORTLISTED", "INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "TRUSTEE_REVIEW", "WAITLISTED"].includes(application.status)) {
+    if (!["SHORTLISTED", "INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "TRUSTEE_REVIEW", "WAITLISTED", "QUERY_RESPONDED"].includes(application.status)) {
       return NextResponse.json(
         { error: "Application must be shortlisted or interviewed before trustee approval" },
         { status: 400 }

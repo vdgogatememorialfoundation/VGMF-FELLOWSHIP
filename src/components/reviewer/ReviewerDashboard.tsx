@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 
 export function ReviewerDashboard() {
   const [applications, setApplications] = useState<Array<Record<string, unknown>>>([]);
@@ -37,8 +38,16 @@ export function ReviewerDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Reviewer Portal</h1>
-        <p className="mt-1 text-gray-600">Review applications, score proposals, and shortlist candidates</p>
+        <p className="mt-1 text-gray-600">
+          Review applications assigned to you by admin — score proposals or raise queries
+        </p>
       </div>
+
+      {applications.length === 0 && (
+        <div className="card py-8 text-center text-gray-500">
+          No applications assigned yet. Admin will assign applications for committee review.
+        </div>
+      )}
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -105,6 +114,19 @@ export function ReviewerDashboard() {
           <div className="flex gap-2">
             <Button onClick={() => submitScore(selected)}>Submit Score</Button>
             <Button variant="secondary" onClick={() => setSelected(null)}>Cancel</Button>
+          </div>
+
+          <div className="border-t pt-4">
+            <ApplicationQueryPanel
+              applicationId={selected}
+              phase="COMMITTEE"
+              canResolve
+              onUpdated={() =>
+                fetch("/api/committee/scores")
+                  .then((r) => r.json())
+                  .then((d) => setApplications(d.applications || []))
+              }
+            />
           </div>
         </div>
       )}

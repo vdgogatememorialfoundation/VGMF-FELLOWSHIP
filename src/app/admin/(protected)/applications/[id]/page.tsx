@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import { formatCurrency } from "@/lib/utils";
 import { formatApplicationNumber } from "@/lib/application-number";
 import { InterviewSchedulePanel } from "@/components/admin/InterviewSchedulePanel";
+import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel";
+import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import {
   canApproveScrutiny,
   getNextActions,
@@ -169,6 +171,20 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
+
+      <ReviewAssignmentPanel applicationId={id} onUpdated={reload} />
+
+      {app.queryNotes && (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5">
+          <h2 className="font-semibold text-orange-900">Open Query</h2>
+          <p className="mt-2 text-sm text-orange-800">{app.queryNotes}</p>
+        </div>
+      )}
+
+      <div className="card">
+        <h2 className="mb-4 font-semibold">Admin Query Actions</h2>
+        <ApplicationQueryPanel applicationId={id} phase="VERIFICATION" canRaise canResolve onUpdated={reload} />
+      </div>
 
       {app.status === "SCRUTINY" && (
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5">

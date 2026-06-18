@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TrusteeApprovalActions } from "@/components/trustee/TrusteeApprovalActions";
+import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { formatCurrency } from "@/lib/utils";
 
 type TrusteeApp = {
@@ -18,7 +19,7 @@ type TrusteeApp = {
     committeeUser: { profile: { name: string } | null };
   }>;
   trusteeApproval: { approved: boolean; remarks: string | null } | null;
-  fellowship: { fellowshipId: string; sanctionedAmount: number } | null;
+  fellowship: { id: string; fellowshipId: string; sanctionedAmount: number; awardLetterPath?: string | null } | null;
 };
 
 export function TrusteeApprovalsClient() {
@@ -47,9 +48,15 @@ export function TrusteeApprovalsClient() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Trustee Approvals</h1>
         <p className="mt-1 text-gray-600">
-          Final fellowship approval by the Board of Trustees (Rulebook §7.4)
+          Review applications assigned to you — approve fellowship awards or raise queries
         </p>
       </div>
+
+      {applications.length === 0 && (
+        <div className="card py-8 text-center text-gray-500">
+          No applications assigned yet. Admin will assign applications for trustee review.
+        </div>
+      )}
 
       {applications.map((app) => {
         const avgScore =
@@ -112,28 +119,45 @@ export function TrusteeApprovalsClient() {
                   <p className="mt-1 text-sm text-gray-600">{app.trusteeApproval.remarks}</p>
                 )}
                 {app.fellowship && (
-                  <p className="mt-2 text-sm font-medium text-green-800">
-                    Fellowship {app.fellowship.fellowshipId} —{" "}
-                    {formatCurrency(app.fellowship.sanctionedAmount)}
-                  </p>
+                  <>
+                    <p className="mt-2 text-sm font-medium text-green-800">
+                      Fellowship {app.fellowship.fellowshipId} —{" "}
+                      {formatCurrency(app.fellowship.sanctionedAmount)}
+                    </p>
+                    {app.fellowship.awardLetterPath && (
+                      <a
+                        href={app.fellowship.awardLetterPath}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block text-sm text-primary-600 hover:underline"
+                      >
+                        View auto-generated Fellowship Agreement
+                      </a>
+                    )}
+                  </>
                 )}
               </div>
-            ) : ["SHORTLISTED", "INTERVIEW_SCHEDULED", "WAITLISTED"].includes(app.status) ? (
-              <TrusteeApprovalActions
-                applicationId={app.id}
-                budgetTotal={app.budget?.total}
-                onComplete={reload}
-              />
+            ) : ["SHORTLISTED", "INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "TRUSTEE_REVIEW", "WAITLISTED", "QUERY_RESPONDED"].includes(app.status) ? (
+              <>
+                <TrusteeApprovalActions
+                  applicationId={app.id}
+                  budgetTotal={app.budget?.total}
+                  onComplete={reload}
+                />
+                <ApplicationQueryPanel
+                  applicationId={app.id}
+                  phase="TRUSTEE"
+                  canResolve
+                  onUpdated={reload}
+                />
+              </>
+            ) : app.status === "QUERY_RAISED" ? (
+              <ApplicationQueryPanel applicationId={app.id} phase="TRUSTEE" canRaise={false} />
             ) : null}
           </div>
         );
       })}
 
-      {applications.length === 0 && (
-        <div className="card py-12 text-center text-gray-500">
-          No applications pending trustee approval
-        </div>
-      )}
     </div>
   );
 }

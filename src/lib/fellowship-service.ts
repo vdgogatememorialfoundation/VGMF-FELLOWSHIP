@@ -3,6 +3,7 @@ import { generateFellowshipId } from "./auth";
 import { notifyInstallmentReleased, notifyStatusChange } from "./notifications";
 import { stageForInstallmentRelease } from "./fellowship-stage";
 import { validateInstallmentRelease } from "./installment-gates";
+import { generateAndStoreFellowshipAgreement } from "./agreement-service";
 
 const INSTALLMENT_SPLITS = [
   { no: 1, percentage: 40, label: "Commencement (40%)" },
@@ -86,6 +87,12 @@ export async function awardFellowship(params: {
     application.applicationNumber,
     "AGREEMENT_PENDING"
   );
+
+  try {
+    await generateAndStoreFellowshipAgreement(fellowship.id);
+  } catch (err) {
+    console.error("Failed to auto-generate fellowship agreement:", err);
+  }
 
   return fellowship;
 }

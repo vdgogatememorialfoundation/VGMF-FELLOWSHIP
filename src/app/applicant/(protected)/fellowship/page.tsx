@@ -33,6 +33,7 @@ type FellowshipData = {
   bankBranch: string | null;
   bankSubmittedAt: string | null;
   bankVerifiedAt: string | null;
+  awardLetterPath: string | null;
   installments: Installment[];
   progressReports: Array<{ quarter: number; year: number; status: string; submittedAt: string }>;
   finalSubmission: { status: string; submittedAt: string } | null;
@@ -235,6 +236,23 @@ export default function ApplicantFellowshipPage() {
           ))}
         </div>
       </div>
+
+      {f.awardLetterPath && (
+        <div className="card">
+          <h2 className="mb-2 font-semibold">Fellowship Agreement</h2>
+          <p className="text-sm text-gray-600">
+            Auto-generated when your fellowship was awarded. Review and keep a copy for your records.
+          </p>
+          <a
+            href={f.awardLetterPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-block text-sm font-medium text-primary-600 hover:underline"
+          >
+            View Fellowship Agreement (PDF)
+          </a>
+        </div>
+      )}
 
       <div id="bank-details" className="card space-y-4">
         <h2 className="font-semibold">Bank Details</h2>

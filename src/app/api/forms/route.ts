@@ -17,6 +17,7 @@ import {
   formatUndertakingForClient,
   repairOrphanUndertaking,
 } from "@/lib/undertaking-assets";
+import { completeQueryResubmit } from "@/lib/review-workflow";
 
 async function requireDigitalUndertaking(applicationId: string | null): Promise<string | null> {
   if (!applicationId) {
@@ -46,6 +47,12 @@ export async function GET(request: NextRequest) {
   let submission = null;
   let applicationId: string | null = null;
   let digitalUndertaking = null;
+  let applicationQuery: {
+    status: string;
+    queryNotes: string | null;
+    requiresResubmit: boolean;
+    openQuery: { id: string; message: string; requiresFullResubmit: boolean } | null;
+  } | null = null;
   const uploadedFiles: Record<string, boolean> = {};
 
   if (user) {
@@ -56,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     if (submission?.applicationId) {
       applicationId = submission.applicationId;
-      const [docs, undertaking] = await Promise.all([
+      const [docs, undertaking, application] = await Promise.all([
         prisma.applicationDocument.findMany({
           where: { applicationId: submission.applicationId },
           select: { type: true },
@@ -71,10 +78,39 @@ export async function GET(request: NextRequest) {
             submittedAt: true,
           },
         }),
+        prisma.application.findUnique({
+          where: { id: submission.applicationId },
+          select: {
+            status: true,
+            queryNotes: true,
+            requiresResubmit: true,
+            applicationQueries: {
+              where: { status: "OPEN" },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        }),
       ]);
       if (undertaking) {
         const repaired = await repairOrphanUndertaking(submission.applicationId);
         digitalUndertaking = repaired ? formatUndertakingForClient(repaired) : null;
+      }
+
+      if (application) {
+        const open = application.applicationQueries[0];
+        applicationQuery = {
+          status: application.status,
+          queryNotes: application.queryNotes,
+          requiresResubmit: application.requiresResubmit,
+          openQuery: open
+            ? {
+                id: open.id,
+                message: open.message,
+                requiresFullResubmit: open.requiresFullResubmit,
+              }
+            : null,
+        };
       }
 
       for (const field of template.fields) {
@@ -94,6 +130,7 @@ export async function GET(request: NextRequest) {
     applicationId,
     uploadedFiles,
     digitalUndertaking,
+    applicationQuery,
   });
 }
 
@@ -162,10 +199,22 @@ export async function POST(request: NextRequest) {
       }
 
       if (existing.status === "SUBMITTED") {
-        return NextResponse.json(
-          { error: "This application has already been submitted" },
-          { status: 400 }
-        );
+        const resubmitApp = existing.applicationId
+          ? await prisma.application.findUnique({
+              where: { id: existing.applicationId, userId: user.id },
+              select: { status: true, requiresResubmit: true },
+            })
+          : null;
+
+        const allowResubmit =
+          resubmitApp?.status === "QUERY_RAISED" && resubmitApp.requiresResubmit;
+
+        if (!allowResubmit) {
+          return NextResponse.json(
+            { error: "This application has already been submitted" },
+            { status: 400 }
+          );
+        }
       }
 
       const mergedData = await mergeUploadedFileFlags(
@@ -225,6 +274,15 @@ export async function POST(request: NextRequest) {
         );
         applicationId = application.id;
         applicationNumber = application.applicationNumber;
+
+        const resubmitApp = await prisma.application.findUnique({
+          where: { id: application.id },
+          select: { status: true, requiresResubmit: true },
+        });
+
+        if (resubmitApp?.requiresResubmit) {
+          await completeQueryResubmit(application.id, user.id);
+        }
 
         const applicantEmail = String(mergedData.email || "");
         await notifyApplicationSubmitted(

@@ -56,6 +56,16 @@ export default function ApplicantFormsPage() {
     id: string;
     pdfUrl: string;
   } | null>(null);
+  const [applicationQuery, setApplicationQuery] = useState<{
+    status: string;
+    queryNotes: string | null;
+    requiresResubmit: boolean;
+    openQuery: { id: string; message: string; requiresFullResubmit: boolean } | null;
+  } | null>(null);
+
+  const resubmitRequired =
+    applicationQuery?.status === "QUERY_RAISED" && applicationQuery.requiresResubmit;
+  const formLocked = submissionStatus === "SUBMITTED" && !resubmitRequired;
 
   const loadForm = useCallback(() => {
     setPageLoading(true);
@@ -103,6 +113,7 @@ export default function ApplicantFormsPage() {
 
           if (d.applicationId) setApplicationId(d.applicationId);
           if (d.digitalUndertaking) setDigitalUndertaking(d.digitalUndertaking);
+          if (d.applicationQuery) setApplicationQuery(d.applicationQuery);
           setValues(init);
         }
       })
@@ -144,7 +155,7 @@ export default function ApplicantFormsPage() {
   }
 
   async function handleFileSelect(fieldKey: string, file: File) {
-    if (submissionStatus === "SUBMITTED") return;
+    if (formLocked) return;
 
     setFileUploading(fieldKey);
     setError("");
@@ -183,7 +194,7 @@ export default function ApplicantFormsPage() {
 
   async function save(status: "DRAFT" | "SUBMITTED") {
     if (!template) return;
-    if (submissionStatus === "SUBMITTED") return;
+    if (formLocked) return;
     if (!schedule?.open && status !== "DRAFT") {
       setError(schedule?.message || "Applications are currently closed");
       return;
@@ -243,7 +254,7 @@ export default function ApplicantFormsPage() {
     return <p className="py-12 text-center text-gray-500">Application form not available.</p>;
   }
 
-  const isSubmitted = submissionStatus === "SUBMITTED";
+  const isSubmitted = formLocked;
   const formClosed = schedule && !schedule.open;
 
   return (
@@ -273,6 +284,18 @@ export default function ApplicantFormsPage() {
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
+
+      {resubmitRequired && (
+        <div className="rounded-xl border-2 border-orange-300 bg-orange-50 p-5">
+          <h2 className="font-semibold text-orange-900">Query — full resubmission required</h2>
+          <p className="mt-2 text-sm text-orange-800">
+            {applicationQuery?.openQuery?.message || applicationQuery?.queryNotes}
+          </p>
+          <p className="mt-2 text-sm text-orange-900">
+            Please update all application details and documents below, then submit again.
+          </p>
+        </div>
+      )}
 
       {!isSubmitted && applicationId && (
         <div

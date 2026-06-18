@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
         trusteeApproval: true,
         statusHistory: { orderBy: { createdAt: "desc" } },
         fellowship: { include: { installments: true } },
+        reviewAssignments: { where: { isActive: true }, include: { reviewer: { include: { profile: true } } } },
+        applicationQueries: { orderBy: { createdAt: "desc" }, take: 10 },
       },
     });
     return NextResponse.json({ application });

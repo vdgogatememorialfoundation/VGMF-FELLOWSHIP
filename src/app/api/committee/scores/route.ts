@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { scoreSchema } from "@/lib/validations";
+import { getAssignedApplicationIds } from "@/lib/review-workflow";
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
@@ -83,13 +84,30 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const assignedIds = await getAssignedApplicationIds(user.id, "COMMITTEE");
+
   const applications = await prisma.application.findMany({
-    where: { status: { in: ["SCRUTINY", "SCRUTINY_APPROVED", "SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"] } },
+    where: {
+      id: { in: assignedIds.length > 0 ? assignedIds : [] },
+      status: {
+        in: [
+          "SCRUTINY",
+          "SCRUTINY_APPROVED",
+          "SUBMITTED",
+          "UNDER_REVIEW",
+          "TECHNICAL_SCORING",
+          "SHORTLISTED",
+          "QUERY_RAISED",
+          "QUERY_RESPONDED",
+        ],
+      },
+    },
     include: {
       user: { include: { profile: true } },
       researchProposal: true,
       budget: true,
       committeeScores: true,
+      applicationQueries: { orderBy: { createdAt: "desc" }, take: 3 },
     },
     orderBy: { submittedAt: "desc" },
   });
