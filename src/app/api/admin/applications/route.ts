@@ -4,8 +4,10 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
+import { getDiditConfig } from "@/lib/didit";
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
+import { updateApplicationByAdmin } from "@/lib/admin-application-update";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -33,9 +35,21 @@ export async function GET(request: NextRequest) {
         fellowship: { include: { installments: true } },
         reviewAssignments: { where: { isActive: true }, include: { reviewer: { include: { profile: true } } } },
         applicationQueries: { orderBy: { createdAt: "desc" }, take: 10 },
+        digitalUndertaking: { select: { id: true, submittedAt: true, fullName: true } },
       },
     });
-    return NextResponse.json({ application });
+    if (!application) {
+      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
+    const diditConfig = await getDiditConfig();
+    return NextResponse.json({
+      application,
+      didit: {
+        identityWorkflowConfigured: !!diditConfig.workflowIdIdentity,
+        requireIdentityForScrutiny: diditConfig.requireIdentityForScrutiny,
+        webhookUrl: `${diditConfig.appUrl}/api/didit/webhook`,
+      },
+    });
   }
 
   const where = status ? { status: status as never } : {};
@@ -70,6 +84,23 @@ export async function PATCH(request: NextRequest) {
 
     if (!existing) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
+
+    if (status === "SCRUTINY_APPROVED") {
+      const diditConfig = await getDiditConfig();
+      if (
+        diditConfig.requireIdentityForScrutiny &&
+        diditConfig.workflowIdIdentity &&
+        existing.identityVerificationStatus !== "APPROVED"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Applicant must complete Didit identity verification before document verification can be approved",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const validationError = validateStatusTransition(
@@ -135,6 +166,34 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error("Status update error:", error);
     return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const user = await getSession();
+  if (!user || !["ADMIN", "STAFF"].includes(user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { applicationId, personal, notes, researchProposal, budget } = body;
+
+    if (!applicationId) {
+      return NextResponse.json({ error: "applicationId required" }, { status: 400 });
+    }
+
+    const application = await updateApplicationByAdmin(
+      applicationId,
+      { personal, notes, researchProposal, budget },
+      user.id
+    );
+
+    return NextResponse.json({ success: true, application });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update application";
+    console.error("Admin application update error:", error);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 

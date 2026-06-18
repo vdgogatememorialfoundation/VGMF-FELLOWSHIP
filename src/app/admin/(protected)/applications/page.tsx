@@ -109,6 +109,12 @@ export default function AdminApplicationsPage() {
                   </td>
                   <td className="py-3">
                     <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/admin/applications/${app.id}`}
+                        className="text-xs font-medium text-primary-600 hover:underline"
+                      >
+                        View & edit
+                      </Link>
                       <select
                         className="rounded border px-2 py-1 text-xs"
                         value={app.status}

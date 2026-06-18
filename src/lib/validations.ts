@@ -111,6 +111,9 @@ export const adminUpdateUserSchema = z.object({
   id: z.string().min(1),
   isActive: z.boolean().optional(),
   password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  email: z.string().email("Invalid email address").optional(),
+  phone: z.string().optional(),
 });
 
 export const profileSchema = z.object({
@@ -188,6 +191,29 @@ export const budgetSchema = z.object({
   },
   { message: "Total budget cannot exceed ₹75,000" }
 );
+
+export const adminUpdateApplicationSchema = z.object({
+  applicationId: z.string().min(1),
+  personal: applicationSchema.partial().optional(),
+  notes: z
+    .object({
+      adminNotes: z.string().nullable().optional(),
+      verificationNotes: z.string().nullable().optional(),
+      eligibilityNotes: z.string().nullable().optional(),
+    })
+    .optional(),
+  researchProposal: researchProposalSchema.partial().optional(),
+  budget: z
+    .object({
+      equipment: z.coerce.number().min(0).optional(),
+      consumables: z.coerce.number().min(0).optional(),
+      travel: z.coerce.number().min(0).optional(),
+      documentation: z.coerce.number().min(0).optional(),
+      publication: z.coerce.number().min(0).optional(),
+      other: z.coerce.number().min(0).optional(),
+    })
+    .optional(),
+});
 
 export const supportSchema = z.object({
   subject: z.string().min(5),

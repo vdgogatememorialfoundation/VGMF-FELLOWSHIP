@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import prisma from "@/lib/db";
 import { createUserAccount, listUsersByRoles, formatAccountForAdmin, updateUserByAdmin } from "@/lib/admin-users";
 import { adminCreateApplicantSchema, adminUpdateUserSchema } from "@/lib/validations";
 import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
@@ -10,9 +11,33 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (id) {
+    const applicant = await prisma.user.findFirst({
+      where: { id, role: "APPLICANT" },
+      include: {
+        profile: true,
+        applications: {
+          include: {
+            researchProposal: { select: { projectTitle: true } },
+            budget: { select: { total: true } },
+            fellowship: { select: { fellowshipId: true, currentStage: true, sanctionedAmount: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!applicant) {
+      return NextResponse.json({ error: "Applicant not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ applicant: formatAccountForAdmin(applicant) });
+  }
 
   const applicants = await listUsersByRoles(["APPLICANT"]);
 
@@ -92,11 +117,14 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { id, isActive, password } = parsed.data;
+    const { id, isActive, password, name, email, phone } = parsed.data;
 
     const updated = await updateUserByAdmin(id, {
       ...(isActive !== undefined ? { isActive } : {}),
       ...(password ? { password } : {}),
+      ...(name ? { name } : {}),
+      ...(email ? { email } : {}),
+      ...(phone !== undefined ? { phone } : {}),
     });
 
     if (updated.role !== "APPLICANT") {

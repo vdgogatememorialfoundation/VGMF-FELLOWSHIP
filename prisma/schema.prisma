@@ -143,6 +143,22 @@ enum ReviewPhase {
   VERIFICATION
 }
 
+enum DiditVerificationPurpose {
+  APPLICANT_IDENTITY
+  BANK_ACCOUNT
+  UNDERTAKING_IDENTITY
+}
+
+enum DiditVerificationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  APPROVED
+  DECLINED
+  IN_REVIEW
+  ABANDONED
+  EXPIRED
+}
+
 enum ApplicationQueryStatus {
   OPEN
   RESPONDED
@@ -198,6 +214,7 @@ model User {
   queriesRaised        ApplicationQuery[]          @relation("QueriesRaised")
   notifications        Notification[]
   sessions             Session[]
+  diditSessions        DiditVerificationSession[]
 
   @@map("users")
 }
@@ -268,6 +285,8 @@ model Application {
   termsAcceptedAt       DateTime?         @map("terms_accepted_at")
   undertakingAcceptedAt DateTime?         @map("undertaking_accepted_at")
   verificationNotes     String?           @map("verification_notes")
+  identityVerificationStatus DiditVerificationStatus @default(NOT_STARTED) @map("identity_verification_status")
+  identityVerifiedAt    DateTime?         @map("identity_verified_at")
   eligibilityNotes      String?           @map("eligibility_notes")
   queryNotes            String?           @map("query_notes")
   queryPhase            String?           @map("query_phase")
@@ -290,6 +309,7 @@ model Application {
   digitalUndertaking DigitalUndertaking?
   reviewAssignments  ApplicationReviewAssignment[]
   applicationQueries ApplicationQuery[]
+  diditSessions      DiditVerificationSession[]
 
   @@map("applications")
 }
@@ -532,6 +552,8 @@ model Fellowship {
   bankBranch        String?   @map("bank_branch")
   bankSubmittedAt   DateTime? @map("bank_submitted_at")
   bankVerifiedAt    DateTime? @map("bank_verified_at")
+  bankVerificationStatus DiditVerificationStatus @default(NOT_STARTED) @map("bank_verification_status")
+  bankDiditVerifiedAt DateTime? @map("bank_didit_verified_at")
   agreementPdfData  String?   @map("agreement_pdf_data") @db.Text
   agreementGeneratedAt DateTime? @map("agreement_generated_at")
   isActive         Boolean  @default(true) @map("is_active")
@@ -548,6 +570,7 @@ model Fellowship {
   certificates     Certificate[]
   fellowshipDocuments FellowshipDocument[]
   reminders        FellowshipReminder[]
+  diditSessions    DiditVerificationSession[]
 
   @@map("fellowships")
 }
@@ -794,9 +817,42 @@ model IntegrationSettings {
   whatsappOtpTemplateName     String?  @map("whatsapp_otp_template_name")
   whatsappOtpTemplateLanguage String?  @map("whatsapp_otp_template_language")
   whatsappApiVersion          String?  @map("whatsapp_api_version")
+  diditApiKey                 String?  @map("didit_api_key")
+  diditWebhookSecret          String?  @map("didit_webhook_secret")
+  diditWorkflowIdIdentity     String?  @map("didit_workflow_id_identity")
+  diditWorkflowIdBank         String?  @map("didit_workflow_id_bank")
+  diditWorkflowIdUndertaking  String?  @map("didit_workflow_id_undertaking")
+  diditRequireIdentityForScrutiny Boolean @default(false) @map("didit_require_identity_for_scrutiny")
   updatedAt                   DateTime @updatedAt @map("updated_at")
 
   @@map("integration_settings")
+}
+
+model DiditVerificationSession {
+  id               String                   @id @default(cuid())
+  diditSessionId   String                   @unique @map("didit_session_id")
+  sessionToken     String?                  @map("session_token") @db.Text
+  verificationUrl  String?                  @map("verification_url") @db.Text
+  purpose          DiditVerificationPurpose
+  status           DiditVerificationStatus  @default(NOT_STARTED)
+  vendorData       String                   @map("vendor_data")
+  userId           String                   @map("user_id")
+  applicationId    String?                  @map("application_id")
+  fellowshipId     String?                  @map("fellowship_id")
+  decisionJson     Json?                    @map("decision_json")
+  webhookPayload   Json?                    @map("webhook_payload")
+  completedAt      DateTime?                @map("completed_at")
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  updatedAt        DateTime                 @updatedAt @map("updated_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fellowship  Fellowship?  @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([applicationId, purpose])
+  @@index([fellowshipId, purpose])
+  @@map("didit_verification_sessions")
 }
 
 model CmsPage {

@@ -115,11 +115,19 @@ interface Integrations {
   whatsappOtpTemplateName: string;
   whatsappOtpTemplateLanguage: string;
   whatsappApiVersion: string;
+  diditApiKey: string;
+  diditWebhookSecret: string;
+  diditWorkflowIdIdentity: string;
+  diditWorkflowIdBank: string;
+  diditWorkflowIdUndertaking: string;
+  diditRequireIdentityForScrutiny: boolean;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
+    diditConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
+    diditSource: string;
   };
 }
 
@@ -217,6 +225,8 @@ export function WebsiteUpdates() {
             ...d.integrations,
             zeptomailToken: "",
             whatsappToken: "",
+            diditApiKey: "",
+            diditWebhookSecret: "",
           });
         }
 
@@ -247,6 +257,8 @@ export function WebsiteUpdates() {
       ...integrations,
       zeptomailToken: integrations.zeptomailToken.trim() || undefined,
       whatsappToken: integrations.whatsappToken.trim() || undefined,
+      diditApiKey: integrations.diditApiKey.trim() || undefined,
+      diditWebhookSecret: integrations.diditWebhookSecret.trim() || undefined,
     });
   }
 
@@ -806,7 +818,7 @@ export function WebsiteUpdates() {
 
       {activeTab === "integrations" && integrations && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className={`rounded-lg border p-4 ${integrations.status.emailConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
               <p className="font-semibold">ZeptoMail Email</p>
               <p className="text-sm text-gray-600">{integrations.status.emailConfigured ? "Configured" : "Not configured"} · Source: {integrations.status.emailSource}</p>
@@ -814,6 +826,10 @@ export function WebsiteUpdates() {
             <div className={`rounded-lg border p-4 ${integrations.status.whatsappConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
               <p className="font-semibold">Meta WhatsApp</p>
               <p className="text-sm text-gray-600">{integrations.status.whatsappConfigured ? "Configured" : "Not configured"} · Source: {integrations.status.whatsappSource}</p>
+            </div>
+            <div className={`rounded-lg border p-4 ${integrations.status.diditConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
+              <p className="font-semibold">Didit Verification</p>
+              <p className="text-sm text-gray-600">{integrations.status.diditConfigured ? "Configured" : "Not configured"} · Source: {integrations.status.diditSource}</p>
             </div>
           </div>
 
@@ -866,6 +882,60 @@ export function WebsiteUpdates() {
               <Input label="Test phone (91XXXXXXXXXX)" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
               <Button type="button" variant="secondary" className="self-end" loading={loading} onClick={() => testIntegration("whatsapp")}>Send test</Button>
             </div>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="font-semibold">Didit Identity Verification</h2>
+            <p className="text-sm text-gray-600">
+              Configure Didit for applicant KYC during scrutiny, bank account verification during fellowship,
+              and optional undertaking identity checks. Register webhook URL in Didit Console:{" "}
+              <code className="text-xs">{integrations.appUrl || "https://your-domain"}/api/didit/webhook</code>
+            </p>
+            {integrations.status.diditConfigured && (
+              <p className="text-sm text-green-700">Didit credentials are saved. Leave secret fields empty to keep them.</p>
+            )}
+            <Input
+              label="Didit API Key"
+              type="password"
+              value={integrations.diditApiKey}
+              placeholder={integrations.status.diditConfigured ? "Leave empty to keep saved key" : "Paste DIDIT_API_KEY"}
+              onChange={(e) => setIntegrations({ ...integrations, diditApiKey: e.target.value })}
+            />
+            <Input
+              label="Didit Webhook Secret"
+              type="password"
+              value={integrations.diditWebhookSecret}
+              placeholder={integrations.status.diditConfigured ? "Leave empty to keep saved secret" : "Paste DIDIT_WEBHOOK_SECRET"}
+              onChange={(e) => setIntegrations({ ...integrations, diditWebhookSecret: e.target.value })}
+            />
+            <Input
+              label="Workflow ID — Applicant identity (SCRUTINY)"
+              value={integrations.diditWorkflowIdIdentity}
+              onChange={(e) => setIntegrations({ ...integrations, diditWorkflowIdIdentity: e.target.value })}
+            />
+            <Input
+              label="Workflow ID — Bank account verification"
+              value={integrations.diditWorkflowIdBank}
+              onChange={(e) => setIntegrations({ ...integrations, diditWorkflowIdBank: e.target.value })}
+            />
+            <Input
+              label="Workflow ID — Undertaking identity (optional)"
+              value={integrations.diditWorkflowIdUndertaking}
+              onChange={(e) => setIntegrations({ ...integrations, diditWorkflowIdUndertaking: e.target.value })}
+            />
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={integrations.diditRequireIdentityForScrutiny}
+                onChange={(e) =>
+                  setIntegrations({
+                    ...integrations,
+                    diditRequireIdentityForScrutiny: e.target.checked,
+                  })
+                }
+              />
+              Require Didit identity verification before admin can approve document scrutiny
+            </label>
           </div>
 
           <p className="text-xs text-gray-500">Settings saved here override environment variables. Secret fields are never shown after save — leave them empty to keep the current token.</p>

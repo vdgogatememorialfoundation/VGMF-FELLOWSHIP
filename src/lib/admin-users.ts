@@ -90,12 +90,20 @@ export async function listAllAccounts(role?: UserRole) {
 
 export async function updateUserByAdmin(
   id: string,
-  data: { isActive?: boolean; password?: string }
+  data: {
+    isActive?: boolean;
+    password?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  }
 ) {
   const update: {
     isActive?: boolean;
     passwordHash?: string;
     adminPassword?: string;
+    email?: string;
+    phone?: string | null;
   } = {};
 
   if (data.isActive !== undefined) {
@@ -107,9 +115,38 @@ export async function updateUserByAdmin(
     update.adminPassword = data.password;
   }
 
-  return prisma.user.update({
+  if (data.email) {
+    update.email = data.email.trim().toLowerCase();
+  }
+
+  if (data.phone !== undefined) {
+    update.phone = data.phone.trim() || null;
+  }
+
+  if (data.name) {
+    await prisma.profile.upsert({
+      where: { userId: id },
+      update: { name: data.name.trim() },
+      create: { userId: id, name: data.name.trim() },
+    });
+  }
+
+  if (Object.keys(update).length > 0) {
+    return prisma.user.update({
+      where: { id },
+      data: update,
+      include: {
+        profile: true,
+        applications: {
+          select: { id: true, applicationNumber: true, status: true },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+  }
+
+  const user = await prisma.user.findUnique({
     where: { id },
-    data: update,
     include: {
       profile: true,
       applications: {
@@ -118,6 +155,9 @@ export async function updateUserByAdmin(
       },
     },
   });
+
+  if (!user) throw new Error("User not found");
+  return user;
 }
 
 export function formatAccountForAdmin(

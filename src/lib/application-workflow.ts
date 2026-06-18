@@ -86,7 +86,11 @@ export function hasDocumentsPendingAction(documents: TrackingDocument[]): boolea
 
 export function canApproveScrutiny(
   status: ApplicationStatus,
-  documents: TrackingDocument[]
+  documents: TrackingDocument[],
+  options?: {
+    requireDiditIdentity?: boolean;
+    identityVerificationStatus?: string;
+  }
 ): { ok: boolean; reason?: string } {
   if (status !== "SCRUTINY") {
     return { ok: false, reason: "Application must be in Document Verification stage" };
@@ -98,6 +102,15 @@ export function canApproveScrutiny(
     return {
       ok: false,
       reason: "Approve or request resubmission for every document before marking verified",
+    };
+  }
+  if (
+    options?.requireDiditIdentity &&
+    options.identityVerificationStatus !== "APPROVED"
+  ) {
+    return {
+      ok: false,
+      reason: "Applicant must complete online identity verification before document verification can be approved",
     };
   }
   return { ok: true };

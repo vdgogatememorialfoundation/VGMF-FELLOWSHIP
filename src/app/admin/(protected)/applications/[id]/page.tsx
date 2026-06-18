@@ -2,15 +2,17 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import { formatCurrency } from "@/lib/utils";
 import { formatApplicationNumber } from "@/lib/application-number";
+import { formatNumericId } from "@/lib/format-ids";
 import { InterviewSchedulePanel } from "@/components/admin/InterviewSchedulePanel";
 import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel";
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
+import { AdminApplicationEditor } from "@/components/admin/AdminApplicationEditor";
 import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
 import {
   canApproveScrutiny,
@@ -35,22 +37,63 @@ type ApplicationData = {
   applicationNumber: string;
   status: string;
   name: string;
+  dob: string;
+  gender: string;
+  address: string;
   email: string;
   mobile: string;
-  bamsCollege: string;
-  currentDesignation: string;
-  registrationCouncil: string;
-  registrationNumber: string;
   city: string;
   state: string;
+  country: string;
   pincode: string;
+  bamsCollege: string;
+  yearOfPassing: number;
+  mdMsPhdDetails?: string | null;
+  currentDesignation: string;
+  institutionName: string;
+  registrationCouncil: string;
+  registrationNumber: string;
+  yearsOfPractice: number;
+  viddhakarmaExperience?: string | null;
+  publicationsSummary?: string | null;
+  submittedAt?: string | null;
+  createdAt?: string;
   rejectionReason?: string | null;
   adminNotes?: string | null;
   queryNotes?: string | null;
   eligibilityNotes?: string | null;
   verificationNotes?: string | null;
-  researchProposal: Record<string, string> | null;
-  budget: { total: number } | null;
+  identityVerificationStatus?: string;
+  identityVerifiedAt?: string | null;
+  user: {
+    id: string;
+    userId: string;
+    email: string;
+    phone: string | null;
+    isActive: boolean;
+    profile: { name: string } | null;
+  };
+  researchProposal: {
+    projectTitle: string;
+    researchArea: string;
+    researchAreaOther?: string | null;
+    objectives: string;
+    methodology: string;
+    sampleSize: string;
+    studyDuration: string;
+    expectedOutcomes: string;
+    budgetSummary: string;
+  } | null;
+  budget: {
+    equipment: number;
+    consumables: number;
+    travel: number;
+    documentation: number;
+    publication: number;
+    other: number;
+    total: number;
+  } | null;
+  digitalUndertaking?: { id: string; submittedAt: string; fullName: string } | null;
   documents: ApplicationDocument[];
   committeeScores: Array<{ totalScore: number; committeeUser: { profile: { name: string } | null } }>;
   interview: {
@@ -78,11 +121,26 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [diditMeta, setDiditMeta] = useState<{
+    requireIdentityForScrutiny: boolean;
+    identityWorkflowConfigured: boolean;
+    webhookUrl: string;
+  } | null>(null);
 
   async function reload() {
     const res = await fetch(`/api/admin/applications?id=${id}`);
     const data = await res.json();
+    setPageLoading(false);
+    if (!res.ok) {
+      setError(data.error || "Failed to load application");
+      setApp(null);
+      return;
+    }
     setApp(data.application);
+    setDiditMeta(data.didit ?? null);
+    setAdminNotes(data.application.adminNotes ?? "");
+    setRejectionReason(data.application.rejectionReason ?? "");
   }
 
   useEffect(() => {
@@ -192,9 +250,25 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     await reload();
   }
 
-  if (!app) return <p className="py-12 text-center text-gray-500">Loading application...</p>;
+  if (pageLoading) {
+    return <p className="py-12 text-center text-gray-500">Loading application...</p>;
+  }
 
-  const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents);
+  if (!app) {
+    return (
+      <div className="space-y-4 py-12 text-center">
+        <p className="text-gray-500">{error || "Application not found"}</p>
+        <Link href="/admin/applications" className="text-primary-600 underline">
+          Back to applications
+        </Link>
+      </div>
+    );
+  }
+
+  const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents, {
+    requireDiditIdentity: diditMeta?.requireIdentityForScrutiny,
+    identityVerificationStatus: app.identityVerificationStatus,
+  });
   const nextActions = getNextActions(app.status as never);
   const docsApproved = allDocumentsApproved(app.documents);
 
@@ -202,17 +276,53 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-mono text-2xl font-bold tracking-wide">{app.applicationNumber}</h1>
+          <Link href="/admin/applications" className="text-sm text-primary-600 hover:underline">
+            ← All applications
+          </Link>
+          <h1 className="mt-2 font-mono text-2xl font-bold tracking-wide">{app.applicationNumber}</h1>
           {/^\d{12}$/.test(app.applicationNumber) && (
             <p className="text-sm text-gray-500">{formatApplicationNumber(app.applicationNumber)}</p>
           )}
           <p className="mt-1 text-gray-600">{app.name}</p>
+          {app.submittedAt && (
+            <p className="mt-1 text-xs text-gray-500">
+              Submitted {new Date(app.submittedAt).toLocaleString("en-IN")}
+            </p>
+          )}
         </div>
         <StatusBadge status={app.status} />
       </div>
       <p className="text-sm text-gray-500">
         Workflow phase: <strong>{getAdminPhase(app.status as never)}</strong>
       </p>
+
+      <div className="card grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Applicant account</p>
+          <Link
+            href={`/admin/applicants/${app.user.id}`}
+            className="mt-1 block font-medium text-primary-600 hover:underline"
+          >
+            {app.user.profile?.name ?? app.name}
+          </Link>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-500">User ID</p>
+          <p className="mt-1 font-mono text-sm">{formatNumericId(app.user.userId)}</p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Account email</p>
+          <p className="mt-1 text-sm">{app.user.email}</p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Digital undertaking</p>
+          <p className="mt-1 text-sm">
+            {app.digitalUndertaking
+              ? `Submitted ${new Date(app.digitalUndertaking.submittedAt).toLocaleDateString("en-IN")}`
+              : "Not submitted"}
+          </p>
+        </div>
+      </div>
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
@@ -251,42 +361,28 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           {!scrutinyCheck.ok && (
             <p className="mt-2 text-sm text-amber-700">{scrutinyCheck.reason}</p>
           )}
+          {diditMeta?.identityWorkflowConfigured && (
+            <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4">
+              <p className="text-sm font-medium text-gray-900">Didit identity verification</p>
+              <p className="mt-1 text-sm text-gray-600">
+                Status:{" "}
+                <strong>{(app.identityVerificationStatus ?? "NOT_STARTED").replace(/_/g, " ")}</strong>
+                {app.identityVerifiedAt &&
+                  ` · Verified ${new Date(app.identityVerifiedAt).toLocaleString("en-IN")}`}
+              </p>
+              {diditMeta.requireIdentityForScrutiny && (
+                <p className="mt-2 text-xs text-amber-800">
+                  Required before marking documents verified (enabled in API Settings).
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
+      <AdminApplicationEditor application={app} onSaved={reload} />
+
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="card space-y-3">
-          <h2 className="font-semibold">Personal & Professional</h2>
-          <div className="space-y-1 text-sm">
-            <p><strong>Email:</strong> {app.email}</p>
-            <p><strong>Mobile:</strong> {app.mobile}</p>
-            <p><strong>Location:</strong> {app.city}, {app.state} — {app.pincode}</p>
-            <p><strong>BAMS College:</strong> {app.bamsCollege}</p>
-            <p><strong>Designation:</strong> {app.currentDesignation}</p>
-            <p><strong>Registration:</strong> {app.registrationCouncil} — {app.registrationNumber}</p>
-          </div>
-        </div>
-
-        {app.researchProposal && (
-          <div className="card space-y-3">
-            <h2 className="font-semibold">Research Proposal</h2>
-            <div className="space-y-1 text-sm">
-              <p><strong>Title:</strong> {app.researchProposal.projectTitle}</p>
-              <p><strong>Area:</strong> {app.researchProposal.researchArea?.replace(/_/g, " ")}</p>
-              <p><strong>Objectives:</strong> {app.researchProposal.objectives}</p>
-            </div>
-          </div>
-        )}
-
-        {app.budget && (
-          <div className="card space-y-3">
-            <h2 className="font-semibold">Budget</h2>
-            <p className="text-lg font-bold text-primary-600">
-              Total: {formatCurrency(app.budget.total)}
-            </p>
-          </div>
-        )}
-
         <div className="card space-y-4 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Document Scrutiny</h2>

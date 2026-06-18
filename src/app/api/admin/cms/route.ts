@@ -94,6 +94,15 @@ export async function PUT(request: NextRequest) {
         whatsappOtpTemplateName: data.whatsappOtpTemplateName?.trim() || null,
         whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage?.trim() || null,
         whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
+        diditApiKey: resolveSecret(data.diditApiKey, existing?.diditApiKey ?? null),
+        diditWebhookSecret: resolveSecret(
+          data.diditWebhookSecret,
+          existing?.diditWebhookSecret ?? null
+        ),
+        diditWorkflowIdIdentity: data.diditWorkflowIdIdentity?.trim() || null,
+        diditWorkflowIdBank: data.diditWorkflowIdBank?.trim() || null,
+        diditWorkflowIdUndertaking: data.diditWorkflowIdUndertaking?.trim() || null,
+        diditRequireIdentityForScrutiny: Boolean(data.diditRequireIdentityForScrutiny),
       },
       create: {
         id: "default",
@@ -106,6 +115,14 @@ export async function PUT(request: NextRequest) {
         whatsappOtpTemplateName: data.whatsappOtpTemplateName?.trim() || null,
         whatsappOtpTemplateLanguage: data.whatsappOtpTemplateLanguage?.trim() || null,
         whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
+        diditApiKey: isMaskedSecret(data.diditApiKey) ? null : data.diditApiKey?.trim() || null,
+        diditWebhookSecret: isMaskedSecret(data.diditWebhookSecret)
+          ? null
+          : data.diditWebhookSecret?.trim() || null,
+        diditWorkflowIdIdentity: data.diditWorkflowIdIdentity?.trim() || null,
+        diditWorkflowIdBank: data.diditWorkflowIdBank?.trim() || null,
+        diditWorkflowIdUndertaking: data.diditWorkflowIdUndertaking?.trim() || null,
+        diditRequireIdentityForScrutiny: Boolean(data.diditRequireIdentityForScrutiny),
       },
     });
 

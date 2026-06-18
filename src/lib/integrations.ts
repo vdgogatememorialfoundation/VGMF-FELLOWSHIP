@@ -19,6 +19,16 @@ export interface IntegrationConfig {
   appUrl: string;
   email: EmailIntegrationConfig;
   whatsapp: WhatsAppIntegrationConfig;
+  didit: DiditIntegrationConfig;
+}
+
+export interface DiditIntegrationConfig {
+  apiKey: string | null;
+  webhookSecret: string | null;
+  workflowIdIdentity: string | null;
+  workflowIdBank: string | null;
+  workflowIdUndertaking: string | null;
+  requireIdentityForScrutiny: boolean;
 }
 
 async function getDbSettings() {
@@ -60,6 +70,21 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
       apiVersion:
         db?.whatsappApiVersion || process.env.WHATSAPP_API_VERSION || "v22.0",
     },
+    didit: {
+      apiKey: db?.diditApiKey || process.env.DIDIT_API_KEY || null,
+      webhookSecret: db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET || null,
+      workflowIdIdentity:
+        db?.diditWorkflowIdIdentity ||
+        process.env.DIDIT_WORKFLOW_ID ||
+        process.env.DIDIT_WORKFLOW_ID_IDENTITY ||
+        null,
+      workflowIdBank: db?.diditWorkflowIdBank || process.env.DIDIT_WORKFLOW_ID_BANK || null,
+      workflowIdUndertaking:
+        db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || null,
+      requireIdentityForScrutiny:
+        db?.diditRequireIdentityForScrutiny ??
+        process.env.DIDIT_REQUIRE_IDENTITY_FOR_SCRUTINY === "true",
+    },
   };
 }
 
@@ -71,6 +96,17 @@ export async function isEmailConfigured(): Promise<boolean> {
 export async function isWhatsAppConfigured(): Promise<boolean> {
   const config = await getIntegrationConfig();
   return !!(config.whatsapp.token && config.whatsapp.phoneNumberId);
+}
+
+export async function isDiditIntegrationConfigured(): Promise<boolean> {
+  const config = await getIntegrationConfig();
+  return !!(
+    config.didit.apiKey &&
+    config.didit.webhookSecret &&
+    (config.didit.workflowIdIdentity ||
+      config.didit.workflowIdBank ||
+      config.didit.workflowIdUndertaking)
+  );
 }
 
 export async function getIntegrationSettingsForAdmin() {
@@ -88,11 +124,24 @@ export async function getIntegrationSettingsForAdmin() {
     whatsappOtpTemplateName: config.whatsapp.otpTemplateName,
     whatsappOtpTemplateLanguage: config.whatsapp.otpTemplateLanguage,
     whatsappApiVersion: config.whatsapp.apiVersion,
+    diditApiKey: maskSecret(db?.diditApiKey || process.env.DIDIT_API_KEY),
+    diditWebhookSecret: maskSecret(db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET),
+    diditWorkflowIdIdentity:
+      db?.diditWorkflowIdIdentity ||
+      process.env.DIDIT_WORKFLOW_ID ||
+      process.env.DIDIT_WORKFLOW_ID_IDENTITY ||
+      "",
+    diditWorkflowIdBank: db?.diditWorkflowIdBank || process.env.DIDIT_WORKFLOW_ID_BANK || "",
+    diditWorkflowIdUndertaking:
+      db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || "",
+    diditRequireIdentityForScrutiny: config.didit.requireIdentityForScrutiny,
     status: {
       emailConfigured: !!(config.email.token && config.email.fromEmail),
       whatsappConfigured: !!(config.whatsapp.token && config.whatsapp.phoneNumberId),
+      diditConfigured: await isDiditIntegrationConfigured(),
       emailSource: db?.zeptomailToken ? "database" : process.env.ZEPTOMAIL_TOKEN ? "environment" : "none",
       whatsappSource: db?.whatsappToken ? "database" : process.env.WHATSAPP_TOKEN ? "environment" : "none",
+      diditSource: db?.diditApiKey ? "database" : process.env.DIDIT_API_KEY ? "environment" : "none",
     },
   };
 }

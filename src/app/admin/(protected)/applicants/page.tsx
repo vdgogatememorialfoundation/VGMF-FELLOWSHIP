@@ -171,7 +171,11 @@ export default function AdminApplicantsPage() {
               <tr key={applicant.id} className="border-b last:border-0">
                 <td className="py-3 pr-4 font-medium">{applicant.userId}</td>
                 <td className="py-3 pr-4">{applicant.name}</td>
-                <td className="py-3 pr-4">{applicant.email}</td>
+                <td className="py-3 pr-4">
+                  <Link href={`/admin/applicants/${applicant.id}`} className="text-primary-600 hover:underline">
+                    {applicant.email}
+                  </Link>
+                </td>
                 <td className="py-3 pr-4">{applicant.phone ?? "—"}</td>
                 <td className="py-3 pr-4">
                   {applicant.applications.length === 0 ? (
@@ -179,8 +183,13 @@ export default function AdminApplicantsPage() {
                   ) : (
                     <div className="space-y-1">
                       {applicant.applications.map((app) => (
-                        <div key={app.id} className="flex items-center gap-2">
-                          <span className="font-mono text-xs">{app.applicationNumber}</span>
+                        <div key={app.id} className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/admin/applications/${app.id}`}
+                            className="font-mono text-xs text-primary-600 hover:underline"
+                          >
+                            {app.applicationNumber}
+                          </Link>
                           <StatusBadge status={app.status} />
                         </div>
                       ))}
@@ -202,14 +211,21 @@ export default function AdminApplicantsPage() {
                   {new Date(applicant.createdAt).toLocaleDateString("en-IN")}
                 </td>
                 <td className="py-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="text-xs"
-                    onClick={() => toggleActive(applicant.id, applicant.isActive)}
-                  >
-                    {applicant.isActive ? "Deactivate" : "Activate"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/admin/applicants/${applicant.id}`}>
+                      <Button type="button" variant="secondary" className="text-xs">
+                        View details
+                      </Button>
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs"
+                      onClick={() => toggleActive(applicant.id, applicant.isActive)}
+                    >
+                      {applicant.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
