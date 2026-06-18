@@ -66,8 +66,10 @@ export function DiditVerificationPanel({
   if (applicationId) query.set("applicationId", applicationId);
   if (fellowshipId) query.set("fellowshipId", fellowshipId);
 
+  const queryString = query.toString();
+
   const loadStatus = useCallback(async () => {
-    const res = await fetch(`/api/didit/session?${query.toString()}`);
+    const res = await fetch(`/api/didit/session?${queryString}`);
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || "Failed to load verification status");
@@ -76,7 +78,7 @@ export function DiditVerificationPanel({
     setState(data);
     onStatusChange?.(data.status);
     setError("");
-  }, [applicationId, fellowshipId, onStatusChange, purpose]);
+  }, [queryString, onStatusChange]);
 
   useEffect(() => {
     loadStatus();

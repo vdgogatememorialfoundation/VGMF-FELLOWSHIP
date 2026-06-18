@@ -80,8 +80,8 @@ export async function GET() {
         ? {
             enabled: true,
             required: integrationConfig.didit.requireIdentityForScrutiny,
-            status: repaired.identityVerificationStatus ?? app.identityVerificationStatus,
-            verifiedAt: repaired.identityVerifiedAt ?? app.identityVerifiedAt,
+            status: app.identityVerificationStatus,
+            verifiedAt: app.identityVerifiedAt,
             sessionUpdatedAt: identitySession?.updatedAt ?? null,
             sessionStartedAt: identitySession?.createdAt ?? null,
           }
