@@ -4,8 +4,8 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
-import { deleteApplicationByAdmin } from "@/lib/applications";
 import { BUDGET_MAX } from "@/lib/utils";
+import { deleteApplication } from "@/lib/application-delete";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -181,17 +181,24 @@ export async function DELETE(request: NextRequest) {
   try {
     const applicationId =
       request.nextUrl.searchParams.get("applicationId") ??
-      (await request.json().catch(() => ({}))).applicationId;
+      request.nextUrl.searchParams.get("id");
 
-    if (!applicationId || typeof applicationId !== "string") {
+    if (!applicationId) {
       return NextResponse.json({ error: "applicationId required" }, { status: 400 });
     }
 
-    const result = await deleteApplicationByAdmin(applicationId);
-    return NextResponse.json({ success: true, ...result });
+    const result = await deleteApplication(applicationId);
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+      message: result.hadFellowship
+        ? `Application ${result.applicationNumber} deleted (fellowship and fund records removed).`
+        : `Application ${result.applicationNumber} deleted.`,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete application";
-    console.error("Admin delete application error:", error);
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.error("Delete application error:", error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

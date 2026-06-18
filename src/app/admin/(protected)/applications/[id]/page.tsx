@@ -120,6 +120,34 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     await reload();
   }
 
+  async function deleteApplicationRecord() {
+    if (!app) return;
+
+    const confirmed = window.confirm(
+      `Permanently delete application ${app.applicationNumber}?\n\nThis removes all documents, committee scores, fellowship records, released installments, and finance data. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const res = await fetch(
+      `/api/admin/applications?applicationId=${encodeURIComponent(id)}`,
+      { method: "DELETE" }
+    );
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to delete application");
+      return;
+    }
+
+    router.push("/admin/applications");
+    router.refresh();
+  }
+
   async function reviewDocument(documentId: string, status: string, reason?: string) {
     setLoading(true);
     setError("");
@@ -162,32 +190,6 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     }
     setMessage(`${file.name} re-uploaded — pending review`);
     await reload();
-  }
-
-  async function deleteApplication() {
-    if (!app) return;
-
-    const confirmed = window.confirm(
-      `Delete application ${app.applicationNumber}?\n\nThis permanently removes the application, documents, fellowship record, and all related data. This cannot be undone.`
-    );
-    if (!confirmed) return;
-
-    setLoading(true);
-    setError("");
-    setMessage("");
-
-    const res = await fetch(`/api/admin/applications?applicationId=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error || "Failed to delete application");
-      return;
-    }
-
-    router.push("/admin/applications");
   }
 
   if (!app) return <p className="py-12 text-center text-gray-500">Loading application...</p>;
@@ -392,14 +394,19 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      <div className="card border-red-100 bg-red-50/40">
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
         <h2 className="font-semibold text-red-900">Delete Application</h2>
         <p className="mt-2 text-sm text-red-800">
-          Permanently remove this application and all related records. Blocked if fellowship funds
-          have already been released.
+          Permanently remove this application, including fellowship and fund records even if
+          installments were released. The applicant account is not deleted.
         </p>
-        <Button variant="danger" className="mt-4" loading={loading} onClick={deleteApplication}>
-          Delete Application
+        <Button
+          variant="danger"
+          className="mt-4"
+          loading={loading}
+          onClick={deleteApplicationRecord}
+        >
+          Delete Application Permanently
         </Button>
       </div>
     </div>

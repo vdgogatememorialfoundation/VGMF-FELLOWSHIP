@@ -44,17 +44,17 @@ export default function AdminApplicationsPage() {
     if (res.ok) loadApplications();
   }
 
-  async function deleteApplication(app: Application) {
+  async function deleteApplication(applicationId: string, applicationNumber: string) {
     const confirmed = window.confirm(
-      `Delete application ${app.applicationNumber}?\n\nThis permanently removes the application, documents, fellowship record, and all related data. This cannot be undone.`
+      `Permanently delete application ${applicationNumber}?\n\nThis removes all documents, reviews, fellowship records, and fund/installment data. This cannot be undone.`
     );
     if (!confirmed) return;
 
-    const res = await fetch(`/api/admin/applications?applicationId=${encodeURIComponent(app.id)}`, {
-      method: "DELETE",
-    });
+    const res = await fetch(
+      `/api/admin/applications?applicationId=${encodeURIComponent(applicationId)}`,
+      { method: "DELETE" }
+    );
     const data = await res.json();
-
     if (!res.ok) {
       window.alert(data.error || "Failed to delete application");
       return;
@@ -120,8 +120,8 @@ export default function AdminApplicationsPage() {
                       </select>
                       <Button
                         variant="danger"
-                        className="h-8 px-2 text-xs"
-                        onClick={() => deleteApplication(app)}
+                        className="px-2 py-1 text-xs"
+                        onClick={() => deleteApplication(app.id, app.applicationNumber)}
                       >
                         Delete
                       </Button>
