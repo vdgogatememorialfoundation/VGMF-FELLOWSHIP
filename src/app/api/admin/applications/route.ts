@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
+import { deleteApplicationByAdmin } from "@/lib/applications";
 import { BUDGET_MAX } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
@@ -168,5 +169,29 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Admin create application error:", error);
     return NextResponse.json({ error: "Failed to create application" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const user = await getSession();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const applicationId =
+      request.nextUrl.searchParams.get("applicationId") ??
+      (await request.json().catch(() => ({}))).applicationId;
+
+    if (!applicationId || typeof applicationId !== "string") {
+      return NextResponse.json({ error: "applicationId required" }, { status: 400 });
+    }
+
+    const result = await deleteApplicationByAdmin(applicationId);
+    return NextResponse.json({ success: true, ...result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete application";
+    console.error("Admin delete application error:", error);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

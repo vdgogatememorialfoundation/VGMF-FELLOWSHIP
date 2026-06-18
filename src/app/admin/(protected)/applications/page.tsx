@@ -44,6 +44,25 @@ export default function AdminApplicationsPage() {
     if (res.ok) loadApplications();
   }
 
+  async function deleteApplication(app: Application) {
+    const confirmed = window.confirm(
+      `Delete application ${app.applicationNumber}?\n\nThis permanently removes the application, documents, fellowship record, and all related data. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const res = await fetch(`/api/admin/applications?applicationId=${encodeURIComponent(app.id)}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      window.alert(data.error || "Failed to delete application");
+      return;
+    }
+
+    await loadApplications();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -89,15 +108,24 @@ export default function AdminApplicationsPage() {
                     {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("en-IN") : "—"}
                   </td>
                   <td className="py-3">
-                    <select
-                      className="rounded border px-2 py-1 text-xs"
-                      value={app.status}
-                      onChange={(e) => updateStatus(app.id, e.target.value)}
-                    >
-                      {APPLICATION_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        className="rounded border px-2 py-1 text-xs"
+                        value={app.status}
+                        onChange={(e) => updateStatus(app.id, e.target.value)}
+                      >
+                        {APPLICATION_STATUSES.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                      <Button
+                        variant="danger"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => deleteApplication(app)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

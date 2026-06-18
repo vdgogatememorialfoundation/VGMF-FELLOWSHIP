@@ -261,3 +261,40 @@ export async function syncApplicationFromFormSubmission(
 
   return application;
 }
+
+export async function deleteApplicationByAdmin(applicationId: string) {
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    include: {
+      fellowship: {
+        include: { installments: true },
+      },
+    },
+  });
+
+  if (!application) {
+    throw new Error("Application not found");
+  }
+
+  const hasReleasedFunds = application.fellowship?.installments.some(
+    (installment) => installment.status === "RELEASED"
+  );
+
+  if (hasReleasedFunds) {
+    throw new Error(
+      "Cannot delete this application because fellowship funds have already been released."
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (application.fellowship) {
+      await tx.fellowship.delete({ where: { id: application.fellowship.id } });
+    }
+    await tx.application.delete({ where: { id: applicationId } });
+  });
+
+  return {
+    applicationNumber: application.applicationNumber,
+    userId: application.userId,
+  };
+}

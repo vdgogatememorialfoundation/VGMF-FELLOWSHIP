@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -70,6 +71,7 @@ type ApplicationData = {
 
 export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [app, setApp] = useState<ApplicationData | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
@@ -160,6 +162,32 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     }
     setMessage(`${file.name} re-uploaded — pending review`);
     await reload();
+  }
+
+  async function deleteApplication() {
+    if (!app) return;
+
+    const confirmed = window.confirm(
+      `Delete application ${app.applicationNumber}?\n\nThis permanently removes the application, documents, fellowship record, and all related data. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const res = await fetch(`/api/admin/applications?applicationId=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to delete application");
+      return;
+    }
+
+    router.push("/admin/applications");
   }
 
   if (!app) return <p className="py-12 text-center text-gray-500">Loading application...</p>;
@@ -363,6 +391,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           ))}
         </div>
       )}
+
+      <div className="card border-red-100 bg-red-50/40">
+        <h2 className="font-semibold text-red-900">Delete Application</h2>
+        <p className="mt-2 text-sm text-red-800">
+          Permanently remove this application and all related records. Blocked if fellowship funds
+          have already been released.
+        </p>
+        <Button variant="danger" className="mt-4" loading={loading} onClick={deleteApplication}>
+          Delete Application
+        </Button>
+      </div>
     </div>
   );
 }
