@@ -18,6 +18,8 @@ import {
   Globe,
   UserCog,
   FormInput,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -26,6 +28,8 @@ import { PORTAL_DASHBOARD_PATHS, type PortalType } from "@/lib/portal";
 interface SidebarProps {
   user: SessionUser;
   portal: PortalType;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[]> = {
@@ -73,14 +77,24 @@ const portalLabels: Record<PortalType, string> = {
   trustee: "Trustee",
 };
 
-export function Sidebar({ user, portal }: SidebarProps) {
+export function Sidebar({ user, portal, mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const links = portalLinks[portal];
 
   return (
-    <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
-      <div className="border-b border-gray-200 p-6">
-        <Link href={PORTAL_DASHBOARD_PATHS[portal]} className="flex items-center gap-2">
+    <aside
+      className={cn(
+        "flex w-64 max-w-[85vw] flex-col border-r border-gray-200 bg-white",
+        "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out lg:static lg:z-auto lg:max-w-none lg:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}
+    >
+      <div className="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6">
+        <Link
+          href={PORTAL_DASHBOARD_PATHS[portal]}
+          className="flex items-center gap-2"
+          onClick={onMobileClose}
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
             VG
           </div>
@@ -89,6 +103,14 @@ export function Sidebar({ user, portal }: SidebarProps) {
             <p className="text-xs capitalize text-gray-500">{portalLabels[portal]}</p>
           </div>
         </Link>
+        <button
+          type="button"
+          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 lg:hidden"
+          aria-label="Close menu"
+          onClick={onMobileClose}
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
@@ -102,10 +124,11 @@ export function Sidebar({ user, portal }: SidebarProps) {
             <Link
               key={link.href}
               href={link.href}
+              onClick={onMobileClose}
               className={cn("sidebar-link", isActive && "sidebar-link-active")}
             >
-              <Icon className="h-5 w-5" />
-              {link.label}
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="truncate">{link.label}</span>
             </Link>
           );
         })}
@@ -114,14 +137,14 @@ export function Sidebar({ user, portal }: SidebarProps) {
       <div className="border-t border-gray-200 p-4">
         <div className="mb-3 rounded-lg bg-gray-50 p-3">
           <p className="text-xs text-gray-500">User ID</p>
-          <p className="text-sm font-medium text-gray-900">{user.userId}</p>
+          <p className="truncate text-sm font-medium text-gray-900">{user.userId}</p>
         </div>
         <form action={`/api/auth/logout?portal=${portal}`} method="GET">
           <button
             type="submit"
             className="sidebar-link w-full text-red-600 hover:bg-red-50 hover:text-red-700"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 shrink-0" />
             Logout
           </button>
         </form>
@@ -130,20 +153,40 @@ export function Sidebar({ user, portal }: SidebarProps) {
   );
 }
 
-export function TopBar({ user, portal }: { user: SessionUser; portal: PortalType }) {
+export function TopBar({
+  user,
+  portal,
+  onMenuOpen,
+}: {
+  user: SessionUser;
+  portal: PortalType;
+  onMenuOpen?: () => void;
+}) {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
-      <p className="text-sm text-gray-500">
-        Vaidya Gogate Memorial Foundation Fellowship Portal 2026
-      </p>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 sm:h-16 sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
+          aria-label="Open navigation menu"
+          onClick={onMenuOpen}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <p className="truncate text-xs text-gray-500 sm:text-sm">
+          <span className="hidden sm:inline">Vaidya Gogate Memorial Foundation Fellowship Portal 2026</span>
+          <span className="sm:hidden">VGMF Fellowship 2026</span>
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+        <div className="hidden text-right sm:block">
           <p className="text-sm font-medium text-gray-900">{user.name}</p>
           <p className="text-xs text-gray-500">{user.email}</p>
         </div>
         <Link
           href={`/${portal}/profile`}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-700 transition hover:bg-primary-200"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-700 transition hover:bg-primary-200 sm:h-10 sm:w-10"
+          aria-label="Profile"
         >
           <User className="h-5 w-5" />
         </Link>

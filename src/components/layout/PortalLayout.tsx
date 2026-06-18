@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, getPortalPath } from "@/lib/auth";
-import { Sidebar, TopBar } from "@/components/layout/Sidebar";
+import { PortalChrome } from "@/components/layout/PortalChrome";
 import type { UserRole } from "@prisma/client";
 import type { PortalType } from "@/lib/portal";
 import { getLoginPath } from "@/lib/portal";
@@ -28,13 +28,9 @@ export function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar user={user} portal={portal} />
-      <div className="flex flex-1 flex-col">
-        <TopBar user={user} portal={portal} />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
-      </div>
-    </div>
+    <PortalChrome user={user} portal={portal}>
+      {children}
+    </PortalChrome>
   );
 }
 

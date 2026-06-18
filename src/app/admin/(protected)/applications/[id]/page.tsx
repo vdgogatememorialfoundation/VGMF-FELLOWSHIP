@@ -10,6 +10,7 @@ import { formatApplicationNumber } from "@/lib/application-number";
 import { InterviewSchedulePanel } from "@/components/admin/InterviewSchedulePanel";
 import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel";
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
+import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
 import {
   canApproveScrutiny,
   getNextActions,
@@ -173,6 +174,12 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
 
       <ReviewAssignmentPanel applicationId={id} onUpdated={reload} />
+
+      <AdminFellowshipPanel
+        applicationId={id}
+        budgetTotal={app.budget?.total}
+        onUpdated={reload}
+      />
 
       {app.queryNotes && (
         <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5">
