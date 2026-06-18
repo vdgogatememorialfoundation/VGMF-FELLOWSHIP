@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearSession } from "@/lib/auth";
 import { getLoginPath, type PortalType } from "@/lib/portal";
-import { buildPublicRedirectUrl } from "@/lib/request-url";
+import { buildPublicUrl } from "@/lib/request-origin";
 
 const PORTALS: PortalType[] = ["applicant", "admin", "staff", "reviewer", "trustee"];
 
@@ -19,5 +19,5 @@ export async function GET(request: NextRequest) {
       ? getLoginPath(portal as PortalType)
       : "/";
 
-  return NextResponse.redirect(buildPublicRedirectUrl(request, redirectPath));
+  return NextResponse.redirect(buildPublicUrl(request, redirectPath));
 }

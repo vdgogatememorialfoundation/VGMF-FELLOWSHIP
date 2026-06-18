@@ -56,13 +56,20 @@ export function normalizeAppUrl(url: string | null | undefined): string {
   const normalized = withProtocol.replace(/\/$/, "");
 
   try {
-    const parsed = new URL(normalized);
-    const host = parsed.hostname.toLowerCase();
-    if (host === "0.0.0.0" || host === "127.0.0.1") {
-      return normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+    const hostname = new URL(normalized).hostname.toLowerCase();
+    if (
+      (hostname === "0.0.0.0" || hostname === "127.0.0.1" || hostname === "localhost") &&
+      url?.trim()
+    ) {
+      const fallbackNormalized = /^https?:\/\//i.test(fallback)
+        ? fallback.replace(/\/$/, "")
+        : `https://${fallback.replace(/\/$/, "")}`;
+      if (fallbackNormalized && fallbackNormalized !== normalized) {
+        return fallbackNormalized;
+      }
     }
   } catch {
-    return "http://localhost:3000";
+    // keep normalized string
   }
 
   return normalized;
