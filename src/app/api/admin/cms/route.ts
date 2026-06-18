@@ -7,6 +7,8 @@ import { resolveSecret, isMaskedSecret, resolveOptionalSetting } from "@/lib/sit
 import {
   mergeNotificationTemplates,
   serializeNotificationTemplates,
+  resolveOtpWhatsAppTemplateLanguage,
+  resolveOtpWhatsAppTemplateName,
   type NotificationEventTemplate,
 } from "@/lib/notification-templates";
 import { saveSiteAsset, resolveLogoUrl, resolveFaviconUrl } from "@/lib/site-assets";
@@ -91,6 +93,14 @@ export async function PUT(request: NextRequest) {
       data.notificationTemplates
     ) as NotificationEventTemplate[];
     const otpTemplate = notificationTemplates.find((item) => item.event === "OTP_VERIFICATION");
+    const resolvedOtpTemplateName = resolveOtpWhatsAppTemplateName([
+      otpTemplate?.whatsappTemplateName,
+      data.whatsappOtpTemplateName,
+    ]);
+    const resolvedOtpTemplateLanguage = resolveOtpWhatsAppTemplateLanguage([
+      otpTemplate?.whatsappTemplateLanguage,
+      data.whatsappOtpTemplateLanguage,
+    ]);
 
     await prisma.integrationSettings.upsert({
       where: { id: "default" },
@@ -101,14 +111,8 @@ export async function PUT(request: NextRequest) {
         zeptomailFromName: data.zeptomailFromName?.trim() || null,
         whatsappToken: resolveSecret(data.whatsappToken, existing?.whatsappToken ?? null),
         whatsappPhoneNumberId: data.whatsappPhoneNumberId?.trim() || null,
-        whatsappOtpTemplateName:
-          otpTemplate?.whatsappTemplateName?.trim() ||
-          data.whatsappOtpTemplateName?.trim() ||
-          null,
-        whatsappOtpTemplateLanguage:
-          otpTemplate?.whatsappTemplateLanguage?.trim() ||
-          data.whatsappOtpTemplateLanguage?.trim() ||
-          null,
+        whatsappOtpTemplateName: resolvedOtpTemplateName,
+        whatsappOtpTemplateLanguage: resolvedOtpTemplateLanguage,
         whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
         whatsappBusinessAccountId: data.whatsappBusinessAccountId?.trim() || null,
         whatsappWebhookVerifyToken: resolveOptionalSetting(
@@ -135,14 +139,8 @@ export async function PUT(request: NextRequest) {
         zeptomailFromName: data.zeptomailFromName?.trim() || null,
         whatsappToken: isMaskedSecret(data.whatsappToken) ? null : data.whatsappToken?.trim() || null,
         whatsappPhoneNumberId: data.whatsappPhoneNumberId?.trim() || null,
-        whatsappOtpTemplateName:
-          otpTemplate?.whatsappTemplateName?.trim() ||
-          data.whatsappOtpTemplateName?.trim() ||
-          null,
-        whatsappOtpTemplateLanguage:
-          otpTemplate?.whatsappTemplateLanguage?.trim() ||
-          data.whatsappOtpTemplateLanguage?.trim() ||
-          null,
+        whatsappOtpTemplateName: resolvedOtpTemplateName,
+        whatsappOtpTemplateLanguage: resolvedOtpTemplateLanguage,
         whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
         whatsappBusinessAccountId: data.whatsappBusinessAccountId?.trim() || null,
         whatsappWebhookVerifyToken: resolveOptionalSetting(

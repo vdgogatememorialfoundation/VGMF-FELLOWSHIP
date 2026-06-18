@@ -3,6 +3,9 @@ import prisma from "./db";
 import {
   getNotificationTemplate,
   mergeNotificationTemplates,
+  resolveOtpWhatsAppTemplateLanguage,
+  resolveOtpWhatsAppTemplateName,
+  DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME,
   type NotificationEventKey,
 } from "./notification-templates";
 
@@ -55,7 +58,10 @@ async function parseWhatsAppResponse(response: Response): Promise<WhatsAppSendRe
   };
 }
 
-async function postWhatsAppPayload(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
+async function postWhatsAppPayload(
+  payload: Record<string, unknown>,
+  context?: string
+): Promise<WhatsAppSendResult> {
   const config = await getIntegrationConfig();
   if (!config.whatsapp.token || !config.whatsapp.phoneNumberId) {
     return { ok: false, error: "WhatsApp is not configured (token or Phone Number ID missing)." };
@@ -76,6 +82,9 @@ async function postWhatsAppPayload(payload: Record<string, unknown>): Promise<Wh
     const result = await parseWhatsAppResponse(response);
     if (!result.ok) {
       console.error("WhatsApp API error:", result.error, JSON.stringify(payload).slice(0, 500));
+    } else if (context) {
+      const template = (payload.template as { name?: string } | undefined)?.name;
+      console.info(`WhatsApp send ok [${context}]`, template || "text", result.messageId || "");
     }
     return result;
   } catch (error) {
@@ -182,7 +191,7 @@ export async function sendWhatsAppTemplateMessage(input: {
 
   let lastError = "Failed to send WhatsApp template message.";
   for (const payload of attempts) {
-    const result = await postWhatsAppPayload(payload);
+    const result = await postWhatsAppPayload(payload, "template");
     if (result.ok) return result;
     lastError = result.error || lastError;
   }
@@ -239,7 +248,7 @@ async function sendWhatsAppAuthOtp(input: {
 
   let lastError = "Failed to send WhatsApp OTP.";
   for (const payload of attempts) {
-    const result = await postWhatsAppPayload(payload);
+    const result = await postWhatsAppPayload(payload, "otp");
     if (result.ok) return result;
     lastError = result.error || lastError;
   }
@@ -249,25 +258,51 @@ async function sendWhatsAppAuthOtp(input: {
 
 export async function sendWhatsAppOtp(phone: string, otpCode: string): Promise<WhatsAppSendResult> {
   const config = await getIntegrationConfig();
-  const languages = uniqueLanguages(
+  const settings = await prisma.integrationSettings
+    .findUnique({ where: { id: "default" }, select: { notificationTemplatesJson: true } })
+    .catch(() => null);
+  const templates = mergeNotificationTemplates(settings?.notificationTemplatesJson);
+  const otpEvent = templates.find((item) => item.event === "OTP_VERIFICATION");
+
+  const templateName = resolveOtpWhatsAppTemplateName([
+    otpEvent?.whatsappTemplateName,
+    config.whatsapp.otpTemplateName,
+  ]);
+  const templateLanguage = resolveOtpWhatsAppTemplateLanguage([
+    otpEvent?.whatsappTemplateLanguage,
     config.whatsapp.otpTemplateLanguage,
-    "en",
-    "en_US"
-  );
+  ]);
+
+  if (templateName !== config.whatsapp.otpTemplateName) {
+    console.warn(
+      "WhatsApp OTP template corrected:",
+      config.whatsapp.otpTemplateName,
+      "→",
+      templateName
+    );
+  }
+
+  const languages = uniqueLanguages(templateLanguage, "en", "en_US");
 
   let lastError = "Failed to send WhatsApp OTP.";
   for (const language of languages) {
     const result = await sendWhatsAppAuthOtp({
       phone,
-      templateName: config.whatsapp.otpTemplateName,
+      templateName,
       language,
       otpCode,
     });
-    if (result.ok) return result;
+    if (result.ok) {
+      console.info("WhatsApp OTP sent with template", templateName, "language", language);
+      return result;
+    }
     lastError = result.error || lastError;
   }
 
-  return { ok: false, error: lastError };
+  return {
+    ok: false,
+    error: `${lastError} (template: ${templateName || DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME})`,
+  };
 }
 
 export async function sendWhatsAppForEvent(

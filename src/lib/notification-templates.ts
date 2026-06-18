@@ -36,6 +36,50 @@ export type NotificationValidationIssue = {
 
 export const CRITICAL_WHATSAPP_EVENTS: NotificationEventKey[] = ["OTP_VERIFICATION"];
 
+export const DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME = "vgmf_otp_auth";
+
+/** Utility / marketing templates — must never be used for OTP sends. */
+export const WHATSAPP_UTILITY_TEMPLATE_NAMES = new Set([
+  "vgmf_account_created",
+  "vgmf_account_created1",
+  "vgmf_registration_success",
+  "vgmf_under_review",
+  "vgmf_application_approved",
+  "vgmf_application_rejected",
+  "vgmf_payment_success",
+  "vgmf_payment_failed",
+  "vgmf_payment_pending",
+  "vgmf_checkin_success",
+  "vgmf_checkin_failed",
+  "vgmf_ticket_issued",
+  "vgmf_ticket_reissued",
+  "authentication",
+  "hello_world",
+]);
+
+export function resolveOtpWhatsAppTemplateName(
+  candidates: Array<string | null | undefined>
+): string {
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (!trimmed) continue;
+    if (WHATSAPP_UTILITY_TEMPLATE_NAMES.has(trimmed)) continue;
+    if (trimmed === DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME) return trimmed;
+    if (/otp|auth|verification/i.test(trimmed)) return trimmed;
+  }
+  return DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME;
+}
+
+export function resolveOtpWhatsAppTemplateLanguage(
+  candidates: Array<string | null | undefined>
+): string {
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (trimmed) return trimmed;
+  }
+  return "en";
+}
+
 export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
   {
     event: "ACCOUNT_CREATED",
@@ -180,7 +224,7 @@ export function mergeNotificationTemplates(
   return defaults.map((base) => {
     const override = map.get(base.event);
     if (!override) return base;
-    return {
+    const merged = {
       ...base,
       channel: override.channel ?? base.channel,
       whatsappTemplateName: override.whatsappTemplateName ?? base.whatsappTemplateName,
@@ -188,6 +232,12 @@ export function mergeNotificationTemplates(
         override.whatsappTemplateLanguage ?? base.whatsappTemplateLanguage,
       emailSubject: override.emailSubject ?? base.emailSubject,
     };
+    if (merged.event === "OTP_VERIFICATION") {
+      merged.whatsappTemplateName = resolveOtpWhatsAppTemplateName([
+        merged.whatsappTemplateName,
+      ]);
+    }
+    return merged;
   });
 }
 

@@ -2,6 +2,8 @@ import prisma from "./db";
 import { maskSecret } from "./site-content";
 import {
   mergeNotificationTemplates,
+  resolveOtpWhatsAppTemplateLanguage,
+  resolveOtpWhatsAppTemplateName,
 } from "./notification-templates";
 
 export interface EmailIntegrationConfig {
@@ -59,17 +61,17 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
   const notificationTemplates = mergeNotificationTemplates(db?.notificationTemplatesJson);
   const otpTemplate = notificationTemplates.find((item) => item.event === "OTP_VERIFICATION");
 
-  const otpTemplateName =
-    db?.whatsappOtpTemplateName?.trim() ||
-    otpTemplate?.whatsappTemplateName?.trim() ||
-    process.env.WHATSAPP_OTP_TEMPLATE_NAME?.trim() ||
-    "vgmf_otp_auth";
+  const otpTemplateName = resolveOtpWhatsAppTemplateName([
+    otpTemplate?.whatsappTemplateName,
+    db?.whatsappOtpTemplateName,
+    process.env.WHATSAPP_OTP_TEMPLATE_NAME,
+  ]);
 
-  const otpTemplateLanguage =
-    db?.whatsappOtpTemplateLanguage?.trim() ||
-    otpTemplate?.whatsappTemplateLanguage?.trim() ||
-    process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE?.trim() ||
-    "en";
+  const otpTemplateLanguage = resolveOtpWhatsAppTemplateLanguage([
+    otpTemplate?.whatsappTemplateLanguage,
+    db?.whatsappOtpTemplateLanguage,
+    process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE,
+  ]);
 
   return {
     appUrl: normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL),
