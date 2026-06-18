@@ -86,7 +86,8 @@ export async function POST(request: NextRequest) {
     await createNotification(
       user.id,
       "Welcome to VGMF Fellowship Portal",
-      `Registration successful! Your User ID is ${userId}. You can now complete your fellowship application.`
+      `Registration successful! Your User ID is ${userId}. You can now complete your fellowship application.`,
+      "EMAIL"
     );
 
     await sendWelcomeNotifications(user.id, email, name, userId);

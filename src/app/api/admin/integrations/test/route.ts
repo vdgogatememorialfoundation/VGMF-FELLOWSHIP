@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
-import { sendWhatsAppMessageDetailed, sendWhatsAppOtp } from "@/lib/whatsapp";
+import { sendWhatsAppOtp } from "@/lib/whatsapp";
 import { isEmailConfigured, isWhatsAppConfigured } from "@/lib/integrations";
 
 export async function POST(request: NextRequest) {
@@ -62,32 +62,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sent = await sendWhatsAppMessageDetailed(
-      target,
-      "VGMF Fellowship Portal — WhatsApp integration test successful."
-    );
-
-    if (!sent.ok) {
-      const otpTest = await sendWhatsAppOtp(target, "123456");
-      if (!otpTest.ok) {
-        return NextResponse.json(
-          {
-            error:
-              sent.error ||
-              otpTest.error ||
-              "Failed to send WhatsApp test message. Verify token, Phone Number ID, and OTP template in API Settings.",
-          },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `OTP template test sent to ${target} (code 123456). Plain text is blocked by Meta outside the 24-hour window.`,
-      });
+    const otpTest = await sendWhatsAppOtp(target, "123456");
+    if (!otpTest.ok) {
+      return NextResponse.json(
+        {
+          error:
+            otpTest.error ||
+            "Failed to send WhatsApp OTP test. Verify token, Phone Number ID, WABA ID, and vgmf_otp_auth.",
+        },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, message: `Test message sent to ${target}` });
+    return NextResponse.json({
+      success: true,
+      message: `OTP test sent to ${target} using vgmf_otp_auth (code 123456).`,
+    });
   }
 
   return NextResponse.json({ error: "Invalid test type" }, { status: 400 });

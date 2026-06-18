@@ -1,10 +1,13 @@
 import { getIntegrationConfig } from "./integrations";
 import prisma from "./db";
 import {
+  lookupWhatsAppTemplateRows,
+  isTemplateParameterError,
+  isTemplateTranslationError,
+} from "./whatsapp-meta";
+import {
   getNotificationTemplate,
   mergeNotificationTemplates,
-  resolveOtpWhatsAppTemplateLanguage,
-  resolveOtpWhatsAppTemplateName,
   DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME,
   type NotificationEventKey,
 } from "./notification-templates";
@@ -117,7 +120,6 @@ export async function sendWhatsAppTemplateMessage(input: {
   templateName: string;
   language?: string;
   bodyParameters?: string[];
-  otpCode?: string;
   staticTemplate?: boolean;
 }): Promise<WhatsAppSendResult> {
   const config = await getIntegrationConfig();
@@ -126,8 +128,7 @@ export async function sendWhatsAppTemplateMessage(input: {
 
   const attempts: Array<Record<string, unknown>> = [];
 
-  const includeStaticAttempt =
-    Boolean(input.staticTemplate) || (bodyParameters.length === 0 && !input.otpCode);
+  const includeStaticAttempt = Boolean(input.staticTemplate);
 
   if (includeStaticAttempt) {
     attempts.push(buildTemplatePayload(input.phone, input.templateName, language, []));
@@ -139,47 +140,6 @@ export async function sendWhatsAppTemplateMessage(input: {
         {
           type: "body",
           parameters: bodyParameters.map((text) => ({ type: "text", text })),
-        },
-      ])
-    );
-  }
-
-  if (input.otpCode) {
-    attempts.push(
-      buildTemplatePayload(input.phone, input.templateName, language, [
-        {
-          type: "body",
-          parameters: [{ type: "text", text: input.otpCode }],
-        },
-        {
-          type: "button",
-          sub_type: "copy_code",
-          index: "0",
-          parameters: [{ type: "coupon_code", coupon_code: input.otpCode }],
-        },
-      ])
-    );
-
-    attempts.push(
-      buildTemplatePayload(input.phone, input.templateName, language, [
-        {
-          type: "body",
-          parameters: [{ type: "text", text: input.otpCode }],
-        },
-      ])
-    );
-
-    attempts.push(
-      buildTemplatePayload(input.phone, input.templateName, language, [
-        {
-          type: "body",
-          parameters: [{ type: "text", text: input.otpCode }],
-        },
-        {
-          type: "button",
-          sub_type: "url",
-          index: "0",
-          parameters: [{ type: "text", text: input.otpCode }],
         },
       ])
     );
@@ -213,87 +173,137 @@ function uniqueLanguages(...codes: Array<string | undefined | null>): string[] {
   return result;
 }
 
+function buildOtpLanguageVariants(language: string): Array<{ code: string; policy?: string }> {
+  const code = language.trim() || "en";
+  return [{ code }, { code, policy: "deterministic" }];
+}
+
 async function sendWhatsAppAuthOtp(input: {
   phone: string;
   templateName: string;
   language: string;
   otpCode: string;
-}): Promise<WhatsAppSendResult> {
+  isAuthentication: boolean;
+}): Promise<WhatsAppSendResult & { method?: string }> {
+  const otp = String(input.otpCode).slice(0, 32);
   const bodyComponent = {
     type: "body",
-    parameters: [{ type: "text", text: input.otpCode }],
+    parameters: [{ type: "text", text: otp }],
   };
-
-  const attempts = [
-    buildTemplatePayload(input.phone, input.templateName, input.language, [
-      bodyComponent,
-      {
-        type: "button",
-        sub_type: "copy_code",
-        index: "0",
-        parameters: [{ type: "coupon_code", coupon_code: input.otpCode }],
-      },
-    ]),
-    buildTemplatePayload(input.phone, input.templateName, input.language, [bodyComponent]),
-    buildTemplatePayload(input.phone, input.templateName, input.language, [
-      bodyComponent,
-      {
-        type: "button",
-        sub_type: "url",
-        index: "0",
-        parameters: [{ type: "text", text: input.otpCode }],
-      },
-    ]),
+  const authBodyUrlComponents = [
+    bodyComponent,
+    {
+      type: "button",
+      sub_type: "url",
+      index: "0",
+      parameters: [{ type: "text", text: otp }],
+    },
+  ];
+  const copyCodeComponents = [
+    bodyComponent,
+    {
+      type: "button",
+      sub_type: "copy_code",
+      index: "0",
+      parameters: [{ type: "coupon_code", coupon_code: otp }],
+    },
   ];
 
+  const attempts: Array<{ label: string; components?: Array<Record<string, unknown>> }> =
+    input.isAuthentication
+      ? [
+          { label: "auth_body_url", components: authBodyUrlComponents },
+          { label: "auth_body_only", components: [bodyComponent] },
+          { label: "auth_copy_code", components: copyCodeComponents },
+        ]
+      : [
+          { label: "body_url", components: authBodyUrlComponents },
+          { label: "body_copy_code", components: copyCodeComponents },
+          { label: "body_only", components: [bodyComponent] },
+        ];
+
   let lastError = "Failed to send WhatsApp OTP.";
-  for (const payload of attempts) {
-    const result = await postWhatsAppPayload(payload, "otp");
-    if (result.ok) return result;
-    lastError = result.error || lastError;
+  for (const langVariant of buildOtpLanguageVariants(input.language)) {
+    for (const attempt of attempts) {
+      const templatePayload: Record<string, unknown> = {
+        name: input.templateName,
+        language: langVariant,
+      };
+      if (attempt.components?.length) {
+        templatePayload.components = attempt.components;
+      }
+
+      const result = await postWhatsAppPayload(
+        {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: normalizePhone(input.phone),
+          type: "template",
+          template: templatePayload,
+        },
+        `otp:${attempt.label}`
+      );
+
+      if (result.ok) {
+        return { ...result, method: attempt.label };
+      }
+
+      lastError = result.error || lastError;
+      if (isTemplateTranslationError(result.error)) continue;
+      if (isTemplateParameterError(result.error)) continue;
+    }
   }
 
   return { ok: false, error: lastError };
 }
 
 export async function sendWhatsAppOtp(phone: string, otpCode: string): Promise<WhatsAppSendResult> {
-  const config = await getIntegrationConfig();
-  const settings = await prisma.integrationSettings
-    .findUnique({ where: { id: "default" }, select: { notificationTemplatesJson: true } })
-    .catch(() => null);
-  const templates = mergeNotificationTemplates(settings?.notificationTemplatesJson);
-  const otpEvent = templates.find((item) => item.event === "OTP_VERIFICATION");
-
-  const templateName = resolveOtpWhatsAppTemplateName([
-    otpEvent?.whatsappTemplateName,
-    config.whatsapp.otpTemplateName,
-  ]);
-  const templateLanguage = resolveOtpWhatsAppTemplateLanguage([
-    otpEvent?.whatsappTemplateLanguage,
-    config.whatsapp.otpTemplateLanguage,
-  ]);
-
-  if (templateName !== config.whatsapp.otpTemplateName) {
-    console.warn(
-      "WhatsApp OTP template corrected:",
-      config.whatsapp.otpTemplateName,
-      "→",
-      templateName
-    );
+  const templateName = DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME;
+  const to = normalizePhone(phone);
+  if (!to) {
+    return { ok: false, error: "Invalid phone number." };
   }
 
-  const languages = uniqueLanguages(templateLanguage, "en", "en_US");
+  const lookup = await lookupWhatsAppTemplateRows(templateName);
+  if (!lookup.templates.length) {
+    return {
+      ok: false,
+      error:
+        lookup.error ||
+        `Meta template "${templateName}" was not found. Approve it in WhatsApp Manager.`,
+    };
+  }
+
+  if (!lookup.isAuthentication) {
+    return {
+      ok: false,
+      error: `Template "${templateName}" is not an AUTHENTICATION template on Meta. OTP cannot be sent with utility templates.`,
+    };
+  }
+
+  const langCandidates = uniqueLanguages(
+    ...(lookup.approvedLanguages.length ? lookup.approvedLanguages : ["en"]),
+    "en",
+    "en_US"
+  );
 
   let lastError = "Failed to send WhatsApp OTP.";
-  for (const language of languages) {
+  for (const language of langCandidates) {
     const result = await sendWhatsAppAuthOtp({
-      phone,
+      phone: to,
       templateName,
       language,
       otpCode,
+      isAuthentication: true,
     });
     if (result.ok) {
-      console.info("WhatsApp OTP sent with template", templateName, "language", language);
+      console.info(
+        "WhatsApp OTP sent:",
+        templateName,
+        language,
+        result.method || "unknown",
+        result.messageId || ""
+      );
       return result;
     }
     lastError = result.error || lastError;
@@ -301,7 +311,7 @@ export async function sendWhatsAppOtp(phone: string, otpCode: string): Promise<W
 
   return {
     ok: false,
-    error: `${lastError} (template: ${templateName || DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME})`,
+    error: `${lastError} (template: ${templateName}, languages tried: ${langCandidates.join(", ")})`,
   };
 }
 
@@ -350,7 +360,6 @@ export async function sendWhatsAppMessage(
   const result = await sendWhatsAppForEvent("PORTAL_ALERT", phone, [message.slice(0, 1024)]);
   if (result.ok) return true;
 
-  const config = await getIntegrationConfig();
   const textResult = await postWhatsAppPayload({
     messaging_product: "whatsapp",
     to: normalizePhone(phone),

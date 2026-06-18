@@ -77,6 +77,132 @@ function isUsableMetaTemplateStatus(status?: string | null): boolean {
   );
 }
 
+export type MetaTemplateRow = {
+  name?: string;
+  status?: string;
+  language?: string;
+  category?: string;
+  components?: Array<{ type?: string; text?: string }>;
+};
+
+export async function lookupWhatsAppTemplateRows(templateName: string): Promise<{
+  wabaId: string | null;
+  templates: MetaTemplateRow[];
+  approvedLanguages: string[];
+  isAuthentication: boolean;
+  error?: string;
+  hint?: string;
+}> {
+  const config = await getIntegrationConfig();
+  const tplName = templateName.trim();
+  const wabaId =
+    config.whatsapp.businessAccountId || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || null;
+
+  if (!config.whatsapp.token) {
+    return {
+      wabaId,
+      templates: [],
+      approvedLanguages: [],
+      isAuthentication: false,
+      error: "WhatsApp access token is not configured.",
+    };
+  }
+
+  if (!wabaId) {
+    return {
+      wabaId: null,
+      templates: [],
+      approvedLanguages: [],
+      isAuthentication: false,
+      error: "WhatsApp Business Account ID (WABA) is not configured.",
+      hint: "Set WABA ID in Admin → API Settings.",
+    };
+  }
+
+  if (!tplName) {
+    return {
+      wabaId,
+      templates: [],
+      approvedLanguages: [],
+      isAuthentication: false,
+      error: "Template name is required.",
+    };
+  }
+
+  const params = new URLSearchParams({
+    fields: "name,status,language,category,components",
+    limit: "20",
+    name: tplName,
+  });
+
+  const url = `https://graph.facebook.com/${config.whatsapp.apiVersion}/${wabaId}/message_templates?${params.toString()}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${config.whatsapp.token}` },
+      cache: "no-store",
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+      data?: MetaTemplateRow[];
+    } | null;
+
+    if (!response.ok) {
+      return {
+        wabaId,
+        templates: [],
+        approvedLanguages: [],
+        isAuthentication: false,
+        error: payload?.error?.message || "Meta API could not list templates.",
+      };
+    }
+
+    const templates = (payload?.data || []).filter((row) => row.name === tplName);
+    const approvedLanguages = [
+      ...new Set(
+        templates
+          .filter((row) => isUsableMetaTemplateStatus(row.status))
+          .map((row) => row.language?.trim())
+          .filter(Boolean) as string[]
+      ),
+    ];
+    const isAuthentication = templates.some(
+      (row) => String(row.category || "").toUpperCase() === "AUTHENTICATION"
+    );
+
+    if (!templates.length) {
+      return {
+        wabaId,
+        templates: [],
+        approvedLanguages: [],
+        isAuthentication: false,
+        error: `Template "${tplName}" was not found on WABA ${wabaId}.`,
+        hint: "Create or approve vgmf_otp_auth in Meta WhatsApp Manager.",
+      };
+    }
+
+    return { wabaId, templates, approvedLanguages, isAuthentication };
+  } catch (error) {
+    return {
+      wabaId,
+      templates: [],
+      approvedLanguages: [],
+      isAuthentication: false,
+      error: error instanceof Error ? error.message : "Failed to look up template on Meta.",
+    };
+  }
+}
+
+export function isTemplateTranslationError(message?: string): boolean {
+  const text = (message || "").toLowerCase();
+  return text.includes("132001") || text.includes("does not exist in the translation");
+}
+
+export function isTemplateParameterError(message?: string): boolean {
+  const text = (message || "").toLowerCase();
+  return text.includes("132000") || text.includes("parameter");
+}
+
 export async function checkWhatsAppTemplate(
   templateName: string,
   language = "en",
