@@ -889,7 +889,7 @@ export function WebsiteUpdates() {
             <p className="text-sm text-gray-600">
               Configure Didit for applicant KYC during scrutiny, bank account verification during fellowship,
               and optional undertaking identity checks. Register webhook URL in Didit Console:{" "}
-              <code className="text-xs">{integrations.appUrl || "https://your-domain"}/api/didit/webhook</code>
+              <code className="text-xs">{integrations.appUrl ? `${integrations.appUrl.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}` : "https://your-domain"}/api/didit/webhook</code>
             </p>
             {integrations.status.diditConfigured && (
               <p className="text-sm text-green-700">Didit credentials are saved. Leave secret fields empty to keep them.</p>

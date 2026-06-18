@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import type { NoticeCategory } from "@prisma/client";
-import { getIntegrationSettingsForAdmin } from "@/lib/integrations";
+import { getIntegrationSettingsForAdmin, normalizeAppUrl } from "@/lib/integrations";
 import { resolveSecret, isMaskedSecret } from "@/lib/site-content";
 import { saveSiteAsset, resolveLogoUrl, resolveFaviconUrl } from "@/lib/site-assets";
 import { notifySiteNotice } from "@/lib/notifications";
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest) {
     await prisma.integrationSettings.upsert({
       where: { id: "default" },
       update: {
-        appUrl: data.appUrl?.trim() || null,
+        appUrl: data.appUrl?.trim() ? normalizeAppUrl(data.appUrl.trim()) : null,
         zeptomailToken: resolveSecret(data.zeptomailToken, existing?.zeptomailToken ?? null),
         zeptomailFromEmail: data.zeptomailFromEmail?.trim() || null,
         zeptomailFromName: data.zeptomailFromName?.trim() || null,
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest) {
       },
       create: {
         id: "default",
-        appUrl: data.appUrl?.trim() || null,
+        appUrl: data.appUrl?.trim() ? normalizeAppUrl(data.appUrl.trim()) : null,
         zeptomailToken: isMaskedSecret(data.zeptomailToken) ? null : data.zeptomailToken?.trim() || null,
         zeptomailFromEmail: data.zeptomailFromEmail?.trim() || null,
         zeptomailFromName: data.zeptomailFromName?.trim() || null,

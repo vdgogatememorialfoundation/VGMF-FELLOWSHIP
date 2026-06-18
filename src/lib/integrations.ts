@@ -39,14 +39,20 @@ async function getDbSettings() {
   }
 }
 
+export function normalizeAppUrl(url: string | null | undefined): string {
+  const fallback = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const raw = (url?.trim() || fallback).trim();
+  if (!raw) return "http://localhost:3000";
+
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProtocol.replace(/\/$/, "");
+}
+
 export async function getIntegrationConfig(): Promise<IntegrationConfig> {
   const db = await getDbSettings();
 
   return {
-    appUrl:
-      db?.appUrl ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000",
+    appUrl: normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL),
     email: {
       token: db?.zeptomailToken || process.env.ZEPTOMAIL_TOKEN || null,
       fromEmail: db?.zeptomailFromEmail || process.env.ZEPTOMAIL_FROM_EMAIL || null,
@@ -114,7 +120,7 @@ export async function getIntegrationSettingsForAdmin() {
   const config = await getIntegrationConfig();
 
   return {
-    appUrl: db?.appUrl || process.env.NEXT_PUBLIC_APP_URL || "",
+    appUrl: normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL),
     zeptomailToken: maskSecret(db?.zeptomailToken || process.env.ZEPTOMAIL_TOKEN),
     zeptomailFromEmail: db?.zeptomailFromEmail || process.env.ZEPTOMAIL_FROM_EMAIL || "",
     zeptomailFromName: config.email.fromName,
