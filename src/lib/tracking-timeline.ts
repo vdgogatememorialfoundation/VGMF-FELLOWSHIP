@@ -10,6 +10,11 @@ import {
   APPLICANT_FELLOWSHIP_STEPS,
   getFellowshipStepStates,
 } from "./fellowship-tracking";
+import {
+  buildIdentityVerificationTimelineStep,
+  shouldTrackIdentityVerification,
+  type IdentityVerificationTrackingInput,
+} from "./identity-verification-tracking";
 
 export type TimelineStepState = "complete" | "current" | "pending" | "query" | "failed";
 
@@ -128,7 +133,8 @@ function mapFellowshipState(state: string): TimelineStepState {
 export function buildTrackingHeadline(
   status: ApplicationStatus,
   fellowshipStage: FellowshipStage | null,
-  queryNotes?: string | null
+  queryNotes?: string | null,
+  identityVerification?: IdentityVerificationTrackingInput | null
 ): TrackingHeadline {
   if (status === "REJECTED") {
     return {
@@ -156,6 +162,32 @@ export function buildTrackingHeadline(
       title: "Response submitted",
       subtitle: "Verification team is reviewing your updated information",
       tone: "progress",
+    };
+  }
+  if (
+    identityVerification &&
+    shouldTrackIdentityVerification(identityVerification, status) &&
+    identityVerification.status !== "APPROVED" &&
+    ["SCRUTINY", "SUBMITTED", "QUERY_RAISED", "QUERY_RESPONDED"].includes(status)
+  ) {
+    if (identityVerification.status === "IN_REVIEW") {
+      return {
+        title: "Identity verification under review",
+        subtitle: "Didit is reviewing your session — document scrutiny continues in parallel",
+        tone: "progress",
+      };
+    }
+    if (identityVerification.status === "DECLINED") {
+      return {
+        title: "Identity verification declined",
+        subtitle: "Start a new verification session from Identity Verification",
+        tone: "warning",
+      };
+    }
+    return {
+      title: "Complete identity verification",
+      subtitle: "Verify your ID online so the Foundation can approve your documents",
+      tone: "warning",
     };
   }
   if (fellowshipStage === "COMPLETED") {
@@ -321,8 +353,10 @@ export function buildTrackingTimeline(input: {
   submittedAt: Date | string | null;
   createdAt: Date | string;
   fellowship: FellowshipInput | null;
+  identityVerification?: IdentityVerificationTrackingInput | null;
 }): TrackingTimelineStep[] {
-  const { status, fellowshipStage, statusHistory, submittedAt, createdAt, fellowship } = input;
+  const { status, fellowshipStage, statusHistory, submittedAt, createdAt, fellowship, identityVerification } =
+    input;
   const milestoneStates = getMilestoneStates(status, fellowshipStage);
   const steps: TrackingTimelineStep[] = [];
 
@@ -347,6 +381,21 @@ export function buildTrackingTimeline(input: {
       timestamp: milestoneStates[index] === "complete" ? timestamp : null,
       phase: "application",
     });
+
+    if (
+      milestone.key === "submitted" &&
+      identityVerification &&
+      shouldTrackIdentityVerification(identityVerification, status)
+    ) {
+      steps.push(
+        buildIdentityVerificationTimelineStep({
+          status: identityVerification.status,
+          applicationStatus: status,
+          verifiedAt: identityVerification.verifiedAt,
+          sessionUpdatedAt: identityVerification.sessionUpdatedAt,
+        })
+      );
+    }
   });
 
   if (fellowship && fellowshipStage) {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DiditSdk } from "@didit-protocol/sdk-web";
 import { Button } from "@/components/ui/Button";
+import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 
 type DiditPurpose = "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
 
@@ -14,6 +15,7 @@ type VerificationState = {
     status: string;
     verificationUrl: string | null;
     completedAt: string | null;
+    createdAt: string;
     updatedAt: string;
   } | null;
 };
@@ -40,6 +42,8 @@ interface DiditVerificationPanelProps {
   fellowshipId?: string;
   disabled?: boolean;
   onStatusChange?: (status: string) => void;
+  showTracking?: boolean;
+  verifiedAt?: string | null;
 }
 
 export function DiditVerificationPanel({
@@ -50,6 +54,8 @@ export function DiditVerificationPanel({
   fellowshipId,
   disabled = false,
   onStatusChange,
+  showTracking = true,
+  verifiedAt = null,
 }: DiditVerificationPanelProps) {
   const [state, setState] = useState<VerificationState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -153,50 +159,70 @@ export function DiditVerificationPanel({
   const canRetry = !disabled && ["DECLINED", "ABANDONED", "EXPIRED"].includes(status);
 
   return (
-    <div className="space-y-3 rounded-lg border border-primary-100 bg-primary-50/40 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          <p className="mt-1 text-sm text-gray-600">{description}</p>
+    <div className="space-y-4">
+      <div className="space-y-3 rounded-lg border border-primary-100 bg-primary-50/40 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-gray-900">{title}</h3>
+            <p className="mt-1 text-sm text-gray-600">{description}</p>
+          </div>
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              STATUS_STYLES[status] ?? STATUS_STYLES.NOT_STARTED
+            }`}
+          >
+            {formatStatus(status)}
+          </span>
         </div>
-        <span
-          className={`rounded-full border px-3 py-1 text-xs font-medium ${
-            STATUS_STYLES[status] ?? STATUS_STYLES.NOT_STARTED
-          }`}
-        >
-          {formatStatus(status)}
-        </span>
+
+        {status === "APPROVED" && (
+          <p className="text-sm text-green-800">
+            Verification completed successfully. No further action is required for this step.
+          </p>
+        )}
+
+        {status === "IN_REVIEW" && (
+          <p className="text-sm text-blue-800">
+            Your verification is under manual review. We will notify you when it is complete.
+          </p>
+        )}
+
+        {canStart && (
+          <Button loading={loading} onClick={() => startVerification(false)}>
+            {status === "NOT_STARTED" ? "Start verification" : "Continue verification"}
+          </Button>
+        )}
+
+        {canRetry && (
+          <Button loading={loading} variant="secondary" onClick={() => startVerification(true)}>
+            Start new verification
+          </Button>
+        )}
+
+        {polling && !["APPROVED", "DECLINED", "IN_REVIEW"].includes(status) && (
+          <p className="text-xs text-gray-500">Checking for updates...</p>
+        )}
+
+        {error && <p className="text-sm text-red-700">{error}</p>}
       </div>
 
-      {status === "APPROVED" && (
-        <p className="text-sm text-green-800">
-          Verification completed successfully. No further action is required for this step.
-        </p>
+      {showTracking && purpose === "APPLICANT_IDENTITY" && (
+        <IdentityVerificationTracker
+          status={
+            status as
+              | "NOT_STARTED"
+              | "IN_PROGRESS"
+              | "APPROVED"
+              | "DECLINED"
+              | "IN_REVIEW"
+              | "ABANDONED"
+              | "EXPIRED"
+          }
+          verifiedAt={verifiedAt ?? state.session?.completedAt ?? null}
+          sessionUpdatedAt={state.session?.updatedAt ?? null}
+          sessionStartedAt={state.session?.createdAt ?? null}
+        />
       )}
-
-      {status === "IN_REVIEW" && (
-        <p className="text-sm text-blue-800">
-          Your verification is under manual review. We will notify you when it is complete.
-        </p>
-      )}
-
-      {canStart && (
-        <Button loading={loading} onClick={() => startVerification(false)}>
-          {status === "NOT_STARTED" ? "Start verification" : "Continue verification"}
-        </Button>
-      )}
-
-      {canRetry && (
-        <Button loading={loading} variant="secondary" onClick={() => startVerification(true)}>
-          Start new verification
-        </Button>
-      )}
-
-      {polling && !["APPROVED", "DECLINED", "IN_REVIEW"].includes(status) && (
-        <p className="text-xs text-gray-500">Checking for updates...</p>
-      )}
-
-      {error && <p className="text-sm text-red-700">{error}</p>}
     </div>
   );
 }

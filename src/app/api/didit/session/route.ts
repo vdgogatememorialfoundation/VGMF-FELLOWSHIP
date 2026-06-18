@@ -229,6 +229,7 @@ export async function GET(request: NextRequest) {
           status: latest.status,
           verificationUrl: latest.verificationUrl,
           completedAt: latest.completedAt,
+          createdAt: latest.createdAt,
           updatedAt: latest.updatedAt,
         }
       : null,

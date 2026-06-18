@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DiditVerificationPanel } from "@/components/verification/DiditVerificationPanel";
+import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 import { formatApplicationNumber } from "@/lib/application-number";
 
 type ApplicationSummary = {
@@ -71,6 +72,7 @@ export default function ApplicantVerificationPage() {
           applicationId={application.id}
           title="Applicant identity verification"
           description="Verify your name and photo against your uploaded application details. This step is required before the Foundation can approve your documents when Didit is enabled."
+          verifiedAt={application.identityVerifiedAt}
           onStatusChange={(status) =>
             setApplication((prev) =>
               prev ? { ...prev, identityVerificationStatus: status } : prev
@@ -78,13 +80,21 @@ export default function ApplicantVerificationPage() {
           }
         />
       ) : (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-          Identity verification is available when your application is under document scrutiny. Current
-          status: <strong>{application.status.replace(/_/g, " ")}</strong>.
-          {application.identityVerificationStatus === "APPROVED" && application.identityVerifiedAt && (
-            <p className="mt-2 text-green-800">
-              Identity verified on {new Date(application.identityVerifiedAt).toLocaleString("en-IN")}.
-            </p>
+        <div className="space-y-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+            Identity verification is available when your application is under document scrutiny. Current
+            status: <strong>{application.status.replace(/_/g, " ")}</strong>.
+            {application.identityVerificationStatus === "APPROVED" && application.identityVerifiedAt && (
+              <p className="mt-2 text-green-800">
+                Identity verified on {new Date(application.identityVerifiedAt).toLocaleString("en-IN")}.
+              </p>
+            )}
+          </div>
+          {application.identityVerificationStatus === "APPROVED" && (
+            <IdentityVerificationTracker
+              status="APPROVED"
+              verifiedAt={application.identityVerifiedAt}
+            />
           )}
         </div>
       )}

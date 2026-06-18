@@ -19,6 +19,8 @@ import {
 } from "@/lib/fellowship-tracking";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { repairApplicationIfNeeded } from "@/lib/fellowship-access";
+import { getIntegrationConfig } from "@/lib/integrations";
+import { shouldTrackIdentityVerification } from "@/lib/identity-verification-tracking";
 import {
   buildTrackingHeadline,
   buildTrackingTimeline,
@@ -43,6 +45,11 @@ export async function GET() {
       interview: true,
       trusteeApproval: true,
       budget: true,
+      diditSessions: {
+        where: { purpose: "APPLICANT_IDENTITY" },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+      },
       fellowship: {
         include: {
           installments: true,
@@ -56,6 +63,11 @@ export async function GET() {
     orderBy: { updatedAt: "desc" },
   });
 
+  const integrationConfig = await getIntegrationConfig();
+  const diditIdentityEnabled = Boolean(
+    integrationConfig.didit.apiKey && integrationConfig.didit.workflowIdIdentity
+  );
+
   const payload = await Promise.all(
     applications.map(async (app) => {
       try {
@@ -63,6 +75,17 @@ export async function GET() {
       const effectiveStatus = repaired.status as typeof app.status;
       const fellowship = repaired.fellowship ?? app.fellowship;
       const fellowshipStage = fellowship?.currentStage ?? null;
+      const identitySession = app.diditSessions[0] ?? null;
+      const identityVerification = diditIdentityEnabled
+        ? {
+            enabled: true,
+            required: integrationConfig.didit.requireIdentityForScrutiny,
+            status: repaired.identityVerificationStatus ?? app.identityVerificationStatus,
+            verifiedAt: repaired.identityVerifiedAt ?? app.identityVerifiedAt,
+            sessionUpdatedAt: identitySession?.updatedAt ?? null,
+            sessionStartedAt: identitySession?.createdAt ?? null,
+          }
+        : null;
       const milestoneStates = getMilestoneStates(effectiveStatus, fellowshipStage);
       const fellowshipStepStates = fellowshipStage
         ? getFellowshipStepStates(fellowshipStage)
@@ -96,6 +119,26 @@ export async function GET() {
         ];
       }
 
+      if (
+        identityVerification &&
+        shouldTrackIdentityVerification(identityVerification, effectiveStatus) &&
+        identityVerification.status !== "APPROVED"
+      ) {
+        pendingActions = [
+          {
+            key: "identity_verification",
+            label: "Complete identity verification",
+            detail:
+              identityVerification.status === "DECLINED"
+                ? "Your previous session was declined. Start a new verification from Identity Verification."
+                : "Verify your government ID online so the Foundation can approve your documents.",
+            href: "/applicant/verification",
+            urgent: true,
+          },
+          ...pendingActions,
+        ];
+      }
+
       const displayStatus = fellowshipStage
         ? fellowshipStage === "COMPLETED"
           ? "Fellowship Completed"
@@ -110,7 +153,8 @@ export async function GET() {
       const headline = buildTrackingHeadline(
         effectiveStatus,
         fellowshipStage,
-        app.queryNotes
+        app.queryNotes,
+        identityVerification
       );
       const timeline = buildTrackingTimeline({
         status: effectiveStatus,
@@ -132,6 +176,7 @@ export async function GET() {
               })),
             }
           : null,
+        identityVerification,
       });
       const compactSteps = getCompactPipelineSteps(effectiveStatus, fellowshipStage);
 
@@ -212,6 +257,15 @@ export async function GET() {
           : null,
         fellowshipPendingSetup:
           !fellowship && ["AGREEMENT_PENDING", "SELECTED"].includes(effectiveStatus),
+        identityVerification: identityVerification
+          ? {
+              status: identityVerification.status,
+              verifiedAt: identityVerification.verifiedAt,
+              required: identityVerification.required,
+              sessionUpdatedAt: identityVerification.sessionUpdatedAt,
+              sessionStartedAt: identityVerification.sessionStartedAt,
+            }
+          : null,
       };
       } catch (error) {
         console.error("Tracking payload error for application", app.id, error);
