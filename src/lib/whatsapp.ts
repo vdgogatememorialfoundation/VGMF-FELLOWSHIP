@@ -109,12 +109,17 @@ export async function sendWhatsAppTemplateMessage(input: {
   language?: string;
   bodyParameters?: string[];
   otpCode?: string;
+  staticTemplate?: boolean;
 }): Promise<WhatsAppSendResult> {
   const config = await getIntegrationConfig();
   const language = normalizeWhatsAppLanguage(input.language || config.whatsapp.otpTemplateLanguage);
-  const bodyParameters = input.bodyParameters ?? [];
+  const bodyParameters = input.staticTemplate ? [] : (input.bodyParameters ?? []);
 
   const attempts: Array<Record<string, unknown>> = [];
+
+  if (input.staticTemplate || bodyParameters.length === 0) {
+    attempts.push(buildTemplatePayload(input.phone, input.templateName, language, []));
+  }
 
   if (bodyParameters.length > 0) {
     attempts.push(
@@ -195,7 +200,8 @@ export async function sendWhatsAppOtp(phone: string, otpCode: string): Promise<W
 export async function sendWhatsAppForEvent(
   event: NotificationEventKey,
   phone: string,
-  bodyParameters: string[]
+  bodyParameters: string[],
+  options?: { templateName?: string; staticTemplate?: boolean }
 ): Promise<WhatsAppSendResult> {
   const settings = await prisma.integrationSettings
     .findUnique({ where: { id: "default" }, select: { notificationTemplatesJson: true } })
@@ -208,7 +214,10 @@ export async function sendWhatsAppForEvent(
     return { ok: true };
   }
 
-  if (!template.whatsappTemplateName.trim()) {
+  const templateName = options?.templateName?.trim() || template.whatsappTemplateName;
+  const staticTemplate = options?.staticTemplate ?? template.whatsappStaticTemplate ?? false;
+
+  if (!templateName.trim()) {
     return postWhatsAppPayload({
       messaging_product: "whatsapp",
       to: normalizePhone(phone),
@@ -219,9 +228,10 @@ export async function sendWhatsAppForEvent(
 
   return sendWhatsAppTemplateMessage({
     phone,
-    templateName: template.whatsappTemplateName,
+    templateName,
     language: template.whatsappTemplateLanguage,
-    bodyParameters,
+    bodyParameters: staticTemplate ? [] : bodyParameters,
+    staticTemplate,
   });
 }
 

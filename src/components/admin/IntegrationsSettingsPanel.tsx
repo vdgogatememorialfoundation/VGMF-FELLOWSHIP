@@ -9,7 +9,7 @@ import type {
   NotificationEventTemplate,
   NotificationValidationIssue,
 } from "@/lib/notification-templates";
-import { applyEmailOnlyAlertChannels } from "@/lib/notification-templates";
+import { applyEmailOnlyAlertChannels, applyRecommendedMetaTemplates } from "@/lib/notification-templates";
 
 type IntegrationsState = {
   appUrl: string;
@@ -404,11 +404,28 @@ export function IntegrationsSettingsPanel({
           <div>
             <h2 className="font-semibold">WhatsApp Meta templates (all events)</h2>
             <p className="mt-1 text-sm text-gray-600">
-              Only <strong>vgmf_otp_auth</strong> is required for signup OTP. Other templates can stay
-              on Email until you create and Meta-approves each WhatsApp template.
+              Shared VGMF Meta catalog: <strong>vgmf_otp_auth</strong>,{" "}
+              <strong>vgmf_account_created1</strong>, <strong>vgmf_registration_success</strong>,{" "}
+              <strong>vgmf_under_review</strong>, <strong>vgmf_application_approved</strong>,{" "}
+              <strong>vgmf_application_rejected</strong>. Do not use rejected{" "}
+              <strong>vgmf_account_created</strong>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                onIntegrationsChange({
+                  ...integrations,
+                  notificationTemplates: applyRecommendedMetaTemplates(
+                    integrations.notificationTemplates
+                  ),
+                })
+              }
+            >
+              Apply VGMF Meta templates
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -430,10 +447,9 @@ export function IntegrationsSettingsPanel({
         </div>
 
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          <strong>Meta template status:</strong> Create each template in Meta Business Manager → WhatsApp
-          Manager → Message templates. After approval, set the event channel to WhatsApp + Email and click
-          Check Meta. Rejected templates (like <code className="text-xs">vgmf_account_created</code>) must be
-          fixed or removed from WhatsApp channel.
+          <strong>Meta template status:</strong> Templates showing &quot;Active – Quality pending&quot; in
+          Meta are usable. Click <strong>Apply VGMF Meta templates</strong>, save settings, then validate.
+          Enable WhatsApp per event only after Check Meta passes for that template.
         </div>
 
         {checkMessage && (

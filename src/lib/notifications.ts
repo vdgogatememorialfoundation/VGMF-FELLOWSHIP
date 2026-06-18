@@ -6,6 +6,7 @@ import {
   sendWelcomeEmail,
 } from "./email";
 import { sendWhatsAppForEvent } from "./whatsapp";
+import { resolveStatusWhatsAppTemplateName } from "./notification-templates";
 import { getAccessControl } from "./access-control";
 import { getStatusLabel } from "./utils";
 
@@ -56,7 +57,8 @@ export async function dispatchNotification(
 export async function dispatchStatusUpdate(
   userId: string,
   title: string,
-  message: string
+  message: string,
+  options?: { applicationStatus?: string }
 ) {
   const access = await getAccessControl();
 
@@ -74,7 +76,11 @@ export async function dispatchStatusUpdate(
   }
 
   if (access.statusNotifyWhatsappEnabled && user.phone) {
-    await sendWhatsAppForEvent("STATUS_UPDATE", user.phone, [title, message]);
+    const templateName = resolveStatusWhatsAppTemplateName(options?.applicationStatus);
+    await sendWhatsAppForEvent("STATUS_UPDATE", user.phone, [], {
+      templateName,
+      staticTemplate: true,
+    });
   }
 }
 
@@ -101,11 +107,7 @@ export async function sendWelcomeNotifications(
   }
 
   if (access.welcomeWhatsappEnabled && user?.phone) {
-    await sendWhatsAppForEvent("ACCOUNT_CREATED", user.phone, [
-      name,
-      userUserId,
-      "Log in to complete your fellowship application.",
-    ]);
+    await sendWhatsAppForEvent("ACCOUNT_CREATED", user.phone, [], { staticTemplate: true });
   }
 }
 
@@ -135,11 +137,7 @@ export async function notifyApplicationSubmitted(
   }
 
   if (user?.phone && access.applicationNotifyWhatsappEnabled) {
-    await sendWhatsAppForEvent("APPLICATION_SUBMITTED", user.phone, [
-      name,
-      appNumber,
-      "Save this number to track your application status.",
-    ]);
+    await sendWhatsAppForEvent("APPLICATION_SUBMITTED", user.phone, [], { staticTemplate: true });
   }
 }
 
@@ -173,7 +171,8 @@ export async function notifyStatusChange(
   await dispatchStatusUpdate(
     userId,
     `Application Status: ${label}`,
-    `Application ${appNumber}: ${detail}`
+    `Application ${appNumber}: ${detail}`,
+    { applicationStatus: status }
   );
 }
 

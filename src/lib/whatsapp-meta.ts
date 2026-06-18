@@ -53,6 +53,30 @@ export async function checkWhatsAppCredentials(): Promise<MetaCheckResult> {
   }
 }
 
+function languagesMatch(requested: string, templateLanguage: string): boolean {
+  const req = requested.trim().toLowerCase().replace(/_/g, "-");
+  const tpl = templateLanguage.trim().toLowerCase().replace(/_/g, "-");
+  if (!req || !tpl) return true;
+  if (req === tpl) return true;
+  const reqBase = req.split("-")[0];
+  const tplBase = tpl.split("-")[0];
+  return reqBase === tplBase;
+}
+
+function isUsableMetaTemplateStatus(status?: string | null): boolean {
+  if (!status) return true;
+  const normalized = status.toUpperCase();
+  if (normalized === "REJECTED" || normalized === "PAUSED" || normalized === "DISABLED") {
+    return false;
+  }
+  return (
+    normalized === "APPROVED" ||
+    normalized === "PENDING" ||
+    normalized === "ACTIVE" ||
+    normalized === "IN_APPEAL"
+  );
+}
+
 export async function checkWhatsAppTemplate(
   templateName: string,
   language = "en",
@@ -105,8 +129,10 @@ export async function checkWhatsAppTemplate(
       payload?.data?.find(
         (item) =>
           item.name === templateName.trim() &&
-          (item.language || "").toLowerCase() === language.toLowerCase()
-      ) ?? payload?.data?.[0];
+          languagesMatch(language, item.language || "")
+      ) ??
+      payload?.data?.find((item) => item.name === templateName.trim()) ??
+      payload?.data?.[0];
 
     if (!match) {
       return {
@@ -115,7 +141,7 @@ export async function checkWhatsAppTemplate(
       };
     }
 
-    if (match.status && match.status !== "APPROVED") {
+    if (!isUsableMetaTemplateStatus(match.status)) {
       return {
         ok: false,
         message: `Template "${templateName}" exists but status is ${match.status}.`,
@@ -124,7 +150,7 @@ export async function checkWhatsAppTemplate(
 
     return {
       ok: true,
-      message: `Template "${match.name}" (${match.language || language}) is approved on Meta.`,
+      message: `Template "${match.name}" (${match.language || language}) is available on Meta (${match.status || "APPROVED"}).`,
     };
   } catch (error) {
     return {
