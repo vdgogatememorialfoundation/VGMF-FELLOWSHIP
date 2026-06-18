@@ -4,7 +4,6 @@ import prisma from "@/lib/db";
 import { formatApplicationNumber } from "@/lib/application-number";
 import {
   APPLICANT_MILESTONES,
-  getMilestoneProgress,
   getMilestoneIndex,
   getMilestoneStates,
   getDocumentLabel,
@@ -20,6 +19,12 @@ import {
 } from "@/lib/fellowship-tracking";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { repairApplicationIfNeeded } from "@/lib/fellowship-access";
+import {
+  buildTrackingHeadline,
+  buildTrackingTimeline,
+  getCompactPipelineSteps,
+  getTrackingProgress,
+} from "@/lib/tracking-timeline";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -102,14 +107,45 @@ export async function GET() {
         !fellowship &&
         getMilestoneIndex(effectiveStatus, fellowshipStage) < 6;
 
+      const headline = buildTrackingHeadline(
+        effectiveStatus,
+        fellowshipStage,
+        app.queryNotes
+      );
+      const timeline = buildTrackingTimeline({
+        status: effectiveStatus,
+        fellowshipStage,
+        statusHistory: app.statusHistory,
+        submittedAt: app.submittedAt,
+        createdAt: app.createdAt,
+        fellowship: fellowship
+          ? {
+              currentStage: fellowship.currentStage,
+              createdAt: fellowship.createdAt,
+              bankSubmittedAt: fellowship.bankSubmittedAt,
+              bankVerifiedAt: fellowship.bankVerifiedAt,
+              agreementGeneratedAt: fellowship.agreementGeneratedAt,
+              installments: fellowship.installments.map((i) => ({
+                installmentNo: i.installmentNo,
+                status: i.status,
+                releasedAt: i.releasedAt,
+              })),
+            }
+          : null,
+      });
+      const compactSteps = getCompactPipelineSteps(effectiveStatus, fellowshipStage);
+
       return {
         id: app.id,
         applicationNumber: app.applicationNumber,
         formattedNumber: formatApplicationNumber(app.applicationNumber),
         status: effectiveStatus,
         displayStatus,
+        headline,
+        timeline,
+        compactSteps,
         adminPhase: getAdminPhase(effectiveStatus),
-        progress: getMilestoneProgress(effectiveStatus, fellowshipStage),
+        progress: getTrackingProgress(effectiveStatus, fellowshipStage),
         pipelineIndex: getMilestoneIndex(effectiveStatus, fellowshipStage),
         milestoneStates,
         fellowshipSteps: fellowship ? APPLICANT_FELLOWSHIP_STEPS : null,

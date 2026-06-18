@@ -156,6 +156,18 @@ body {
   animation: tracker-progress 1s ease-out both;
 }
 
+@keyframes tracker-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.tracker-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200% 100%;
+  animation: tracker-shimmer 2s ease-in-out infinite;
+}
+
 .tracker-live-dot {
   animation: tracker-live 1.4s ease-in-out infinite;
 }
+
