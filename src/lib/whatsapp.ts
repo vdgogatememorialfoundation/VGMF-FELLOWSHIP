@@ -117,7 +117,10 @@ export async function sendWhatsAppTemplateMessage(input: {
 
   const attempts: Array<Record<string, unknown>> = [];
 
-  if (input.staticTemplate || bodyParameters.length === 0) {
+  const includeStaticAttempt =
+    Boolean(input.staticTemplate) || (bodyParameters.length === 0 && !input.otpCode);
+
+  if (includeStaticAttempt) {
     attempts.push(buildTemplatePayload(input.phone, input.templateName, language, []));
   }
 
@@ -187,14 +190,84 @@ export async function sendWhatsAppTemplateMessage(input: {
   return { ok: false, error: lastError };
 }
 
+function uniqueLanguages(...codes: Array<string | undefined | null>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const code of codes) {
+    const trimmed = (code || "").trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+  return result;
+}
+
+async function sendWhatsAppAuthOtp(input: {
+  phone: string;
+  templateName: string;
+  language: string;
+  otpCode: string;
+}): Promise<WhatsAppSendResult> {
+  const bodyComponent = {
+    type: "body",
+    parameters: [{ type: "text", text: input.otpCode }],
+  };
+
+  const attempts = [
+    buildTemplatePayload(input.phone, input.templateName, input.language, [
+      bodyComponent,
+      {
+        type: "button",
+        sub_type: "copy_code",
+        index: "0",
+        parameters: [{ type: "coupon_code", coupon_code: input.otpCode }],
+      },
+    ]),
+    buildTemplatePayload(input.phone, input.templateName, input.language, [bodyComponent]),
+    buildTemplatePayload(input.phone, input.templateName, input.language, [
+      bodyComponent,
+      {
+        type: "button",
+        sub_type: "url",
+        index: "0",
+        parameters: [{ type: "text", text: input.otpCode }],
+      },
+    ]),
+  ];
+
+  let lastError = "Failed to send WhatsApp OTP.";
+  for (const payload of attempts) {
+    const result = await postWhatsAppPayload(payload);
+    if (result.ok) return result;
+    lastError = result.error || lastError;
+  }
+
+  return { ok: false, error: lastError };
+}
+
 export async function sendWhatsAppOtp(phone: string, otpCode: string): Promise<WhatsAppSendResult> {
   const config = await getIntegrationConfig();
-  return sendWhatsAppTemplateMessage({
-    phone,
-    templateName: config.whatsapp.otpTemplateName,
-    language: config.whatsapp.otpTemplateLanguage,
-    otpCode,
-  });
+  const languages = uniqueLanguages(
+    config.whatsapp.otpTemplateLanguage,
+    "en",
+    "en_US"
+  );
+
+  let lastError = "Failed to send WhatsApp OTP.";
+  for (const language of languages) {
+    const result = await sendWhatsAppAuthOtp({
+      phone,
+      templateName: config.whatsapp.otpTemplateName,
+      language,
+      otpCode,
+    });
+    if (result.ok) return result;
+    lastError = result.error || lastError;
+  }
+
+  return { ok: false, error: lastError };
 }
 
 export async function sendWhatsAppForEvent(

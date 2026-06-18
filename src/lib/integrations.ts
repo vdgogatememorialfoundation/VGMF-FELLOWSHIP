@@ -56,6 +56,20 @@ export function normalizeAppUrl(url: string | null | undefined): string {
 
 export async function getIntegrationConfig(): Promise<IntegrationConfig> {
   const db = await getDbSettings();
+  const notificationTemplates = mergeNotificationTemplates(db?.notificationTemplatesJson);
+  const otpTemplate = notificationTemplates.find((item) => item.event === "OTP_VERIFICATION");
+
+  const otpTemplateName =
+    db?.whatsappOtpTemplateName?.trim() ||
+    otpTemplate?.whatsappTemplateName?.trim() ||
+    process.env.WHATSAPP_OTP_TEMPLATE_NAME?.trim() ||
+    "vgmf_otp_auth";
+
+  const otpTemplateLanguage =
+    db?.whatsappOtpTemplateLanguage?.trim() ||
+    otpTemplate?.whatsappTemplateLanguage?.trim() ||
+    process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE?.trim() ||
+    "en";
 
   return {
     appUrl: normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL),
@@ -75,20 +89,11 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
         db?.whatsappBusinessAccountId || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || null,
       webhookVerifyToken:
         db?.whatsappWebhookVerifyToken || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || null,
-      otpTemplateName:
-        db?.whatsappOtpTemplateName ||
-        process.env.WHATSAPP_OTP_TEMPLATE_NAME ||
-        "authentication",
-      otpTemplateLanguage:
-        db?.whatsappOtpTemplateLanguage ||
-        process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE ||
-        "en",
+      otpTemplateName,
+      otpTemplateLanguage,
       apiVersion:
         db?.whatsappApiVersion || process.env.WHATSAPP_API_VERSION || "v22.0",
-      defaultTemplateLanguage:
-        db?.whatsappOtpTemplateLanguage ||
-        process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE ||
-        "en",
+      defaultTemplateLanguage: otpTemplateLanguage,
     },
     didit: {
       apiKey: db?.diditApiKey || process.env.DIDIT_API_KEY || null,

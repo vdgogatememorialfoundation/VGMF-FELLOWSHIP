@@ -31,6 +31,6 @@ services:
       - key: WHATSAPP_PHONE_NUMBER_ID
         sync: false
       - key: WHATSAPP_OTP_TEMPLATE_NAME
-        value: authentication
+        value: vgmf_otp_auth
       - key: WHATSAPP_OTP_TEMPLATE_LANGUAGE
         value: en

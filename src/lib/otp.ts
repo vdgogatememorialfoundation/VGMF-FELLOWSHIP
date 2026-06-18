@@ -2,6 +2,7 @@ import prisma from "./db";
 import type { OtpPurpose } from "@prisma/client";
 import { sendWhatsAppOtp } from "./whatsapp";
 import { sendOtpEmail } from "./email";
+import { isWhatsAppConfigured } from "./integrations";
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
@@ -71,17 +72,20 @@ export async function createAndSendOtp(params: {
     const code = await storeOtp({ phone: normalizedPhone, purpose });
     const result = await sendWhatsAppOtp(normalizedPhone, code);
 
-    if (!result.ok && process.env.NODE_ENV === "production") {
-      return {
-        success: false,
-        error:
-          result.error ||
-          "Failed to send OTP via WhatsApp. Check Admin → API Settings → Meta WhatsApp and OTP template name.",
-      };
-    }
-
     if (!result.ok) {
+      const configured = await isWhatsAppConfigured();
+      if (configured || process.env.NODE_ENV === "production") {
+        console.error("WhatsApp OTP send failed:", result.error, "phone:", normalizedPhone);
+        return {
+          success: false,
+          error:
+            result.error ||
+            "Failed to send OTP via WhatsApp. Check Admin → API Settings → Meta WhatsApp and OTP template vgmf_otp_auth.",
+        };
+      }
       logDevOtp(normalizedPhone, code);
+    } else if (result.messageId) {
+      console.log("WhatsApp OTP accepted by Meta:", result.messageId, "phone:", normalizedPhone);
     }
 
     return { success: true };
