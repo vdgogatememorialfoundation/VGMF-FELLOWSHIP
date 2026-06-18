@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { formatCurrency } from "@/lib/utils";
@@ -11,6 +10,7 @@ import { InterviewSchedulePanel } from "@/components/admin/InterviewSchedulePane
 import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel";
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
+import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
 import {
   canApproveScrutiny,
   getNextActions,
@@ -73,8 +73,6 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [app, setApp] = useState<ApplicationData | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
-  const [docRejection, setDocRejection] = useState("");
-  const [selectedDoc, setSelectedDoc] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -142,9 +140,25 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       return;
     }
 
-    setSelectedDoc("");
-    setDocRejection("");
     setMessage(`Document marked as ${status.replace(/_/g, " ")}`);
+    await reload();
+  }
+
+  async function reuploadApplicationDocument(docType: string, file: File) {
+    setLoading(true);
+    setError("");
+    const formData = new FormData();
+    formData.append("applicationId", id);
+    formData.append("type", docType);
+    formData.append("file", file);
+    const res = await fetch("/api/documents", { method: "POST", body: formData });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error || "Failed to re-upload document");
+      return;
+    }
+    setMessage(`${file.name} re-uploaded — pending review`);
     await reload();
   }
 
@@ -256,76 +270,18 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             <p className="text-sm text-gray-500">No documents uploaded yet.</p>
           ) : (
             app.documents.map((doc) => (
-              <div
+              <DocumentReviewControls
                 key={doc.id}
-                className={`rounded-xl border p-4 ${
-                  doc.status === "RESUBMIT_REQUIRED"
-                    ? "border-orange-200 bg-orange-50"
-                    : doc.status === "APPROVED"
-                      ? "border-green-200 bg-green-50/40"
-                      : ""
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{getDocumentLabel(doc.type)}</p>
-                    <a
-                      href={doc.filePath}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary-600 hover:underline"
-                    >
-                      {doc.fileName}
-                    </a>
-                    {doc.rejectionReason && (
-                      <p className="mt-1 text-xs text-orange-700">Reason: {doc.rejectionReason}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <DocStatusBadge status={doc.status} />
-                    {doc.status !== "APPROVED" && (
-                      <Button
-                        variant="secondary"
-                        className="px-2 py-1 text-xs"
-                        loading={loading}
-                        onClick={() => reviewDocument(doc.id, "APPROVED")}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                    <Button
-                      variant="secondary"
-                      className="px-2 py-1 text-xs"
-                      onClick={() => setSelectedDoc(doc.id)}
-                    >
-                      Request resubmit
-                    </Button>
-                  </div>
-                </div>
-                {selectedDoc === doc.id && (
-                  <div className="mt-3 space-y-2 border-t pt-3">
-                    <Textarea
-                      label="Reason for resubmission"
-                      value={docRejection}
-                      onChange={(e) => setDocRejection(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        variant="danger"
-                        loading={loading}
-                        onClick={() =>
-                          reviewDocument(doc.id, "RESUBMIT_REQUIRED", docRejection)
-                        }
-                      >
-                        Send back to applicant
-                      </Button>
-                      <Button variant="secondary" onClick={() => setSelectedDoc("")}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                documentId={doc.id}
+                label={getDocumentLabel(doc.type)}
+                fileName={doc.fileName}
+                filePath={doc.filePath}
+                status={doc.status}
+                rejectionReason={doc.rejectionReason}
+                loading={loading}
+                onReview={reviewDocument}
+                onReupload={(file) => reuploadApplicationDocument(doc.type, file)}
+              />
             ))
           )}
         </div>

@@ -5,6 +5,8 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import type { FellowshipDocType } from "@prisma/client";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
+import { canReplaceFellowshipDocument } from "@/lib/document-review";
+import { notifyDocumentReviewed } from "@/lib/notifications";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -95,12 +97,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only PDF or image files allowed" }, { status: 400 });
     }
 
+    const isStaff = ["ADMIN", "STAFF", "FINANCE"].includes(user.role);
+
     const fellowship = await prisma.fellowship.findFirst({
-      where: { id: fellowshipId, application: { userId: user.id } },
+      where: {
+        id: fellowshipId,
+        ...(user.role === "APPLICANT" ? { application: { userId: user.id } } : {}),
+      },
+      include: { application: { select: { userId: true } } },
     });
 
     if (!fellowship) {
       return NextResponse.json({ error: "Fellowship not found" }, { status: 404 });
+    }
+
+    const existingDoc = await prisma.fellowshipDocument.findUnique({
+      where: {
+        fellowshipId_installmentNo_type: {
+          fellowshipId,
+          installmentNo,
+          type: docType,
+        },
+      },
+    });
+
+    if (
+      !isStaff &&
+      existingDoc &&
+      !canReplaceFellowshipDocument({ existingStatus: existingDoc.status, isStaff: false })
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            existingDoc.status === "APPROVED"
+              ? "Document is approved and cannot be replaced"
+              : existingDoc.status === "PENDING"
+                ? "Document is awaiting review. You will be notified if resubmission is required."
+                : "Document cannot be replaced at this stage",
+        },
+        { status: 403 }
+      );
     }
 
     const uploadDir = path.join(
@@ -163,15 +199,29 @@ export async function PATCH(request: NextRequest) {
   try {
     const { documentId, status, rejectionReason } = await request.json();
 
+    if (!["APPROVED", "REJECTED", "RESUBMIT_REQUIRED", "PENDING"].includes(status)) {
+      return NextResponse.json({ error: "Invalid document status" }, { status: 400 });
+    }
+
+    if (
+      (status === "REJECTED" || status === "RESUBMIT_REQUIRED") &&
+      !rejectionReason?.trim()
+    ) {
+      return NextResponse.json(
+        { error: "Rejection reason is required when rejecting or requesting resubmission" },
+        { status: 400 }
+      );
+    }
+
     const document = await prisma.fellowshipDocument.update({
       where: { id: documentId },
       data: {
         status,
-        rejectionReason,
+        rejectionReason: rejectionReason?.trim() || null,
         reviewedAt: new Date(),
         reviewedBy: user.id,
       },
-      include: { fellowship: true },
+      include: { fellowship: { include: { application: true } } },
     });
 
     if (status === "APPROVED" && document.type === "BANK_VERIFICATION") {
@@ -186,6 +236,23 @@ export async function PATCH(request: NextRequest) {
         },
       });
     }
+
+    if (
+      (status === "REJECTED" || status === "RESUBMIT_REQUIRED") &&
+      document.type === "BANK_VERIFICATION"
+    ) {
+      await prisma.fellowship.update({
+        where: { id: document.fellowshipId },
+        data: { bankVerifiedAt: null },
+      });
+    }
+
+    await notifyDocumentReviewed(
+      document.fellowship.application.userId,
+      document.type,
+      status,
+      rejectionReason?.trim()
+    );
 
     return NextResponse.json({ success: true, document });
   } catch (error) {

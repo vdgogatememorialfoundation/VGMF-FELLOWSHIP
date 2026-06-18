@@ -15,6 +15,7 @@ type FellowshipWithDocs = {
     type: FellowshipDocType;
     status: string;
     filePath: string;
+    rejectionReason?: string | null;
   }>;
   progressReports: Array<{ status: string; reportPath: string | null }>;
   finalSubmission: {
@@ -108,7 +109,12 @@ export async function getInstallmentRequirementStatus(
       status: doc?.status ?? "MISSING",
       filePath: doc?.filePath ?? null,
       documentId: doc?.id ?? null,
-      detail: satisfied ? undefined : `Upload ${req.label} and await staff approval`,
+      detail:
+        doc?.status === "REJECTED" || doc?.status === "RESUBMIT_REQUIRED"
+          ? doc.rejectionReason || "Please re-upload this document"
+          : satisfied
+            ? undefined
+            : `Upload ${req.label} and await staff approval`,
     };
   });
 }

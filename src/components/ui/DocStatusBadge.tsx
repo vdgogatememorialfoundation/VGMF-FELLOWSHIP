@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { getDocumentStatusLabel } from "@/lib/document-review";
 
 const DOC_STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-gray-100 text-gray-800",
@@ -15,7 +16,7 @@ export function DocStatusBadge({ status }: { status: string }) {
         DOC_STATUS_COLORS[status] ?? "bg-gray-100 text-gray-800"
       )}
     >
-      {status.replace(/_/g, " ")}
+      {getDocumentStatusLabel(status)}
     </span>
   );
 }

@@ -446,6 +446,8 @@ export function ApplicationTracker() {
                         className={`rounded-2xl border p-4 ${
                           doc.status === "RESUBMIT_REQUIRED"
                             ? "border-amber-200 bg-amber-50/60"
+                            : doc.status === "REJECTED"
+                              ? "border-red-200 bg-red-50/60"
                             : doc.status === "APPROVED"
                               ? "border-emerald-100 bg-emerald-50/40"
                               : "border-[#e8f0ec] bg-[#fafdfb]"
@@ -467,16 +469,17 @@ export function ApplicationTracker() {
                         </div>
 
                         {doc.rejectionReason && (
-                          <p className="mt-2 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-amber-800">
+                          <p className="mt-2 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-red-700">
+                            {doc.status === "REJECTED" ? "Rejected: " : "Resubmit: "}
                             {doc.rejectionReason}
                           </p>
                         )}
 
-                        {doc.canResubmit && (
+                        {(doc.canResubmit || doc.status === "REJECTED" || doc.status === "RESUBMIT_REQUIRED") && (
                           <div className="mt-3">
                             <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-primary-200 bg-white px-3 py-2 text-xs font-medium text-primary-700 hover:bg-primary-50">
                               <Upload className="h-3.5 w-3.5" />
-                              {uploadingDoc === doc.type ? "Uploading…" : "Resubmit (same ID)"}
+                              {uploadingDoc === doc.type ? "Uploading…" : "Re-upload (same ID)"}
                               <input
                                 type="file"
                                 className="hidden"

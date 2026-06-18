@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
+import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
 import { formatCurrency } from "@/lib/utils";
 import { FELLOWSHIP_STAGE_LABELS } from "@/lib/lifecycle-workflow";
 import { INSTALLMENT_REQUIREMENTS } from "@/lib/installment-requirements";
@@ -16,6 +17,7 @@ type FellowshipDoc = {
   fileName: string;
   filePath: string;
   status: string;
+  rejectionReason?: string | null;
 };
 
 type Installment = {
@@ -202,8 +204,23 @@ export function AdminFellowshipPanel({
     onUpdated?.();
   }
 
-  async function approveDoc(documentId: string) {
-    await runAction({ action: "approve_document", documentId, status: "APPROVED" }, "Document approved");
+  async function reviewFellowshipDoc(documentId: string, status: string, reason?: string) {
+    setLoading(true);
+    setError("");
+    const res = await fetch("/api/fellowship/documents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId, status, rejectionReason: reason }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error || "Failed to update document");
+      return;
+    }
+    setMessage(`Document marked as ${status.replace(/_/g, " ")}`);
+    await load();
+    onUpdated?.();
   }
 
   return (
@@ -352,48 +369,38 @@ export function AdminFellowshipPanel({
                     (d) => d.type === t.type && d.installmentNo === instNo
                   );
                   return (
-                    <div key={t.type} className="rounded-lg border p-3 space-y-2">
-                      <p className="text-sm font-medium">{t.label}</p>
+                    <div key={t.type}>
                       {existing ? (
-                        <div className="space-y-1">
-                          <a
-                            href={existing.filePath}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block truncate text-xs text-primary-600 hover:underline"
-                          >
-                            {existing.fileName}
-                          </a>
-                          <div className="flex flex-wrap gap-2">
-                            <DocStatusBadge status={existing.status} />
-                            {existing.status !== "APPROVED" && (
-                              <Button
-                                variant="secondary"
-                                className="px-2 py-1 text-xs"
-                                loading={loading}
-                                onClick={() => approveDoc(existing.id)}
-                              >
-                                Approve
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500">Not uploaded</p>
-                      )}
-                      <label className="block cursor-pointer text-xs text-primary-700 hover:underline">
-                        Upload / replace
-                        <input
-                          type="file"
-                          accept=".pdf,application/pdf,image/*"
-                          className="hidden"
-                          disabled={loading}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) void uploadDoc(t.type, instNo, file);
-                          }}
+                        <DocumentReviewControls
+                          documentId={existing.id}
+                          label={t.label}
+                          fileName={existing.fileName}
+                          filePath={existing.filePath}
+                          status={existing.status}
+                          rejectionReason={existing.rejectionReason}
+                          loading={loading}
+                          onReview={reviewFellowshipDoc}
+                          onReupload={(file) => uploadDoc(t.type, instNo, file)}
                         />
-                      </label>
+                      ) : (
+                        <div className="rounded-lg border p-3 space-y-2">
+                          <p className="text-sm font-medium">{t.label}</p>
+                          <p className="text-xs text-gray-500">Not uploaded</p>
+                          <label className="block cursor-pointer text-xs text-primary-700 hover:underline">
+                            Upload file
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf,image/*"
+                              className="hidden"
+                              disabled={loading}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void uploadDoc(t.type, instNo, file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

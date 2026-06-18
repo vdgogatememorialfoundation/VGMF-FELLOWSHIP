@@ -199,7 +199,9 @@ export async function notifyDocumentReviewed(
       ? `Your ${docType.replace(/_/g, " ")} document has been approved.`
       : status === "RESUBMIT_REQUIRED"
         ? `Your ${docType.replace(/_/g, " ")} document requires resubmission.${reason ? ` Reason: ${reason}` : ""}`
-        : `Your ${docType.replace(/_/g, " ")} document status is now ${label}.${reason ? ` Note: ${reason}` : ""}`;
+        : status === "REJECTED"
+          ? `Your ${docType.replace(/_/g, " ")} document was rejected.${reason ? ` Reason: ${reason}` : ""} Please re-upload a corrected file.`
+          : `Your ${docType.replace(/_/g, " ")} document status is now ${label}.${reason ? ` Note: ${reason}` : ""}`;
 
   await dispatchStatusUpdate(userId, `Document Update: ${label}`, message);
 }

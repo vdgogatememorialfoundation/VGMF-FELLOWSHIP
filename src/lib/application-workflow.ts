@@ -77,7 +77,10 @@ export function allDocumentsApproved(documents: TrackingDocument[]): boolean {
 
 export function hasDocumentsPendingAction(documents: TrackingDocument[]): boolean {
   return documents.some(
-    (doc) => doc.status === "PENDING" || doc.status === "RESUBMIT_REQUIRED"
+    (doc) =>
+      doc.status === "PENDING" ||
+      doc.status === "RESUBMIT_REQUIRED" ||
+      doc.status === "REJECTED"
   );
 }
 

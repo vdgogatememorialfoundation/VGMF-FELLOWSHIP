@@ -7,6 +7,7 @@ import path from "path";
 import { awardFellowship, releaseInstallment } from "@/lib/fellowship-service";
 import { generateAndStoreFellowshipAgreement } from "@/lib/agreement-service";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
+import { notifyDocumentReviewed } from "@/lib/notifications";
 import { BUDGET_MAX } from "@/lib/utils";
 
 const ADMIN_UPLOAD_TYPES: FellowshipDocType[] = [
@@ -297,19 +298,34 @@ export async function PATCH(request: NextRequest) {
 
     if (action === "approve_document") {
       const { documentId, status = "APPROVED", rejectionReason } = body;
+
       if (!documentId) {
         return NextResponse.json({ error: "documentId required" }, { status: 400 });
+      }
+
+      if (!["APPROVED", "REJECTED", "RESUBMIT_REQUIRED", "PENDING"].includes(status)) {
+        return NextResponse.json({ error: "Invalid document status" }, { status: 400 });
+      }
+
+      if (
+        (status === "REJECTED" || status === "RESUBMIT_REQUIRED") &&
+        !rejectionReason?.trim()
+      ) {
+        return NextResponse.json(
+          { error: "Rejection reason is required when rejecting or requesting resubmission" },
+          { status: 400 }
+        );
       }
 
       const document = await prisma.fellowshipDocument.update({
         where: { id: documentId },
         data: {
           status,
-          rejectionReason: rejectionReason || null,
+          rejectionReason: rejectionReason?.trim() || null,
           reviewedAt: new Date(),
           reviewedBy: user.id,
         },
-        include: { fellowship: true },
+        include: { fellowship: { include: { application: true } } },
       });
 
       if (status === "APPROVED" && document.type === "BANK_VERIFICATION") {
@@ -324,6 +340,23 @@ export async function PATCH(request: NextRequest) {
           },
         });
       }
+
+      if (
+        (status === "REJECTED" || status === "RESUBMIT_REQUIRED") &&
+        document.type === "BANK_VERIFICATION"
+      ) {
+        await prisma.fellowship.update({
+          where: { id: document.fellowshipId },
+          data: { bankVerifiedAt: null },
+        });
+      }
+
+      await notifyDocumentReviewed(
+        document.fellowship.application.userId,
+        document.type,
+        status,
+        rejectionReason?.trim()
+      );
 
       return NextResponse.json({ success: true, document });
     }

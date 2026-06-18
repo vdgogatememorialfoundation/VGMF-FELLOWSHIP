@@ -131,7 +131,8 @@ export async function GET() {
           filePath: doc.filePath,
           rejectionReason: doc.rejectionReason,
           reviewedAt: doc.reviewedAt,
-          canResubmit: doc.status === "RESUBMIT_REQUIRED",
+          canResubmit:
+            doc.status === "RESUBMIT_REQUIRED" || doc.status === "REJECTED",
         })),
         statusHistory: app.statusHistory.map((entry) => ({
           id: entry.id,

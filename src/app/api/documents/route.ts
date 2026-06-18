@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { notifyDocumentReviewed } from "@/lib/notifications";
+import { canReplaceApplicationDocument } from "@/lib/document-review";
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -44,9 +45,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const app = await prisma.application.findFirst({
-      where: { id: applicationId, userId: user.id },
-    });
+    const isStaff = ["ADMIN", "STAFF"].includes(user.role);
+
+    const app = isStaff
+      ? await prisma.application.findUnique({ where: { id: applicationId } })
+      : await prisma.application.findFirst({
+          where: { id: applicationId, userId: user.id },
+        });
 
     if (!app) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
@@ -58,13 +63,19 @@ export async function POST(request: NextRequest) {
 
     if (
       existingDoc &&
-      existingDoc.status !== "RESUBMIT_REQUIRED" &&
-      app.status !== "DRAFT" &&
-      app.status !== "SCRUTINY" &&
-      app.status !== "SUBMITTED"
+      !canReplaceApplicationDocument({
+        existingStatus: existingDoc.status,
+        applicationStatus: app.status,
+        isStaff,
+      })
     ) {
       return NextResponse.json(
-        { error: "Document cannot be replaced at this stage" },
+        {
+          error:
+            existingDoc.status === "APPROVED"
+              ? "Document is approved. Mark as Rejected or Resubmit Required before replacing."
+              : "Document cannot be replaced at this stage",
+        },
         { status: 403 }
       );
     }
@@ -120,11 +131,25 @@ export async function PATCH(request: NextRequest) {
   try {
     const { documentId, status, rejectionReason } = await request.json();
 
+    if (!["APPROVED", "REJECTED", "RESUBMIT_REQUIRED", "PENDING"].includes(status)) {
+      return NextResponse.json({ error: "Invalid document status" }, { status: 400 });
+    }
+
+    if (
+      (status === "REJECTED" || status === "RESUBMIT_REQUIRED") &&
+      !rejectionReason?.trim()
+    ) {
+      return NextResponse.json(
+        { error: "Rejection reason is required when rejecting or requesting resubmission" },
+        { status: 400 }
+      );
+    }
+
     const document = await prisma.applicationDocument.update({
       where: { id: documentId },
       data: {
         status,
-        rejectionReason,
+        rejectionReason: rejectionReason?.trim() || null,
         reviewedAt: new Date(),
         reviewedBy: user.id,
       },
