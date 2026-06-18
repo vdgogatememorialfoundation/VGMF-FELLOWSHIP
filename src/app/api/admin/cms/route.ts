@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import type { NoticeCategory } from "@prisma/client";
 import { getIntegrationSettingsForAdmin, normalizeAppUrl } from "@/lib/integrations";
-import { resolveSecret, isMaskedSecret } from "@/lib/site-content";
+import { resolveSecret, isMaskedSecret, resolveOptionalSetting } from "@/lib/site-content";
 import {
   mergeNotificationTemplates,
   serializeNotificationTemplates,
@@ -111,7 +111,10 @@ export async function PUT(request: NextRequest) {
           null,
         whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
         whatsappBusinessAccountId: data.whatsappBusinessAccountId?.trim() || null,
-        whatsappWebhookVerifyToken: data.whatsappWebhookVerifyToken?.trim() || null,
+        whatsappWebhookVerifyToken: resolveOptionalSetting(
+          data.whatsappWebhookVerifyToken,
+          existing?.whatsappWebhookVerifyToken ?? null
+        ),
         emailOtpSubject: data.emailOtpSubject?.trim() || null,
         notificationTemplatesJson: serializeNotificationTemplates(notificationTemplates),
         diditApiKey: resolveSecret(data.diditApiKey, existing?.diditApiKey ?? null),
@@ -142,7 +145,10 @@ export async function PUT(request: NextRequest) {
           null,
         whatsappApiVersion: data.whatsappApiVersion?.trim() || null,
         whatsappBusinessAccountId: data.whatsappBusinessAccountId?.trim() || null,
-        whatsappWebhookVerifyToken: data.whatsappWebhookVerifyToken?.trim() || null,
+        whatsappWebhookVerifyToken: resolveOptionalSetting(
+          data.whatsappWebhookVerifyToken,
+          existing?.whatsappWebhookVerifyToken ?? null
+        ),
         emailOtpSubject: data.emailOtpSubject?.trim() || null,
         notificationTemplatesJson: serializeNotificationTemplates(notificationTemplates),
         diditApiKey: isMaskedSecret(data.diditApiKey) ? null : data.diditApiKey?.trim() || null,

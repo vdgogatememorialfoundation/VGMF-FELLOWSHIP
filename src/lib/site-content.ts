@@ -156,3 +156,14 @@ export function resolveSecret(incoming: string | undefined, existing: string | n
   }
   return incoming.trim();
 }
+
+/** Keep an existing saved value when the admin leaves the field blank on save. */
+export function resolveOptionalSetting(
+  incoming: string | undefined,
+  existing: string | null
+): string | null {
+  if (incoming === undefined) return existing;
+  const trimmed = incoming.trim();
+  if (!trimmed) return existing;
+  return trimmed;
+}
