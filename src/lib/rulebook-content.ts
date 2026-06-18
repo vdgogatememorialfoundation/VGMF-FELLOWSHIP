@@ -1,10 +1,10 @@
 export const RULEBOOK_TITLE = "Viddhakarma Research Fellowship Rulebook";
 
-/** Rulebook §8 — fund release schedule (shown before quarterly reporting in §9) */
+/** Rulebook section 8 — fund release schedule (shown before quarterly reporting in section 9) */
 export const RULEBOOK_SECTION_8_DISBURSEMENT =
   "40% at commencement | 40% after satisfactory mid-term review | 20% upon submission of final report and presentation. Release is subject to satisfactory progress and reporting requirements.";
 
-/** Rulebook §9 — fellow responsibilities relevant to quarterly reporting */
+/** Rulebook section 9 — fellow responsibilities relevant to quarterly reporting */
 export const RULEBOOK_SECTION_9_QUARTERLY =
   "Maintain proper case records and submit quarterly progress reports with study updates, case records, and expenditure details. Utilize funds strictly for approved research.";
 

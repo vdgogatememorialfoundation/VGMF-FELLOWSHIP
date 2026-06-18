@@ -317,10 +317,10 @@ export default function ApplicantFellowshipPage() {
       <div id="quarterly-reports" className="card space-y-4">
         <h2 className="font-semibold">Quarterly Progress Report</h2>
         <p className="text-sm text-gray-600">
-          <span className="font-medium text-ink-soft">Rulebook §8:</span> {RULEBOOK_SECTION_8_DISBURSEMENT}
+          <span className="font-medium text-ink-soft">Rulebook 8:</span> {RULEBOOK_SECTION_8_DISBURSEMENT}
         </p>
         <p className="text-sm text-gray-600">
-          <span className="font-medium text-ink-soft">Rulebook §9:</span> {RULEBOOK_SECTION_9_QUARTERLY}
+          <span className="font-medium text-ink-soft">Rulebook 9:</span> {RULEBOOK_SECTION_9_QUARTERLY}
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <Input
@@ -355,7 +355,7 @@ export default function ApplicantFellowshipPage() {
       <div id="final-submission" className="card space-y-4">
         <h2 className="font-semibold">Final Submission</h2>
         <p className="text-sm text-gray-600">
-          Final report, publication-ready manuscript, and utilization certificate (Rulebook §9.6–9.7)
+          Final report, publication-ready manuscript, and utilization certificate (Rulebook 9.6–9.7)
         </p>
         <div className="grid gap-4">
           <div>

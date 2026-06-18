@@ -146,7 +146,7 @@ export function getFellowshipPendingActions(input: {
     actions.push({
       key: "quarterly",
       label: "Submit quarterly progress report",
-      detail: "Rulebook §9 — maintain case records and report study progress each quarter (§8 governs fund release)",
+      detail: "Rulebook 9 — maintain case records and report study progress each quarter (section 8 governs fund release)",
       href: "/applicant/fellowship#quarterly-reports",
       urgent: true,
     });
