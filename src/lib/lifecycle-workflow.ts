@@ -228,6 +228,7 @@ export function getMilestoneIndex(
 
   for (let i = APPLICANT_MILESTONES.length - 1; i >= 0; i--) {
     const m = APPLICANT_MILESTONES[i];
+    if (m.fellowshipStages && !fellowshipStage) continue;
     if (m.statuses.includes(status)) return i;
   }
 
@@ -254,7 +255,7 @@ export function getMilestoneProgress(
   }
 
   if (status === "COMPLETED" && !fellowshipStage) {
-    return 100;
+    return Math.min(99, Math.round(((APPLICANT_MILESTONES.length - 1) / APPLICANT_MILESTONES.length) * 100));
   }
 
   return Math.round(((idx + 1) / APPLICANT_MILESTONES.length) * 100);

@@ -87,6 +87,7 @@ type TrackedApplication = {
     mentor?: string | null;
     institution?: string | null;
     sanctionedAmount?: number;
+    awardLetterPath?: string | null;
     bankSubmitted?: boolean;
     bankVerified?: boolean;
     isActive: boolean;
@@ -99,6 +100,7 @@ type TrackedApplication = {
       status?: string;
     }>;
   } | null;
+  fellowshipPendingSetup?: boolean;
 };
 
 const STAGE_ICONS = [Send, ShieldCheck, FileCheck2, Users, Sparkles, Mic, Trophy];
@@ -409,9 +411,25 @@ export function ApplicationTracker() {
                     Current stage
                   </p>
                   <p className="mt-1 font-display text-lg font-bold text-ink">
-                    {pipeline[currentIndex].label}
+                    {app.displayStatus ?? pipeline[currentIndex].label}
                   </p>
                   <p className="mt-1 text-sm text-ink-soft">{pipeline[currentIndex].description}</p>
+                </div>
+              )}
+
+              {app.fellowshipPendingSetup && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="font-medium text-amber-900">Fellowship setup in progress</p>
+                  <p className="mt-1 text-sm text-amber-800">
+                    You have been selected. Open My Fellowship to submit bank details and complete
+                    Installment 1 requirements.
+                  </p>
+                  <Link
+                    href="/applicant/fellowship"
+                    className="mt-3 inline-block rounded-xl bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+                  >
+                    Go to My Fellowship
+                  </Link>
                 </div>
               )}
 

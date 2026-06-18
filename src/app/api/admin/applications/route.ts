@@ -3,6 +3,8 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
+import { awardFellowship } from "@/lib/fellowship-service";
+import { BUDGET_MAX } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -62,7 +64,7 @@ export async function PATCH(request: NextRequest) {
 
     const existing = await prisma.application.findUnique({
       where: { id: applicationId },
-      include: { documents: true },
+      include: { documents: true, fellowship: true, budget: true, trusteeApproval: true },
     });
 
     if (!existing) {
@@ -105,6 +107,21 @@ export async function PATCH(request: NextRequest) {
         },
       },
     });
+
+    if (
+      (status === "AGREEMENT_PENDING" || status === "SELECTED") &&
+      !existing.fellowship
+    ) {
+      try {
+        await awardFellowship({
+          applicationId,
+          sanctionedAmount: Math.min(existing.budget?.total ?? BUDGET_MAX, BUDGET_MAX),
+          duration: "12 months",
+        });
+      } catch (error) {
+        console.error("Admin status awardFellowship error:", error);
+      }
+    }
 
     await notifyStatusChange(
       existing.userId,

@@ -78,6 +78,17 @@ export async function GET() {
             (r) => r.status === "REVISION_REQUIRED"
           ) ?? false,
         });
+      } else if (["AGREEMENT_PENDING", "SELECTED"].includes(effectiveStatus)) {
+        pendingActions = [
+          {
+            key: "fellowship_setup",
+            label: "Open My Fellowship",
+            detail:
+              "Complete agreement, bank details, and Installment 1 documents to receive your grant.",
+            href: "/applicant/fellowship",
+            urgent: true,
+          },
+        ];
       }
 
       const displayStatus = fellowshipStage
@@ -146,6 +157,7 @@ export async function GET() {
               mentor: fellowship.mentor,
               institution: fellowship.institution,
               sanctionedAmount: fellowship.sanctionedAmount,
+              awardLetterPath: fellowship.awardLetterPath,
               bankSubmitted: Boolean(fellowship.bankSubmittedAt),
               bankVerified: Boolean(fellowship.bankVerifiedAt),
               isActive: fellowship.isActive,
@@ -161,6 +173,8 @@ export async function GET() {
               })),
             }
           : null,
+        fellowshipPendingSetup:
+          !fellowship && ["AGREEMENT_PENDING", "SELECTED"].includes(effectiveStatus),
       };
       } catch (error) {
         console.error("Tracking payload error for application", app.id, error);

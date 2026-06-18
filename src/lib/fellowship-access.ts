@@ -1,5 +1,6 @@
 import prisma from "./db";
 import { awardFellowship } from "./fellowship-service";
+import { generateAndStoreFellowshipAgreement } from "./agreement-service";
 import { BUDGET_MAX } from "./utils";
 
 const fellowshipInclude = {
@@ -11,6 +12,60 @@ const fellowshipInclude = {
   fellowshipDocuments: true,
   application: { include: { digitalUndertaking: true } },
 };
+
+const POST_SELECTION_STATUSES = new Set(["SELECTED", "AGREEMENT_PENDING", "COMPLETED"]);
+
+function shouldHaveFellowship(app: {
+  status: string;
+  trusteeApproval: { approved: boolean } | null;
+}) {
+  return app.trusteeApproval?.approved || POST_SELECTION_STATUSES.has(app.status);
+}
+
+async function createFellowshipForApplication(app: {
+  id: string;
+  status: string;
+  budget: { total: number } | null;
+}) {
+  const created = await awardFellowship({
+    applicationId: app.id,
+    sanctionedAmount: Math.min(app.budget?.total ?? BUDGET_MAX, BUDGET_MAX),
+    duration: "12 months",
+  });
+
+  const fellowship = await prisma.fellowship.findUnique({
+    where: { id: created.id },
+    include: fellowshipInclude,
+  });
+
+  return fellowship;
+}
+
+async function ensureAgreementPdf(fellowshipId: string, agreementPdfData: string | null | undefined) {
+  if (agreementPdfData) return;
+  try {
+    await generateAndStoreFellowshipAgreement(fellowshipId);
+  } catch (error) {
+    console.error("ensureAgreementPdf error:", error);
+  }
+}
+
+async function revertPrematureCompleted(applicationId: string) {
+  await prisma.application.update({
+    where: { id: applicationId },
+    data: {
+      status: "AGREEMENT_PENDING",
+      statusHistory: {
+        create: {
+          fromStatus: "COMPLETED",
+          toStatus: "AGREEMENT_PENDING",
+          notes: "Status corrected — fellowship is still in progress",
+        },
+      },
+    },
+  });
+  return "AGREEMENT_PENDING" as const;
+}
 
 export async function loadApplicantApplication(userId: string) {
   return prisma.application.findFirst({
@@ -40,39 +95,27 @@ export async function ensureApplicantFellowship(userId: string) {
   let fellowship = application.fellowship;
   let status = application.status;
 
-  if (!fellowship && application.trusteeApproval?.approved) {
+  if (!fellowship && shouldHaveFellowship(application)) {
     try {
-      const created = await awardFellowship({
-        applicationId: application.id,
-        sanctionedAmount: Math.min(application.budget?.total ?? BUDGET_MAX, BUDGET_MAX),
-        duration: "12 months",
-      });
-      fellowship = await prisma.fellowship.findUnique({
-        where: { id: created.id },
-        include: fellowshipInclude,
-      });
+      fellowship = await createFellowshipForApplication(application);
       status = "AGREEMENT_PENDING";
     } catch (error) {
       console.error("ensureApplicantFellowship award error:", error);
     }
   }
 
+  if (fellowship) {
+    await ensureAgreementPdf(fellowship.id, fellowship.agreementPdfData);
+    const refreshed = await prisma.fellowship.findUnique({
+      where: { id: fellowship.id },
+      include: fellowshipInclude,
+    });
+    if (refreshed) fellowship = refreshed;
+  }
+
   if (status === "COMPLETED" && fellowship && !fellowship.isCompleted) {
     try {
-      await prisma.application.update({
-        where: { id: application.id },
-        data: {
-          status: "AGREEMENT_PENDING",
-          statusHistory: {
-            create: {
-              fromStatus: "COMPLETED",
-              toStatus: "AGREEMENT_PENDING",
-              notes: "Status corrected — fellowship is still in progress",
-            },
-          },
-        },
-      });
-      status = "AGREEMENT_PENDING";
+      status = await revertPrematureCompleted(application.id);
     } catch (error) {
       console.error("ensureApplicantFellowship status revert error:", error);
     }
@@ -100,7 +143,12 @@ export async function getFellowshipForApplicant(userId: string, fellowshipId?: s
 export async function repairApplicationIfNeeded(app: {
   id: string;
   status: string;
-  fellowship: { id: string; isCompleted: boolean; currentStage: string } | null;
+  fellowship: {
+    id: string;
+    isCompleted: boolean;
+    currentStage: string;
+    agreementPdfData?: string | null;
+  } | null;
   trusteeApproval: { approved: boolean } | null;
   budget: { total: number } | null;
 }) {
@@ -109,39 +157,27 @@ export async function repairApplicationIfNeeded(app: {
   >["fellowship"];
   let status = app.status;
 
-  if (!fellowship && app.trusteeApproval?.approved) {
+  if (!fellowship && shouldHaveFellowship(app)) {
     try {
-      const created = await awardFellowship({
-        applicationId: app.id,
-        sanctionedAmount: Math.min(app.budget?.total ?? BUDGET_MAX, BUDGET_MAX),
-        duration: "12 months",
-      });
-      fellowship = await prisma.fellowship.findUnique({
-        where: { id: created.id },
-        include: fellowshipInclude,
-      });
+      fellowship = await createFellowshipForApplication(app);
       status = "AGREEMENT_PENDING";
     } catch (error) {
       console.error("repairApplicationIfNeeded award error:", error);
     }
   }
 
+  if (fellowship) {
+    await ensureAgreementPdf(fellowship.id, fellowship.agreementPdfData);
+    const refreshed = await prisma.fellowship.findUnique({
+      where: { id: fellowship.id },
+      include: fellowshipInclude,
+    });
+    if (refreshed) fellowship = refreshed;
+  }
+
   if (status === "COMPLETED" && fellowship && !fellowship.isCompleted) {
     try {
-      await prisma.application.update({
-        where: { id: app.id },
-        data: {
-          status: "AGREEMENT_PENDING",
-          statusHistory: {
-            create: {
-              fromStatus: "COMPLETED",
-              toStatus: "AGREEMENT_PENDING",
-              notes: "Status corrected — fellowship is still in progress",
-            },
-          },
-        },
-      });
-      status = "AGREEMENT_PENDING";
+      status = await revertPrematureCompleted(app.id);
     } catch (error) {
       console.error("repairApplicationIfNeeded revert error:", error);
     }
