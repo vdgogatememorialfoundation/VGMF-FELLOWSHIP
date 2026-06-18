@@ -230,7 +230,7 @@ export default function AdminAccountsPage() {
                       <div className="space-y-2">
                         <Input
                           label=""
-                          type="text"
+                          type="password"
                           placeholder="New password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
