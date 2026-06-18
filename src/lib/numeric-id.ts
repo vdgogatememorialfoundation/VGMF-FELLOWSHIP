@@ -50,3 +50,14 @@ export async function generateUserId(): Promise<string> {
 export async function generateApplicationNumber(): Promise<string> {
   return generateUniqueApplicationNumber();
 }
+
+/** Random 12-digit fellowship tracking number (no prefix/suffix) */
+export async function generateFellowshipId(): Promise<string> {
+  return generateUnique12DigitId(async (fellowshipId) => {
+    const existing = await prisma.fellowship.findUnique({
+      where: { fellowshipId },
+      select: { id: true },
+    });
+    return Boolean(existing);
+  });
+}

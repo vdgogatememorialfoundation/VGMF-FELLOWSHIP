@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatApplicationNumber } from "@/lib/application-number";
+import {
+  RULEBOOK_SECTION_8_DISBURSEMENT,
+  RULEBOOK_SECTION_9_QUARTERLY,
+} from "@/lib/rulebook-content";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InstallmentDocumentsPanel } from "@/components/fellowship/InstallmentDocumentsPanel";
@@ -181,8 +186,9 @@ export default function ApplicantFellowshipPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My Fellowship</h1>
-        <p className="mt-1 text-gray-600">
-          {f.fellowshipId} · Application {data.applicationNumber}
+        <p className="mt-1 font-mono text-sm text-gray-600">
+          Fellowship {formatApplicationNumber(f.fellowshipId)} · Application{" "}
+          {formatApplicationNumber(data.applicationNumber)}
         </p>
       </div>
 
@@ -310,7 +316,12 @@ export default function ApplicantFellowshipPage() {
 
       <div id="quarterly-reports" className="card space-y-4">
         <h2 className="font-semibold">Quarterly Progress Report</h2>
-        <p className="text-sm text-gray-600">Rulebook §9 — submit quarterly progress reports</p>
+        <p className="text-sm text-gray-600">
+          <span className="font-medium text-ink-soft">Rulebook §8:</span> {RULEBOOK_SECTION_8_DISBURSEMENT}
+        </p>
+        <p className="text-sm text-gray-600">
+          <span className="font-medium text-ink-soft">Rulebook §9:</span> {RULEBOOK_SECTION_9_QUARTERLY}
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <Input
             label="Quarter (1–4)"

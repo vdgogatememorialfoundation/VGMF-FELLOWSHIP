@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TrusteeApprovalActions } from "@/components/trustee/TrusteeApprovalActions";
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { formatCurrency } from "@/lib/utils";
+import { formatApplicationNumber } from "@/lib/application-number";
 
 type TrusteeApp = {
   id: string;
@@ -25,14 +26,25 @@ type TrusteeApp = {
 export function TrusteeApprovalsClient() {
   const [applications, setApplications] = useState<TrusteeApp[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const reload = useCallback(() => {
+    setError("");
     fetch("/api/trustee/approvals")
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) {
+          setError(d.error || "Unable to load trustee applications");
+          setApplications([]);
+          return;
+        }
         setApplications(d.applications || []);
-        setLoading(false);
-      });
+      })
+      .catch(() => {
+        setError("Unable to load trustee applications. Please refresh.");
+        setApplications([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -52,7 +64,13 @@ export function TrusteeApprovalsClient() {
         </p>
       </div>
 
-      {applications.length === 0 && (
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {applications.length === 0 && !error && (
         <div className="card py-8 text-center text-gray-500">
           No applications assigned yet. Admin will assign applications for trustee review.
         </div>
@@ -69,7 +87,9 @@ export function TrusteeApprovalsClient() {
           <div key={app.id} className="card space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold">{app.applicationNumber}</h2>
+                <h2 className="font-mono text-lg font-semibold tracking-wide">
+                  {formatApplicationNumber(app.applicationNumber)}
+                </h2>
                 <p className="text-gray-600">
                   {app.user.profile?.name} — {app.researchProposal?.projectTitle}
                 </p>
@@ -121,7 +141,7 @@ export function TrusteeApprovalsClient() {
                 {app.fellowship && (
                   <>
                     <p className="mt-2 text-sm font-medium text-green-800">
-                      Fellowship {app.fellowship.fellowshipId} —{" "}
+                      Fellowship {formatApplicationNumber(app.fellowship.fellowshipId)} —{" "}
                       {formatCurrency(app.fellowship.sanctionedAmount)}
                     </p>
                     {app.fellowship.awardLetterPath && (

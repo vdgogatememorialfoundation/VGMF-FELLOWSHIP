@@ -6,6 +6,18 @@ import { notifyStatusChange } from "@/lib/notifications";
 import { BUDGET_MAX } from "@/lib/utils";
 import { getAssignedApplicationIds } from "@/lib/review-workflow";
 
+const TRUSTEE_PIPELINE_STATUSES = [
+  "SHORTLISTED",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEW_COMPLETED",
+  "TRUSTEE_REVIEW",
+  "WAITLISTED",
+  "AGREEMENT_PENDING",
+  "SELECTED",
+  "QUERY_RAISED",
+  "QUERY_RESPONDED",
+] as const;
+
 export async function GET() {
   const user = await getSession();
   if (!user || user.role !== "TRUSTEE") {
@@ -15,22 +27,15 @@ export async function GET() {
   const assignedIds = await getAssignedApplicationIds(user.id, "TRUSTEE");
 
   const applications = await prisma.application.findMany({
-    where: {
-      id: { in: assignedIds.length > 0 ? assignedIds : [] },
-      status: {
-        in: [
-          "SHORTLISTED",
-          "INTERVIEW_SCHEDULED",
-          "INTERVIEW_COMPLETED",
-          "TRUSTEE_REVIEW",
-          "WAITLISTED",
-          "AGREEMENT_PENDING",
-          "SELECTED",
-          "QUERY_RAISED",
-          "QUERY_RESPONDED",
-        ],
-      },
-    },
+    where:
+      assignedIds.length > 0
+        ? {
+            id: { in: assignedIds },
+            status: { in: [...TRUSTEE_PIPELINE_STATUSES] },
+          }
+        : {
+            status: { in: [...TRUSTEE_PIPELINE_STATUSES] },
+          },
     include: {
       user: { include: { profile: true } },
       researchProposal: true,
@@ -75,6 +80,14 @@ export async function POST(request: NextRequest) {
 
     if (!application) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
+
+    const assignedIds = await getAssignedApplicationIds(user.id, "TRUSTEE");
+    if (assignedIds.length > 0 && !assignedIds.includes(applicationId)) {
+      return NextResponse.json(
+        { error: "This application is not assigned to you for trustee review" },
+        { status: 403 }
+      );
     }
 
     if (application.trusteeApproval) {

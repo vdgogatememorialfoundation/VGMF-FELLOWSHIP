@@ -17,6 +17,7 @@ import {
 import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
+import { formatApplicationNumber } from "@/lib/application-number";
 import type { TrackingHeadline, TrackingTimelineStep } from "@/lib/tracking-timeline";
 import { FlipkartProgressRail } from "@/components/tracking/FlipkartProgressRail";
 import { FlipkartTrackingTimeline } from "@/components/tracking/FlipkartTrackingTimeline";
@@ -564,7 +565,7 @@ export function ApplicationTracker() {
                   <p className="text-xs text-muted">
                     Fellowship ID:{" "}
                     <span className="font-mono font-semibold text-primary-800">
-                      {app.fellowship.fellowshipId}
+                      {formatApplicationNumber(app.fellowship.fellowshipId)}
                     </span>
                   </p>
                   <Link
