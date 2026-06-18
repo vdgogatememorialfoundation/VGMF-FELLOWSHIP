@@ -13,6 +13,7 @@ import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel"
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
 import { AdminApplicationEditor } from "@/components/admin/AdminApplicationEditor";
+import { AdminDiditVerificationPanel } from "@/components/admin/AdminDiditVerificationPanel";
 import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
 import {
   canApproveScrutiny,
@@ -127,6 +128,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     identityWorkflowConfigured: boolean;
     webhookUrl: string;
   } | null>(null);
+  const [diditSessions, setDiditSessions] = useState<
+    Array<{
+      id: string;
+      diditSessionId: string;
+      purpose: "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
+      status: string;
+      completedAt: string | null;
+      createdAt: string;
+      decisionJson: unknown;
+    }>
+  >([]);
 
   async function reload() {
     const res = await fetch(`/api/admin/applications?id=${id}`);
@@ -139,6 +151,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     }
     setApp(data.application);
     setDiditMeta(data.didit ?? null);
+    setDiditSessions(data.diditSessions ?? []);
     setAdminNotes(data.application.adminNotes ?? "");
     setRejectionReason(data.application.rejectionReason ?? "");
   }
@@ -377,6 +390,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {diditMeta?.identityWorkflowConfigured && (
+        <div className="card space-y-4">
+          <h2 className="font-semibold">Didit Verification Details</h2>
+          <AdminDiditVerificationPanel
+            sessions={diditSessions}
+            identityStatus={app.identityVerificationStatus}
+            identityVerifiedAt={app.identityVerifiedAt}
+          />
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
-import type { DiditVerificationPurpose } from "@prisma/client";
+import type { DiditVerificationPurpose, Prisma } from "@prisma/client";
 import prisma from "./db";
 import { getIntegrationConfig } from "./integrations";
 
@@ -349,4 +349,49 @@ export function getDiditStatusLabel(status: import("@prisma/client").DiditVerifi
     default:
       return "Not started";
   }
+}
+
+export function buildDiditCallbackUrl(appUrl: string, nextPath: string): string {
+  const next = nextPath.startsWith("/") ? nextPath : `/${nextPath}`;
+  return `${appUrl}/verification/complete?next=${encodeURIComponent(next)}`;
+}
+
+export async function fetchDiditSessionDecision(sessionId: string): Promise<Record<string, unknown> | null> {
+  const config = await getDiditConfig();
+  if (!config.apiKey) return null;
+
+  const response = await fetch(`${DIDIT_API_BASE}/v3/session/${sessionId}/decision/`, {
+    headers: { "x-api-key": config.apiKey },
+    cache: "no-store",
+  });
+
+  if (!response.ok) return null;
+
+  const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  return payload;
+}
+
+export async function refreshDiditSessionDecision(sessionId: string) {
+  const session = await prisma.diditVerificationSession.findUnique({
+    where: { diditSessionId: sessionId },
+  });
+  if (!session) return null;
+
+  const decision = await fetchDiditSessionDecision(sessionId);
+  if (!decision) return session;
+
+  const statusFromDecision =
+    typeof decision.status === "string" ? mapDiditStatus(decision.status) : session.status;
+
+  return prisma.diditVerificationSession.update({
+    where: { id: session.id },
+    data: {
+      decisionJson: decision as Prisma.InputJsonValue,
+      status: statusFromDecision,
+      completedAt:
+        ["APPROVED", "DECLINED", "ABANDONED", "EXPIRED"].includes(statusFromDecision)
+          ? session.completedAt ?? new Date()
+          : session.completedAt,
+    },
+  });
 }

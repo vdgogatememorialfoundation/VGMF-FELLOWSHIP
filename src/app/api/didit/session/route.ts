@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import {
   createDiditSession,
+  buildDiditCallbackUrl,
   getDiditConfig,
   getLatestDiditSession,
   isDiditConfigured,
@@ -135,12 +136,14 @@ export async function POST(request: NextRequest) {
       Date.now().toString(),
     ].join(":");
 
-    const callbackPath =
+    const callbackPath = buildDiditCallbackUrl(
+      diditConfig.appUrl,
       purpose === "BANK_ACCOUNT"
-        ? `${diditConfig.appUrl}/applicant/fellowship?verified=bank`
+        ? "/applicant/fellowship?verified=bank"
         : purpose === "UNDERTAKING_IDENTITY"
-          ? `${diditConfig.appUrl}/applicant/undertaking?verified=identity`
-          : `${diditConfig.appUrl}/applicant/verification?verified=identity`;
+          ? "/applicant/undertaking?verified=identity"
+          : "/applicant/verification?verified=identity"
+    );
 
     const { session } = await createDiditSession({
       purpose,

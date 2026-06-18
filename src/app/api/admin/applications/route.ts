@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
-import { getDiditConfig } from "@/lib/didit";
+import { getDiditConfig, refreshDiditSessionDecision } from "@/lib/didit";
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
 import { updateApplicationByAdmin } from "@/lib/admin-application-update";
@@ -41,9 +41,35 @@ export async function GET(request: NextRequest) {
     if (!application) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
+
+    let diditSessions = await prisma.diditVerificationSession.findMany({
+      where: {
+        OR: [{ applicationId: id }, ...(application.fellowship ? [{ fellowshipId: application.fellowship.id }] : [])],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    await Promise.all(
+      diditSessions
+        .filter(
+          (session) =>
+            !session.decisionJson &&
+            ["APPROVED", "IN_REVIEW", "DECLINED"].includes(session.status)
+        )
+        .map((session) => refreshDiditSessionDecision(session.diditSessionId))
+    );
+
+    diditSessions = await prisma.diditVerificationSession.findMany({
+      where: {
+        OR: [{ applicationId: id }, ...(application.fellowship ? [{ fellowshipId: application.fellowship.id }] : [])],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
     const diditConfig = await getDiditConfig();
     return NextResponse.json({
       application,
+      diditSessions,
       didit: {
         identityWorkflowConfigured: !!diditConfig.workflowIdIdentity,
         requireIdentityForScrutiny: diditConfig.requireIdentityForScrutiny,

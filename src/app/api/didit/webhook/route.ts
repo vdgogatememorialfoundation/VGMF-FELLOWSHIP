@@ -22,19 +22,42 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  let payload: DiditWebhookPayload;
+  let payload: DiditWebhookPayload & Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody) as DiditWebhookPayload;
+    payload = JSON.parse(rawBody) as DiditWebhookPayload & Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!payload.session_id || !payload.status) {
+  const sessionId =
+    (typeof payload.session_id === "string" && payload.session_id) ||
+    (payload.decision &&
+      typeof payload.decision === "object" &&
+      typeof (payload.decision as Record<string, unknown>).session_id === "string" &&
+      String((payload.decision as Record<string, unknown>).session_id)) ||
+    "";
+
+  const status =
+    (typeof payload.status === "string" && payload.status) ||
+    (payload.decision &&
+      typeof payload.decision === "object" &&
+      typeof (payload.decision as Record<string, unknown>).status === "string" &&
+      String((payload.decision as Record<string, unknown>).status)) ||
+    "";
+
+  if (!sessionId || !status) {
     return NextResponse.json({ error: "Missing session_id or status" }, { status: 400 });
   }
 
   try {
-    const result = await applyDiditWebhook(payload);
+    const result = await applyDiditWebhook({
+      session_id: sessionId,
+      status,
+      vendor_data: typeof payload.vendor_data === "string" ? payload.vendor_data : undefined,
+      decision:
+        (payload.decision as Record<string, unknown> | undefined) ??
+        (typeof payload.decision === "undefined" ? undefined : (payload as Record<string, unknown>)),
+    });
     if (!result.ok) {
       return NextResponse.json({ received: true, matched: false }, { status: 202 });
     }

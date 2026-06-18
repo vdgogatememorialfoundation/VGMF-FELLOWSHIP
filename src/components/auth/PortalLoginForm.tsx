@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Leaf } from "lucide-react";
@@ -13,7 +14,14 @@ interface PortalLoginFormProps {
   showRegisterLink?: boolean;
 }
 
-export function PortalLoginForm({ portal, showRegisterLink }: PortalLoginFormProps) {
+function safeNextPath(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
+function PortalLoginFormInner({ portal, showRegisterLink }: PortalLoginFormProps) {
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -42,7 +50,7 @@ export function PortalLoginForm({ portal, showRegisterLink }: PortalLoginFormPro
         return;
       }
 
-      window.location.assign(data.redirect || PORTAL_DASHBOARD_PATHS[portal]);
+      window.location.assign(nextPath || data.redirect || PORTAL_DASHBOARD_PATHS[portal]);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -118,5 +126,19 @@ export function PortalLoginForm({ portal, showRegisterLink }: PortalLoginFormPro
         </div>
       </div>
     </div>
+  );
+}
+
+export function PortalLoginForm(props: PortalLoginFormProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center px-4 py-12 text-sm text-gray-500">
+          Loading sign in...
+        </div>
+      }
+    >
+      <PortalLoginFormInner {...props} />
+    </Suspense>
   );
 }

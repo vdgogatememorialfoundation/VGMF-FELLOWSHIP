@@ -123,7 +123,12 @@ export function DiditVerificationPanel({
       }
 
       setPolling(true);
-      DiditSdk.shared.startVerification({ url: verificationUrl });
+      DiditSdk.shared.startVerification({
+        url: verificationUrl,
+        configuration: {
+          closeModalOnComplete: true,
+        },
+      });
       await loadStatus();
     } finally {
       setLoading(false);
