@@ -205,7 +205,7 @@ export async function sendWhatsAppForEvent(
   const template = getNotificationTemplate(templates, event);
 
   if (template.channel === "EMAIL" || template.channel === "NONE") {
-    return { ok: false, error: `WhatsApp is disabled for ${event}.` };
+    return { ok: true };
   }
 
   if (!template.whatsappTemplateName.trim()) {

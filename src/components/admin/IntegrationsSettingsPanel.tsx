@@ -9,6 +9,7 @@ import type {
   NotificationEventTemplate,
   NotificationValidationIssue,
 } from "@/lib/notification-templates";
+import { applyEmailOnlyAlertChannels } from "@/lib/notification-templates";
 
 type IntegrationsState = {
   appUrl: string;
@@ -119,8 +120,8 @@ export function IntegrationsSettingsPanel({
         setValidationIssues(data.issues || []);
         setCheckMessage(
           data.ok
-            ? "All notification checks passed."
-            : "Some notification checks failed — review the list below."
+            ? "Critical checks passed. Review any warnings before enabling WhatsApp on additional events."
+            : "Fix the errors below — only WhatsApp OTP must be approved to start signup OTP messages."
         );
       } else {
         setCheckMessage(data.message || data.error || "Check completed.");
@@ -367,8 +368,6 @@ export function IntegrationsSettingsPanel({
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              ["signupOtpEmailEnabled", "Require email OTP during signup", false],
-              ["signupOtpWhatsappEnabled", "Require WhatsApp OTP during signup", false],
               ["welcomeEmailEnabled", "Welcome email on registration", false],
               ["welcomeWhatsappEnabled", "Welcome WhatsApp on registration", true],
               ["applicationNotifyEmailEnabled", "Application submitted email", false],
@@ -405,12 +404,36 @@ export function IntegrationsSettingsPanel({
           <div>
             <h2 className="font-semibold">WhatsApp Meta templates (all events)</h2>
             <p className="mt-1 text-sm text-gray-600">
-              Map each portal alert to a Meta-approved template. Use Check on Meta to verify names.
+              Only <strong>vgmf_otp_auth</strong> is required for signup OTP. Other templates can stay
+              on Email until you create and Meta-approves each WhatsApp template.
             </p>
           </div>
-          <Button type="button" variant="secondary" loading={checking} onClick={() => runValidation("validate-all")}>
-            Validate all notifications
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                onIntegrationsChange({
+                  ...integrations,
+                  notificationTemplates: applyEmailOnlyAlertChannels(
+                    integrations.notificationTemplates
+                  ),
+                })
+              }
+            >
+              Use email-only alerts
+            </Button>
+            <Button type="button" variant="secondary" loading={checking} onClick={() => runValidation("validate-all")}>
+              Validate all notifications
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          <strong>Meta template status:</strong> Create each template in Meta Business Manager → WhatsApp
+          Manager → Message templates. After approval, set the event channel to WhatsApp + Email and click
+          Check Meta. Rejected templates (like <code className="text-xs">vgmf_account_created</code>) must be
+          fixed or removed from WhatsApp channel.
         </div>
 
         {checkMessage && (

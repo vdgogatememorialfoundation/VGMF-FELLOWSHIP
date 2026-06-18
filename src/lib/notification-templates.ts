@@ -32,12 +32,14 @@ export type NotificationValidationIssue = {
   message: string;
 };
 
+export const CRITICAL_WHATSAPP_EVENTS: NotificationEventKey[] = ["OTP_VERIFICATION"];
+
 export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
   {
     event: "ACCOUNT_CREATED",
     label: "Account created / welcome",
     description: "Sent when a new applicant account is registered.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_account_created",
     whatsappTemplateLanguage: "en",
     emailSubject: "Welcome to {{portal_title}}",
@@ -64,7 +66,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "APPLICATION_SUBMITTED",
     label: "Application submitted",
     description: "Confirmation with 12-digit application tracking number.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_application_submitted",
     whatsappTemplateLanguage: "en",
     emailSubject: "Application submitted — {{application_number}}",
@@ -73,7 +75,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "STATUS_UPDATE",
     label: "Application status update",
     description: "When admin changes application workflow status.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_status_update",
     whatsappTemplateLanguage: "en",
     emailSubject: "Application status: {{status_label}}",
@@ -82,7 +84,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "DOCUMENT_REVIEW",
     label: "Document review result",
     description: "When a document is approved, rejected, or needs resubmission.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_document_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Document update: {{document_label}}",
@@ -91,7 +93,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "INTERVIEW_SCHEDULED",
     label: "Interview scheduled",
     description: "Interview date, time, and meeting link.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_interview_scheduled",
     whatsappTemplateLanguage: "en",
     emailSubject: "Interview scheduled — VGMF Fellowship",
@@ -100,7 +102,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "INSTALLMENT_RELEASED",
     label: "Fellowship installment released",
     description: "When a fellowship grant installment is released.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_installment_released",
     whatsappTemplateLanguage: "en",
     emailSubject: "Installment {{installment_no}} released",
@@ -109,7 +111,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "PROGRESS_REPORT_DUE",
     label: "Progress report due",
     description: "Quarterly fellowship progress report reminders.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_report_due",
     whatsappTemplateLanguage: "en",
     emailSubject: "Progress report due — Q{{quarter}} {{year}}",
@@ -118,7 +120,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "SUPPORT_TICKET",
     label: "Support ticket update",
     description: "Applicant support ticket replies and updates.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_support_update",
     whatsappTemplateLanguage: "en",
     emailSubject: "Support update: {{ticket_subject}}",
@@ -127,7 +129,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "SITE_NOTICE",
     label: "Official site notice broadcast",
     description: "When admin publishes a notice to all applicants.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_site_notice",
     whatsappTemplateLanguage: "en",
     emailSubject: "Portal notice: {{notice_title}}",
@@ -136,7 +138,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     event: "PORTAL_ALERT",
     label: "General portal alert",
     description: "Other in-portal alerts and admin messages.",
-    channel: "BOTH",
+    channel: "EMAIL",
     whatsappTemplateName: "vgmf_portal_alert",
     whatsappTemplateLanguage: "en",
     emailSubject: "{{alert_title}}",
@@ -194,6 +196,24 @@ export function getNotificationTemplate(
   event: NotificationEventKey
 ): NotificationEventTemplate {
   return templates.find((item) => item.event === event) ?? DEFAULT_NOTIFICATION_TEMPLATES[0];
+}
+
+export function applyEmailOnlyAlertChannels(
+  templates: NotificationEventTemplate[]
+): NotificationEventTemplate[] {
+  return templates.map((item) =>
+    item.event === "OTP_VERIFICATION"
+      ? item
+      : {
+          ...item,
+          channel:
+            item.channel === "WHATSAPP" || item.channel === "BOTH" ? "EMAIL" : item.channel,
+        }
+  );
+}
+
+export function isCriticalWhatsAppEvent(event: NotificationEventKey): boolean {
+  return CRITICAL_WHATSAPP_EVENTS.includes(event);
 }
 
 export function validateNotificationSetup(input: {
@@ -258,7 +278,7 @@ export function validateNotificationSetup(input: {
 
     if (needsWhatsapp && !template.whatsappTemplateName.trim()) {
       issues.push({
-        level: "error",
+        level: isCriticalWhatsAppEvent(template.event) ? "error" : "warning",
         event: template.event,
         message: `${template.label} requires a Meta WhatsApp template name.`,
       });

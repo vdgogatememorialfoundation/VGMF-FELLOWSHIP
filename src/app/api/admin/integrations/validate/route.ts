@@ -8,6 +8,7 @@ import {
 import {
   mergeNotificationTemplates,
   validateNotificationSetup,
+  isCriticalWhatsAppEvent,
   type NotificationEventKey,
 } from "@/lib/notification-templates";
 import {
@@ -79,10 +80,13 @@ export async function POST(request: NextRequest) {
         adminSettings.whatsappBusinessAccountId
       );
       if (!meta.ok) {
+        const critical = isCriticalWhatsAppEvent(item.event);
         issues.push({
-          level: "error",
+          level: critical ? "error" : "warning",
           event: item.event,
-          message: meta.message,
+          message: critical
+            ? meta.message
+            : `${meta.message} Set this event to Email only until the template is approved on Meta, or create the template in Meta Business Manager.`,
         });
       }
     }
