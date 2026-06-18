@@ -136,20 +136,26 @@ export async function ensureDraftApplication(
   const fields = buildApplicationFields(data, "DRAFT");
 
   if (existingApplicationId) {
-    const application = await prisma.application.update({
+    const existingApp = await prisma.application.findFirst({
       where: { id: existingApplicationId, userId },
-      data: fields,
     });
 
-    await attachResearchProposal(application.id, data);
-    await attachBudget(application.id, data);
+    if (existingApp) {
+      const application = await prisma.application.update({
+        where: { id: existingApplicationId, userId },
+        data: fields,
+      });
 
-    await prisma.formSubmission.update({
-      where: { id: submissionId },
-      data: { applicationId: application.id },
-    });
+      await attachResearchProposal(application.id, data);
+      await attachBudget(application.id, data);
 
-    return application;
+      await prisma.formSubmission.update({
+        where: { id: submissionId },
+        data: { applicationId: application.id },
+      });
+
+      return application;
+    }
   }
 
   const applicationNumber = await generateApplicationNumber();
@@ -191,39 +197,41 @@ export async function syncApplicationFromFormSubmission(
       where: { id: existingApplicationId, userId },
     });
 
-    const application = await prisma.application.update({
-      where: { id: existingApplicationId, userId },
-      data: {
-        ...fields,
-        status: "SCRUTINY",
-        statusHistory: {
-          createMany: {
-            data: [
-              {
-                fromStatus: existing?.status ?? "DRAFT",
-                toStatus: "SUBMITTED",
-                notes: "Application submitted via fellowship form",
-              },
-              {
-                fromStatus: "SUBMITTED",
-                toStatus: "SCRUTINY",
-                notes: "Queued for administrative scrutiny and document verification",
-              },
-            ],
+    if (existing) {
+      const application = await prisma.application.update({
+        where: { id: existingApplicationId, userId },
+        data: {
+          ...fields,
+          status: "SCRUTINY",
+          statusHistory: {
+            createMany: {
+              data: [
+                {
+                  fromStatus: existing.status ?? "DRAFT",
+                  toStatus: "SUBMITTED",
+                  notes: "Application submitted via fellowship form",
+                },
+                {
+                  fromStatus: "SUBMITTED",
+                  toStatus: "SCRUTINY",
+                  notes: "Queued for administrative scrutiny and document verification",
+                },
+              ],
+            },
           },
         },
-      },
-    });
+      });
 
-    await attachResearchProposal(application.id, data);
-    await attachBudget(application.id, data);
+      await attachResearchProposal(application.id, data);
+      await attachBudget(application.id, data);
 
-    await prisma.formSubmission.update({
-      where: { id: submissionId },
-      data: { applicationId: application.id },
-    });
+      await prisma.formSubmission.update({
+        where: { id: submissionId },
+        data: { applicationId: application.id },
+      });
 
-    return application;
+      return application;
+    }
   }
 
   const applicationNumber = await generateApplicationNumber();

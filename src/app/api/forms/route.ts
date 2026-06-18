@@ -18,6 +18,7 @@ import {
   repairOrphanUndertaking,
 } from "@/lib/undertaking-assets";
 import { completeQueryResubmit } from "@/lib/review-workflow";
+import { repairOrphanFormSubmission } from "@/lib/form-submission-reset";
 
 async function requireDigitalUndertaking(applicationId: string | null): Promise<string | null> {
   if (!applicationId) {
@@ -60,6 +61,8 @@ export async function GET(request: NextRequest) {
       where: { userId: user.id, formTemplateId: template.id },
       orderBy: { updatedAt: "desc" },
     });
+
+    submission = await repairOrphanFormSubmission(submission);
 
     if (submission?.applicationId) {
       applicationId = submission.applicationId;
@@ -190,9 +193,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (submissionId) {
-      const existing = await prisma.formSubmission.findUnique({
+      let existing = await prisma.formSubmission.findUnique({
         where: { id: submissionId, userId: user.id },
       });
+
+      if (!existing) {
+        return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+      }
+
+      existing = await repairOrphanFormSubmission(existing);
 
       if (!existing) {
         return NextResponse.json({ error: "Submission not found" }, { status: 404 });
@@ -209,7 +218,7 @@ export async function POST(request: NextRequest) {
         const allowResubmit =
           resubmitApp?.status === "QUERY_RAISED" && resubmitApp.requiresResubmit;
 
-        if (!allowResubmit) {
+        if (!allowResubmit && resubmitApp) {
           return NextResponse.json(
             { error: "This application has already been submitted" },
             { status: 400 }

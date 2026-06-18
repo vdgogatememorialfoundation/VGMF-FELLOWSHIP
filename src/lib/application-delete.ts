@@ -1,4 +1,5 @@
 import prisma from "./db";
+import { resetFormSubmissionsForDeletedApplication } from "./form-submission-reset";
 
 export type DeleteApplicationResult = {
   applicationNumber: string;
@@ -30,6 +31,8 @@ export async function deleteApplication(applicationId: string): Promise<DeleteAp
     application.fellowship?.installments.filter((i) => i.status === "RELEASED").length ?? 0;
 
   await prisma.$transaction(async (tx) => {
+    await resetFormSubmissionsForDeletedApplication(tx, applicationId);
+
     if (application.fellowship) {
       await tx.fellowship.delete({ where: { id: application.fellowship.id } });
     }
