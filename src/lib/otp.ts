@@ -3,6 +3,7 @@ import type { OtpPurpose } from "@prisma/client";
 import { sendWhatsAppOtp } from "./whatsapp";
 import { sendOtpEmail } from "./email";
 import { isWhatsAppConfigured } from "./integrations";
+import { normalizePhoneDigits } from "./phone";
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
@@ -15,7 +16,7 @@ export function generateOtpCode(): string {
 }
 
 function normalizePhone(phone: string): string {
-  return phone.replace(/\s/g, "");
+  return normalizePhoneDigits(phone);
 }
 
 function normalizeEmail(email: string): string {

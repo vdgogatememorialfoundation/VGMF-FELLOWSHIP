@@ -14,14 +14,18 @@ interface PortalLoginFormProps {
   showRegisterLink?: boolean;
 }
 
-function safeNextPath(value: string | null): string | null {
+function safeNextPath(value: string | null, portal: PortalType): string | null {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
+  const portalPrefix = PORTAL_DASHBOARD_PATHS[portal];
+  if (value === portalPrefix || value.startsWith(`${portalPrefix}/`)) {
+    return value;
+  }
+  return null;
 }
 
 function PortalLoginFormInner({ portal, showRegisterLink }: PortalLoginFormProps) {
   const searchParams = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get("next"));
+  const nextPath = safeNextPath(searchParams.get("next"), portal);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -50,7 +54,7 @@ function PortalLoginFormInner({ portal, showRegisterLink }: PortalLoginFormProps
         return;
       }
 
-      window.location.assign(nextPath || data.redirect || PORTAL_DASHBOARD_PATHS[portal]);
+      window.location.assign(data.redirect || nextPath || PORTAL_DASHBOARD_PATHS[portal]);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

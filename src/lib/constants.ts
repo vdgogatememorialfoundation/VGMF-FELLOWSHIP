@@ -1,6 +1,10 @@
 export const SITE_NAME =
   "Vaidya Gogate Memorial Foundation Fellowship Portal 2026";
 
+export const ORGANIZATION_NAME = "Vaidya Gogate Memorial Foundation";
+
+export const ORGANIZATION_FOOTER = `${ORGANIZATION_NAME} Fellowship Portal 2026`;
+
 export const CMS_PAGE_SLUGS = {
   ABOUT: "about",
   TERMS: "terms",

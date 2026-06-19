@@ -4,11 +4,19 @@ import {
   sendNotificationEmail,
   sendApplicationConfirmationEmail,
   sendWelcomeEmail,
+  sendApplicationStatusEmail,
 } from "./email";
 import { sendWhatsAppForEvent } from "./whatsapp";
-import { resolveStatusWhatsAppTemplateName } from "./notification-templates";
+import {
+  resolveStatusWhatsAppTemplateName,
+  type NotificationEventKey,
+} from "./notification-templates";
 import { getAccessControl } from "./access-control";
 import { getStatusLabel } from "./utils";
+import {
+  buildStatusEmailContent,
+  shouldSendMainStatusEmail,
+} from "./status-email";
 
 async function getUserContact(userId: string) {
   return prisma.user.findUnique({
@@ -50,7 +58,10 @@ export async function dispatchNotification(
   }
 
   if (sendWhatsapp && user.phone) {
-    await sendWhatsAppForEvent("PORTAL_ALERT", user.phone, [`*${title}*`, message]);
+    await sendWhatsAppForEvent("PORTAL_ALERT", user.phone, [], {
+      staticTemplate: true,
+      forceDelivery: true,
+    });
   }
 }
 
@@ -58,9 +69,18 @@ export async function dispatchStatusUpdate(
   userId: string,
   title: string,
   message: string,
-  options?: { applicationStatus?: string }
+  options?: {
+    applicationStatus?: string;
+    whatsappEvent?: NotificationEventKey;
+    email?: boolean;
+    whatsapp?: boolean;
+    applicationNumber?: string;
+    useDetailedStatusEmail?: boolean;
+  }
 ) {
   const access = await getAccessControl();
+  const sendEmail = options?.email ?? true;
+  const sendWhatsapp = options?.whatsapp ?? true;
 
   await prisma.notification.create({
     data: { userId, title, message, channel: "BOTH" },
@@ -71,15 +91,38 @@ export async function dispatchStatusUpdate(
 
   const name = user.profile?.name ?? user.email;
 
-  if (access.statusNotifyEmailEnabled) {
-    await sendNotificationEmail(user.email, name, title, message);
+  if (sendEmail && access.statusNotifyEmailEnabled) {
+    if (
+      options?.useDetailedStatusEmail &&
+      options.applicationNumber &&
+      options.applicationStatus
+    ) {
+      const emailContent = buildStatusEmailContent(
+        options.applicationStatus,
+        options.applicationNumber
+      );
+      await sendApplicationStatusEmail(
+        user.email,
+        name,
+        options.applicationNumber,
+        emailContent
+      );
+    } else {
+      await sendNotificationEmail(user.email, name, title, message);
+    }
   }
 
-  if (access.statusNotifyWhatsappEnabled && user.phone) {
-    const templateName = resolveStatusWhatsAppTemplateName(options?.applicationStatus);
-    await sendWhatsAppForEvent("STATUS_UPDATE", user.phone, [], {
+  if (sendWhatsapp && access.statusNotifyWhatsappEnabled && user.phone) {
+    const whatsappEvent = options?.whatsappEvent ?? "STATUS_UPDATE";
+    const templateName =
+      whatsappEvent === "STATUS_UPDATE"
+        ? resolveStatusWhatsAppTemplateName(options?.applicationStatus)
+        : undefined;
+
+    await sendWhatsAppForEvent(whatsappEvent, user.phone, [], {
       templateName,
       staticTemplate: true,
+      forceDelivery: true,
     });
   }
 }
@@ -107,7 +150,10 @@ export async function sendWelcomeNotifications(
   }
 
   if (access.welcomeWhatsappEnabled && user?.phone) {
-    await sendWhatsAppForEvent("ACCOUNT_CREATED", user.phone, [], { staticTemplate: true });
+    await sendWhatsAppForEvent("ACCOUNT_CREATED", user.phone, [], {
+      staticTemplate: true,
+      forceDelivery: true,
+    });
   }
 }
 
@@ -137,7 +183,10 @@ export async function notifyApplicationSubmitted(
   }
 
   if (user?.phone && access.applicationNotifyWhatsappEnabled) {
-    await sendWhatsAppForEvent("APPLICATION_SUBMITTED", user.phone, [], { staticTemplate: true });
+    await sendWhatsAppForEvent("APPLICATION_SUBMITTED", user.phone, [], {
+      staticTemplate: true,
+      forceDelivery: true,
+    });
   }
 }
 
@@ -167,12 +216,20 @@ export async function notifyStatusChange(
   const label = getStatusLabel(status);
   const detail =
     STATUS_MESSAGES[status] ?? `Your application status has been updated to ${label}.`;
+  const sendExternal = shouldSendMainStatusEmail(options?.fromStatus, status);
 
   await dispatchStatusUpdate(
     userId,
     `Application Status: ${label}`,
     `Application ${appNumber}: ${detail}`,
-    { applicationStatus: status }
+    {
+      applicationStatus: status,
+      whatsappEvent: "STATUS_UPDATE",
+      email: sendExternal,
+      whatsapp: sendExternal,
+      applicationNumber: appNumber,
+      useDetailedStatusEmail: sendExternal,
+    }
   );
 }
 
@@ -184,7 +241,8 @@ export async function notifyDocumentResubmit(
   await dispatchStatusUpdate(
     userId,
     "Document Resubmission Required",
-    `Your ${docType.replace(/_/g, " ")} document requires resubmission. Reason: ${reason}`
+    `Your ${docType.replace(/_/g, " ")} document requires resubmission. Reason: ${reason}`,
+    { whatsappEvent: "DOCUMENT_REVIEW", email: false, whatsapp: false }
   );
 }
 
@@ -204,7 +262,11 @@ export async function notifyDocumentReviewed(
           ? `Your ${docType.replace(/_/g, " ")} document was rejected.${reason ? ` Reason: ${reason}` : ""} Please re-upload a corrected file.`
           : `Your ${docType.replace(/_/g, " ")} document status is now ${label}.${reason ? ` Note: ${reason}` : ""}`;
 
-  await dispatchStatusUpdate(userId, `Document Update: ${label}`, message);
+  await dispatchStatusUpdate(userId, `Document Update: ${label}`, message, {
+    whatsappEvent: "DOCUMENT_REVIEW",
+    email: false,
+    whatsapp: false,
+  });
 }
 
 export async function notifyInterviewScheduled(
@@ -216,7 +278,8 @@ export async function notifyInterviewScheduled(
   await dispatchStatusUpdate(
     userId,
     "Interview Scheduled",
-    `Your fellowship interview is scheduled for ${date} at ${time}. Meeting link: ${link}`
+    `Your fellowship interview is scheduled for ${date} at ${time}. Meeting link: ${link}`,
+    { whatsappEvent: "INTERVIEW_SCHEDULED" }
   );
 }
 
@@ -228,7 +291,8 @@ export async function notifyInstallmentReleased(
   await dispatchStatusUpdate(
     userId,
     "Installment Released",
-    `Installment ${installmentNo} of ₹${amount.toLocaleString("en-IN")} has been released to your account.`
+    `Installment ${installmentNo} of ₹${amount.toLocaleString("en-IN")} has been released to your account.`,
+    { whatsappEvent: "INSTALLMENT_RELEASED" }
   );
 }
 
@@ -236,7 +300,8 @@ export async function notifyReportDue(userId: string, quarter: number, year: num
   await dispatchStatusUpdate(
     userId,
     "Progress Report Due",
-    `Your Q${quarter} ${year} progress report is due. Please submit it at your earliest convenience.`
+    `Your Q${quarter} ${year} progress report is due. Please submit it at your earliest convenience.`,
+    { whatsappEvent: "PROGRESS_REPORT_DUE" }
   );
 }
 
@@ -258,5 +323,7 @@ export async function notifySiteNotice(
   title: string,
   content: string
 ) {
-  await dispatchStatusUpdate(userId, `Portal Notice: ${title}`, content);
+  await dispatchStatusUpdate(userId, `Portal Notice: ${title}`, content, {
+    whatsappEvent: "SITE_NOTICE",
+  });
 }

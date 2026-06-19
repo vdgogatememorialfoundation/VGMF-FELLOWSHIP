@@ -44,6 +44,8 @@ export async function createSession(userId: string): Promise<string> {
     .setExpirationTime(expiresAt)
     .sign(JWT_SECRET);
 
+  await prisma.session.deleteMany({ where: { userId } });
+
   await prisma.session.create({
     data: { userId, token, expiresAt },
   });

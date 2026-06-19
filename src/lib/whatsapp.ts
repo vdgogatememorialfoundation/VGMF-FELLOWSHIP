@@ -11,6 +11,7 @@ import {
   DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME,
   type NotificationEventKey,
 } from "./notification-templates";
+import { normalizePhoneE164 } from "./phone";
 
 export { isWhatsAppConfigured } from "./integrations";
 
@@ -21,11 +22,7 @@ export type WhatsAppSendResult = {
 };
 
 export function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.startsWith("91") && digits.length === 12) return digits;
-  if (digits.startsWith("0") && digits.length === 11) return `91${digits.slice(1)}`;
-  return digits;
+  return normalizePhoneE164(phone);
 }
 
 function normalizeWhatsAppLanguage(code: string): string {
@@ -319,7 +316,7 @@ export async function sendWhatsAppForEvent(
   event: NotificationEventKey,
   phone: string,
   bodyParameters: string[],
-  options?: { templateName?: string; staticTemplate?: boolean }
+  options?: { templateName?: string; staticTemplate?: boolean; forceDelivery?: boolean }
 ): Promise<WhatsAppSendResult> {
   const settings = await prisma.integrationSettings
     .findUnique({ where: { id: "default" }, select: { notificationTemplatesJson: true } })
@@ -328,8 +325,11 @@ export async function sendWhatsAppForEvent(
   const templates = mergeNotificationTemplates(settings?.notificationTemplatesJson);
   const template = getNotificationTemplate(templates, event);
 
-  if (template.channel === "EMAIL" || template.channel === "NONE") {
-    return { ok: true };
+  if (
+    !options?.forceDelivery &&
+    (template.channel === "EMAIL" || template.channel === "NONE")
+  ) {
+    return { ok: false, error: "WhatsApp delivery is disabled for this notification event." };
   }
 
   const templateName = options?.templateName?.trim() || template.whatsappTemplateName;
@@ -357,7 +357,9 @@ export async function sendWhatsAppMessage(
   phone: string,
   message: string
 ): Promise<boolean> {
-  const result = await sendWhatsAppForEvent("PORTAL_ALERT", phone, [message.slice(0, 1024)]);
+  const result = await sendWhatsAppForEvent("PORTAL_ALERT", phone, [message.slice(0, 1024)], {
+    forceDelivery: true,
+  });
   if (result.ok) return true;
 
   const textResult = await postWhatsAppPayload({
@@ -383,7 +385,9 @@ export async function sendWhatsAppMessageDetailed(
   phone: string,
   message: string
 ): Promise<WhatsAppSendResult> {
-  const templateResult = await sendWhatsAppForEvent("PORTAL_ALERT", phone, [message.slice(0, 1024)]);
+  const templateResult = await sendWhatsAppForEvent("PORTAL_ALERT", phone, [message.slice(0, 1024)], {
+    forceDelivery: true,
+  });
   if (templateResult.ok) return templateResult;
 
   const textResult = await postWhatsAppPayload({

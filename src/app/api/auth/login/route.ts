@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
+import { phoneLookupVariants } from "@/lib/phone";
 import { assertApplicantLoginEnabled } from "@/lib/access-control";
 
 export async function POST(request: NextRequest) {
@@ -31,9 +32,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const trimmedIdentifier = identifier.trim();
+    const phoneVariants = phoneLookupVariants(trimmedIdentifier);
+
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { phone: identifier }],
+        OR: [
+          { email: trimmedIdentifier.toLowerCase() },
+          ...phoneVariants.map((phone) => ({ phone })),
+        ],
         isActive: true,
       },
       include: { profile: true },

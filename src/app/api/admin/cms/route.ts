@@ -24,9 +24,82 @@ async function broadcastNoticeToApplicants(title: string, content: string) {
     select: { id: true },
   });
 
-  await Promise.all(
+  await Promise.allSettled(
     applicants.map((applicant) => notifySiteNotice(applicant.id, title, content))
   );
+}
+
+const SITE_SETTINGS_UPDATE_KEYS = [
+  "siteName",
+  "siteTagline",
+  "logoUrl",
+  "faviconUrl",
+  "headerOrgName",
+  "utilityBarText",
+  "tickerText",
+  "tickerEnabled",
+  "heroTitle",
+  "heroSubtitle",
+  "heroBadge",
+  "heroStats",
+  "heroSnapshot",
+  "highlightsTitle",
+  "highlightsSubtitle",
+  "highlights",
+  "journeyTitle",
+  "journeySubtitle",
+  "journeySteps",
+  "aboutBadge",
+  "aboutTitle",
+  "aboutContent",
+  "aboutCtaLabel",
+  "aboutCtaHref",
+  "faqTitle",
+  "faqSubtitle",
+  "faqItems",
+  "navLinks",
+  "footerQuickLinks",
+  "footerLegalLinks",
+  "footerAboutText",
+  "footerDeveloperCredit",
+  "footerText",
+  "contactEmail",
+  "contactPhone",
+  "contactAddress",
+  "signupEnabled",
+  "loginEnabled",
+  "signupDisabledMessage",
+  "loginDisabledMessage",
+  "signupOtpEmailEnabled",
+  "signupOtpWhatsappEnabled",
+  "applicationNotifyEmailEnabled",
+  "applicationNotifyWhatsappEnabled",
+  "welcomeEmailEnabled",
+  "welcomeWhatsappEnabled",
+  "alertsEmailEnabled",
+  "alertsWhatsappEnabled",
+  "statusNotifyEmailEnabled",
+  "statusNotifyWhatsappEnabled",
+  "maintenanceModeEnabled",
+  "maintenanceMessage",
+  "maintenanceAllowPortals",
+] as const;
+
+function pickSiteSettingsUpdate(data: Record<string, unknown>) {
+  const update: Record<string, unknown> = {};
+  for (const key of SITE_SETTINGS_UPDATE_KEYS) {
+    if (key in data) update[key] = data[key];
+  }
+  return update;
+}
+
+function resolveAppUrlSetting(
+  incoming: string | undefined,
+  existing: string | null
+): string | null {
+  const trimmed = incoming?.trim();
+  if (!trimmed) return existing;
+  return normalizeAppUrl(trimmed);
 }
 
 async function requireAdmin() {
@@ -78,8 +151,8 @@ export async function PUT(request: NextRequest) {
   if (section === "settings") {
     const settings = await prisma.siteSettings.upsert({
       where: { id: "default" },
-      update: data,
-      create: { id: "default", ...data },
+      update: pickSiteSettingsUpdate(data),
+      create: { id: "default", ...pickSiteSettingsUpdate(data) },
     });
     return NextResponse.json({ settings });
   }
@@ -105,7 +178,7 @@ export async function PUT(request: NextRequest) {
     await prisma.integrationSettings.upsert({
       where: { id: "default" },
       update: {
-        appUrl: data.appUrl?.trim() ? normalizeAppUrl(data.appUrl.trim()) : null,
+        appUrl: resolveAppUrlSetting(data.appUrl, existing?.appUrl ?? null),
         zeptomailToken: resolveSecret(data.zeptomailToken, existing?.zeptomailToken ?? null),
         zeptomailFromEmail: data.zeptomailFromEmail?.trim() || null,
         zeptomailFromName: data.zeptomailFromName?.trim() || null,
@@ -133,7 +206,7 @@ export async function PUT(request: NextRequest) {
       },
       create: {
         id: "default",
-        appUrl: data.appUrl?.trim() ? normalizeAppUrl(data.appUrl.trim()) : null,
+        appUrl: resolveAppUrlSetting(data.appUrl, existing?.appUrl ?? null),
         zeptomailToken: isMaskedSecret(data.zeptomailToken) ? null : data.zeptomailToken?.trim() || null,
         zeptomailFromEmail: data.zeptomailFromEmail?.trim() || null,
         zeptomailFromName: data.zeptomailFromName?.trim() || null,

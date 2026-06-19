@@ -11,6 +11,7 @@ import { registerSchema } from "@/lib/validations";
 import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
 import { isEmailOtpVerified, isPhoneOtpVerified } from "@/lib/otp";
 import { assertSignupEnabled, getAccessControl } from "@/lib/access-control";
+import { normalizePhoneDigits, phoneLookupVariants } from "@/lib/phone";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,10 +31,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, email, phone, password } = parsed.data;
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = phone ? normalizePhoneDigits(phone) : null;
     const access = await getAccessControl();
 
-    if (access.signupOtpWhatsappEnabled) {
-      const phoneOtpVerified = await isPhoneOtpVerified(phone, "REGISTER");
+    if (access.signupOtpWhatsappEnabled && normalizedPhone) {
+      const phoneOtpVerified = await isPhoneOtpVerified(normalizedPhone, "REGISTER");
       if (!phoneOtpVerified) {
         return NextResponse.json(
           { error: "Please verify your mobile number with WhatsApp OTP first" },
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (access.signupOtpEmailEnabled) {
-      const emailOtpVerified = await isEmailOtpVerified(email, "REGISTER");
+      const emailOtpVerified = await isEmailOtpVerified(normalizedEmail, "REGISTER");
       if (!emailOtpVerified) {
         return NextResponse.json(
           { error: "Please verify your email address with email OTP first" },
@@ -54,7 +57,12 @@ export async function POST(request: NextRequest) {
 
     const existing = await prisma.user.findFirst({
       where: {
-        OR: [{ email }, ...(phone ? [{ phone }] : [])],
+        OR: [
+          { email: normalizedEmail },
+          ...(normalizedPhone
+            ? phoneLookupVariants(normalizedPhone).map((variant) => ({ phone: variant }))
+            : []),
+        ],
       },
     });
 
@@ -71,8 +79,8 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         userId,
-        email,
-        phone: phone || null,
+        email: normalizedEmail,
+        phone: normalizedPhone,
         passwordHash,
         adminPassword: password,
         role: "APPLICANT",
@@ -90,7 +98,7 @@ export async function POST(request: NextRequest) {
       "EMAIL"
     );
 
-    await sendWelcomeNotifications(user.id, email, name, userId);
+    await sendWelcomeNotifications(user.id, normalizedEmail, name, userId);
 
     const token = await createSession(user.id);
     await setSessionCookie(token);

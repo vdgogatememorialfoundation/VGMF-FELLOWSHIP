@@ -231,6 +231,8 @@ export function mergeNotificationTemplates(
       whatsappTemplateLanguage:
         override.whatsappTemplateLanguage ?? base.whatsappTemplateLanguage,
       emailSubject: override.emailSubject ?? base.emailSubject,
+      whatsappStaticTemplate:
+        override.whatsappStaticTemplate ?? base.whatsappStaticTemplate,
     };
     if (merged.event === "OTP_VERIFICATION") {
       merged.whatsappTemplateName = resolveOtpWhatsAppTemplateName([
@@ -250,6 +252,7 @@ export function serializeNotificationTemplates(
     whatsappTemplateName: item.whatsappTemplateName,
     whatsappTemplateLanguage: item.whatsappTemplateLanguage,
     emailSubject: item.emailSubject,
+    whatsappStaticTemplate: item.whatsappStaticTemplate ?? false,
   }));
 }
 

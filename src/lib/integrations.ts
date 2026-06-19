@@ -10,6 +10,7 @@ export interface EmailIntegrationConfig {
   token: string | null;
   fromEmail: string | null;
   fromName: string;
+  otpSubject: string | null;
 }
 
 export interface WhatsAppIntegrationConfig {
@@ -101,6 +102,7 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
         db?.zeptomailFromName ||
         process.env.ZEPTOMAIL_FROM_NAME ||
         "VGMF Fellowship Portal",
+      otpSubject: db?.emailOtpSubject || null,
     },
     whatsapp: {
       token: db?.whatsappToken || process.env.WHATSAPP_TOKEN || null,
