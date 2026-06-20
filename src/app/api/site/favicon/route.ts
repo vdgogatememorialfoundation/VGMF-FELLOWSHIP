@@ -11,7 +11,7 @@ export async function GET() {
   return new NextResponse(asset.data, {
     headers: {
       "Content-Type": asset.mimeType,
-      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      "Cache-Control": "public, max-age=300, must-revalidate",
     },
   });
 }

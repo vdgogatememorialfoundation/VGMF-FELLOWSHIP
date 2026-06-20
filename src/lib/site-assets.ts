@@ -3,33 +3,72 @@ import prisma from "./db";
 export const SITE_LOGO_URL = "/api/site/logo";
 export const SITE_FAVICON_URL = "/api/site/favicon";
 
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_FAVICON_BYTES = 512 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/svg+xml",
+  "image/gif",
+]);
+
+function assetVersion(updatedAt?: Date | null): string {
+  return updatedAt ? String(new Date(updatedAt).getTime()) : "1";
+}
+
 export function resolveLogoUrl(settings: {
   logoData?: string | null;
   logoUrl?: string | null;
+  updatedAt?: Date | null;
 }): string | null {
-  if (settings.logoData) return SITE_LOGO_URL;
+  if (settings.logoData) {
+    return `${SITE_LOGO_URL}?v=${assetVersion(settings.updatedAt)}`;
+  }
   if (settings.logoUrl?.startsWith("http")) return settings.logoUrl;
-  if (settings.logoUrl?.startsWith("/api/site/")) return settings.logoUrl;
   return null;
 }
 
 export function resolveFaviconUrl(settings: {
   faviconData?: string | null;
   faviconUrl?: string | null;
+  updatedAt?: Date | null;
 }): string | null {
-  if (settings.faviconData) return SITE_FAVICON_URL;
+  if (settings.faviconData) {
+    return `${SITE_FAVICON_URL}?v=${assetVersion(settings.updatedAt)}`;
+  }
   if (settings.faviconUrl?.startsWith("http")) return settings.faviconUrl;
-  if (settings.faviconUrl?.startsWith("/api/site/")) return settings.faviconUrl;
   return null;
+}
+
+function validateImageFile(file: File, type: "logo" | "favicon") {
+  if (!(file instanceof File) || file.size <= 0) {
+    throw new Error(`Please choose a valid ${type} image file.`);
+  }
+
+  const maxBytes = type === "logo" ? MAX_LOGO_BYTES : MAX_FAVICON_BYTES;
+  if (file.size > maxBytes) {
+    throw new Error(
+      `${type === "logo" ? "Logo" : "Favicon"} must be under ${type === "logo" ? "2MB" : "512KB"}.`
+    );
+  }
+
+  const mimeType = file.type || "image/png";
+  if (!ALLOWED_IMAGE_TYPES.has(mimeType)) {
+    throw new Error("Unsupported image type. Use PNG, JPG, WebP, SVG, or GIF.");
+  }
+
+  return mimeType;
 }
 
 export async function saveSiteAsset(
   file: File,
   type: "logo" | "favicon"
 ): Promise<{ url: string; mimeType: string }> {
+  const mimeType = validateImageFile(file, type);
   const buffer = Buffer.from(await file.arrayBuffer());
   const base64 = buffer.toString("base64");
-  const mimeType = file.type || "image/png";
   const url = type === "logo" ? SITE_LOGO_URL : SITE_FAVICON_URL;
 
   const data =
@@ -37,17 +76,19 @@ export async function saveSiteAsset(
       ? { logoData: base64, logoMimeType: mimeType, logoUrl: url }
       : { faviconData: base64, faviconMimeType: mimeType, faviconUrl: url };
 
-  await prisma.siteSettings.upsert({
+  const saved = await prisma.siteSettings.upsert({
     where: { id: "default" },
     update: data,
     create: {
       id: "default",
-      siteName: "VGMF Fellowship Portal 2026",
+      siteName: "Vaidya Gogate Memorial Foundation Fellowship Portal 2026",
       ...data,
     },
+    select: { updatedAt: true },
   });
 
-  return { url, mimeType };
+  const versionedUrl = `${url}?v=${assetVersion(saved.updatedAt)}`;
+  return { url: versionedUrl, mimeType };
 }
 
 export async function getSiteAsset(type: "logo" | "favicon") {

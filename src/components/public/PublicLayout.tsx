@@ -59,45 +59,41 @@ export async function PublicHeader() {
         <AnnouncementTicker text={settings.tickerText} />
       )}
 
-      <header className="site-header">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-6">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
+      <header className="site-header-v2">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6">
+          <Link href="/" className="flex min-w-0 items-center gap-3.5">
             {settings.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={settings.logoUrl}
-                alt={settings.siteName}
-                width={48}
-                height={48}
-                className="h-11 w-11 rounded-2xl object-contain"
+                alt={settings.headerOrgName || settings.siteName}
+                width={52}
+                height={52}
+                className="h-12 w-12 rounded-2xl object-contain"
               />
             ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 text-sm font-extrabold text-primary-700 shadow-sm">
-                VG
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 to-primary-800 text-xs font-extrabold text-white shadow-md">
+                VGMF
               </div>
             )}
             <div className="min-w-0">
-              <p className="truncate font-display text-sm font-extrabold leading-tight text-ink sm:text-base">
+              <p className="truncate font-display text-sm font-extrabold leading-tight text-ink sm:text-base md:text-lg">
                 {settings.headerOrgName}
               </p>
-              <p className="truncate text-xs font-medium text-muted">
+              <p className="truncate text-xs font-medium text-muted sm:text-sm">
                 {settings.siteTagline || "Fellowship Portal 2026"}
               </p>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 lg:flex">
             {settings.navLinks.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-xl px-3 py-2 text-sm font-semibold text-ink-soft transition hover:bg-primary-50 hover:text-primary-700"
-              >
+              <Link key={item.href} href={item.href} className="nav-link-v2">
                 {item.label}
               </Link>
             ))}
             {settings.signupEnabled && (
-              <Link href="/register" className="btn-primary ml-2 text-sm">
+              <Link href="/register" className="btn-primary ml-3 text-sm">
                 Apply Now
               </Link>
             )}

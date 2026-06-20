@@ -424,26 +424,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const logo = formData.get("logo") as File | null;
-  const favicon = formData.get("favicon") as File | null;
+  const logo = formData.get("logo");
+  const favicon = formData.get("favicon");
 
-  if (!logo && !favicon) {
-    return NextResponse.json({ error: "No file" }, { status: 400 });
+  if (
+    !(logo instanceof File && logo.size > 0) &&
+    !(favicon instanceof File && favicon.size > 0)
+  ) {
+    return NextResponse.json({ error: "No image file provided" }, { status: 400 });
   }
 
-  const update: { logoUrl?: string; faviconUrl?: string } = {};
+  try {
+    const update: { logoUrl?: string; faviconUrl?: string } = {};
 
-  if (logo) {
-    const result = await uploadSiteAsset(logo, "logo");
-    update.logoUrl = result.url;
+    if (logo instanceof File && logo.size > 0) {
+      const result = await uploadSiteAsset(logo, "logo");
+      update.logoUrl = result.url;
+    }
+
+    if (favicon instanceof File && favicon.size > 0) {
+      const result = await uploadSiteAsset(favicon, "favicon");
+      update.faviconUrl = result.url;
+    }
+
+    return NextResponse.json({ success: true, ...update });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload failed";
+    console.error("Site asset upload error:", error);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  if (favicon) {
-    const result = await uploadSiteAsset(favicon, "favicon");
-    update.faviconUrl = result.url;
-  }
-
-  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
-
-  return NextResponse.json({ settings, ...update });
 }

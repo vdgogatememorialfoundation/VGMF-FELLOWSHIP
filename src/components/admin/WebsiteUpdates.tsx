@@ -387,17 +387,55 @@ export function WebsiteUpdates() {
   }
 
   async function uploadAsset(field: "logo" | "favicon", file: File) {
-    const formData = new FormData();
-    formData.append(field, file);
-    const res = await fetch("/api/admin/cms", { method: "POST", body: formData });
-    const data = await res.json();
-    if (res.ok) {
+    setError("");
+    setMessage("");
+
+    const maxBytes = field === "logo" ? 2 * 1024 * 1024 : 512 * 1024;
+    if (file.size > maxBytes) {
+      setError(
+        `${field === "logo" ? "Logo" : "Favicon"} must be under ${field === "logo" ? "2MB" : "512KB"}.`
+      );
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload a PNG, JPG, WebP, SVG, or GIF image.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append(field, file);
+      const res = await fetch("/api/admin/cms", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      let data: { error?: string; logoUrl?: string; faviconUrl?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setError("Upload failed. Please try a smaller image.");
+        return;
+      }
+
+      if (!res.ok) {
+        setError(data.error || "Upload failed");
+        return;
+      }
+
       setSettings((s) => ({
         ...s,
         logoUrl: data.logoUrl ?? s.logoUrl,
         faviconUrl: data.faviconUrl ?? s.faviconUrl,
       }));
-      setMessage(`${field === "logo" ? "Logo" : "Favicon"} uploaded!`);
+      setMessage(`${field === "logo" ? "Logo" : "Favicon"} uploaded successfully!`);
+      void load();
+    } catch {
+      setError("Upload failed. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -456,14 +494,37 @@ export function WebsiteUpdates() {
       {activeTab === "branding" && (
         <div className="card space-y-4">
           <h2 className="font-semibold">Branding & General</h2>
-          {settings.logoUrl && (
-            <img src={settings.logoUrl} alt="Logo" className="h-16 object-contain" />
-          )}
-          <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadAsset("logo", e.target.files[0])} className="text-sm" />
-          {settings.faviconUrl && (
-            <img src={settings.faviconUrl} alt="Favicon" className="h-8 w-8 object-contain" />
-          )}
-          <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadAsset("favicon", e.target.files[0])} className="text-sm" />
+          <p className="text-sm text-muted">
+            Upload logo (max 2MB) and favicon (max 512KB). PNG or JPG recommended.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 p-4">
+              <p className="mb-2 text-sm font-medium">Logo</p>
+              {settings.logoUrl && (
+                <img src={settings.logoUrl} alt="Logo preview" className="mb-3 h-16 object-contain" />
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                disabled={loading}
+                onChange={(e) => e.target.files?.[0] && uploadAsset("logo", e.target.files[0])}
+                className="text-sm"
+              />
+            </div>
+            <div className="rounded-xl border border-gray-200 p-4">
+              <p className="mb-2 text-sm font-medium">Favicon</p>
+              {settings.faviconUrl && (
+                <img src={settings.faviconUrl} alt="Favicon preview" className="mb-3 h-8 w-8 object-contain" />
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                disabled={loading}
+                onChange={(e) => e.target.files?.[0] && uploadAsset("favicon", e.target.files[0])}
+                className="text-sm"
+              />
+            </div>
+          </div>
           <Input label="Site Name" value={settings.siteName || ""} onChange={(e) => setSettings({ ...settings, siteName: e.target.value })} />
           <Input label="Site Tagline" value={settings.siteTagline || ""} onChange={(e) => setSettings({ ...settings, siteTagline: e.target.value })} />
           <Input label="Header Organisation Name" value={settings.headerOrgName || ""} onChange={(e) => setSettings({ ...settings, headerOrgName: e.target.value })} />
