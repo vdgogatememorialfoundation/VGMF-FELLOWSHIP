@@ -3,8 +3,18 @@ import { existsSync } from "fs";
 import path from "path";
 import prisma from "./db";
 import type { SessionUser } from "./auth";
+import {
+  filePathToR2Key,
+  getR2Object,
+  isR2Configured,
+  putR2Object,
+} from "./r2-storage";
 
 const STAFF_ROLES = new Set(["ADMIN", "STAFF", "TRUSTEE", "COMMITTEE", "FINANCE"]);
+
+export function isObjectStorageConfigured(): boolean {
+  return isR2Configured();
+}
 
 export function encodeFileData(buffer: Buffer): string {
   return buffer.toString("base64");
@@ -137,6 +147,45 @@ export async function writeUploadToDisk(relativePath: string, buffer: Buffer): P
 
   await mkdir(path.dirname(diskPath), { recursive: true });
   await writeFile(diskPath, buffer);
+}
+
+/** Write bytes to Cloudflare R2 (production) and local disk (dev fallback). */
+export async function writeStoredUpload(
+  relativePath: string,
+  buffer: Buffer,
+  mimeType?: string | null
+): Promise<void> {
+  if (isR2Configured()) {
+    await putR2Object(filePathToR2Key(relativePath), buffer, mimeType);
+    return;
+  }
+
+  await writeUploadToDisk(relativePath, buffer);
+}
+
+/** Read bytes from R2, then local disk. */
+export async function readStoredUploadBytes(relativePath: string): Promise<Buffer | null> {
+  if (isR2Configured()) {
+    const fromR2 = await getR2Object(filePathToR2Key(relativePath));
+    if (fromR2) return fromR2;
+  }
+
+  return readFileFromDisk(relativePath);
+}
+
+/** When R2 is active, store files in the bucket only — not PostgreSQL. */
+export function prepareFileDataForStorage(buffer: Buffer): string | null {
+  if (isR2Configured()) return null;
+  return encodeFileData(buffer);
+}
+
+export async function persistUpload(
+  relativePath: string,
+  buffer: Buffer,
+  mimeType?: string | null
+): Promise<{ fileData: string | null }> {
+  await writeStoredUpload(relativePath, buffer, mimeType);
+  return { fileData: prepareFileDataForStorage(buffer) };
 }
 
 export function mimeTypeFromFileName(fileName: string): string {
@@ -294,25 +343,19 @@ export async function getApplicationDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  if (document.fileData?.trim()) {
+  const storedBytes = await readStoredUploadBytes(document.filePath);
+  if (storedBytes) {
     return {
-      data: decodeFileData(document.fileData),
+      data: storedBytes,
       fileName: document.fileName,
       mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
       applicationUserId: document.application.userId,
     };
   }
 
-  const diskData = await readFileFromDisk(document.filePath);
-  if (diskData) {
-    const fileData = encodeFileData(diskData);
-    await prisma.applicationDocument.update({
-      where: { id: document.id },
-      data: { fileData },
-    }).catch(() => undefined);
-
+  if (document.fileData?.trim()) {
     return {
-      data: diskData,
+      data: decodeFileData(document.fileData),
       fileName: document.fileName,
       mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
       applicationUserId: document.application.userId,
@@ -330,25 +373,19 @@ export async function getFellowshipDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  if (document.fileData?.trim()) {
+  const storedBytes = await readStoredUploadBytes(document.filePath);
+  if (storedBytes) {
     return {
-      data: decodeFileData(document.fileData),
+      data: storedBytes,
       fileName: document.fileName,
       mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
       applicationUserId: document.fellowship.application.userId,
     };
   }
 
-  const diskData = await readFileFromDisk(document.filePath);
-  if (diskData) {
-    const fileData = encodeFileData(diskData);
-    await prisma.fellowshipDocument.update({
-      where: { id: document.id },
-      data: { fileData },
-    }).catch(() => undefined);
-
+  if (document.fileData?.trim()) {
     return {
-      data: diskData,
+      data: decodeFileData(document.fileData),
       fileName: document.fileName,
       mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
       applicationUserId: document.fellowship.application.userId,
@@ -364,6 +401,17 @@ export async function readStoredUpload(segments: string[]) {
     record?.fileName ??
     normalizeUploadSegments(segments)[segments.length - 1] ??
     "file";
+
+  if (record?.filePath) {
+    const storedBytes = await readStoredUploadBytes(record.filePath);
+    if (storedBytes) {
+      return {
+        data: storedBytes,
+        fileName,
+        mimeType: record.mimeType || mimeTypeFromFileName(fileName),
+      };
+    }
+  }
 
   if (record?.fileData?.trim()) {
     return {

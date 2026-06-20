@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { FellowshipDocType, FellowshipStage } from "@prisma/client";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { awardFellowship, releaseInstallment } from "@/lib/fellowship-service";
 import { generateAndStoreFellowshipAgreement } from "@/lib/agreement-service";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { BUDGET_MAX } from "@/lib/utils";
-import { toUploadApiUrl, encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
+import { toUploadApiUrl, persistUpload } from "@/lib/upload-files";
 
 const ADMIN_UPLOAD_TYPES: FellowshipDocType[] = [
   "ACCEPTANCE_LETTER",
@@ -112,22 +110,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Fellowship not found" }, { status: 404 });
       }
 
-      const uploadDir = path.join(
-        process.cwd(),
-        "public",
-        "uploads",
-        "fellowships",
-        fellowshipId,
-        `inst${installmentNo}`
-      );
-      await mkdir(uploadDir, { recursive: true });
       const fileName = `${docType}_${Date.now()}_${file.name}`;
-      const fullPath = path.join(uploadDir, fileName);
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(fullPath, buffer);
       const relativePath = `/uploads/fellowships/${fellowshipId}/inst${installmentNo}/${fileName}`;
-      const fileData = encodeFileData(buffer);
-      await writeUploadToDisk(relativePath, buffer);
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const { fileData } = await persistUpload(relativePath, buffer, file.type);
 
       const document = await prisma.fellowshipDocument.upsert({
         where: {

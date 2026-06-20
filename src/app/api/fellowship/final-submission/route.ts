@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
+import { persistUpload } from "@/lib/upload-files";
 
 async function saveFile(fellowshipId: string, prefix: string, file: File) {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "fellowships", fellowshipId);
-  await mkdir(uploadDir, { recursive: true });
   const fileName = `${prefix}_${Date.now()}_${file.name}`;
-  const fullPath = path.join(uploadDir, fileName);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(fullPath, buffer);
   const storedPath = `/uploads/fellowships/${fellowshipId}/${fileName}`;
-  await writeUploadToDisk(storedPath, buffer);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { fileData } = await persistUpload(storedPath, buffer, file.type);
   return {
     path: storedPath,
-    data: encodeFileData(buffer),
+    data: fileData,
   };
 }
 

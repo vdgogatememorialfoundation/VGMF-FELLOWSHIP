@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { canReplaceApplicationDocument } from "@/lib/document-review";
 import {
@@ -10,7 +8,11 @@ import {
   isManualIdentityDocumentType,
   syncManualIdentityVerification,
 } from "@/lib/manual-verification";
-import { encodeFileData, writeUploadToDisk, resolveApplicationStoredFileName, mapApplicationDocumentForClient } from "@/lib/upload-files";
+import {
+  persistUpload,
+  resolveApplicationStoredFileName,
+  mapApplicationDocumentForClient,
+} from "@/lib/upload-files";
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -86,21 +88,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", applicationId);
-    await mkdir(uploadDir, { recursive: true });
-
     const fileName = resolveApplicationStoredFileName({
       docType,
       originalFileName: file.name,
       existingFilePath: existingDoc?.filePath,
     });
-    const filePath = path.join(uploadDir, fileName);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
-
     const relativePath = `/uploads/${applicationId}/${fileName}`;
-    const fileData = encodeFileData(buffer);
-    await writeUploadToDisk(relativePath, buffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { fileData } = await persistUpload(relativePath, buffer, file.type);
 
     const document = existingDoc
       ? await prisma.applicationDocument.update({

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
+import { persistUpload } from "@/lib/upload-files";
 import { ensureApplicantFellowship } from "@/lib/fellowship-access";
 
 export async function GET() {
@@ -57,17 +55,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fellowship not found" }, { status: 404 });
     }
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "fellowships", fellowshipId);
-    await mkdir(uploadDir, { recursive: true });
-
     const fileName = `Q${quarter}_${year}_${Date.now()}_${reportFile.name}`;
-    const filePath = path.join(uploadDir, fileName);
-    const buffer = Buffer.from(await reportFile.arrayBuffer());
-    await writeFile(filePath, buffer);
-
     const reportPath = `/uploads/fellowships/${fellowshipId}/${fileName}`;
-    const reportData = encodeFileData(buffer);
-    await writeUploadToDisk(reportPath, buffer);
+    const buffer = Buffer.from(await reportFile.arrayBuffer());
+    const { fileData: reportData } = await persistUpload(reportPath, buffer, reportFile.type);
 
     const report = await prisma.progressReport.upsert({
       where: {

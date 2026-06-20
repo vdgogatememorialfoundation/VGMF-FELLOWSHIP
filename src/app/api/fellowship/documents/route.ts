@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import type { FellowshipDocType } from "@prisma/client";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { canReplaceFellowshipDocument } from "@/lib/document-review";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { isDigioBankAvailable, syncManualBankVerification } from "@/lib/manual-verification";
-import { toUploadApiUrl, encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
+import { toUploadApiUrl, persistUpload, mapFellowshipDocumentForClient } from "@/lib/upload-files";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -144,23 +142,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadDir = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "fellowships",
-      fellowshipId,
-      `inst${installmentNo}`
-    );
-    await mkdir(uploadDir, { recursive: true });
-
     const fileName = `${docType}_${Date.now()}_${file.name}`;
-    const fullPath = path.join(uploadDir, fileName);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(fullPath, buffer);
     const relativePath = `/uploads/fellowships/${fellowshipId}/inst${installmentNo}/${fileName}`;
-    const fileData = encodeFileData(buffer);
-    await writeUploadToDisk(relativePath, buffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { fileData } = await persistUpload(relativePath, buffer, file.type);
 
     const document = await prisma.fellowshipDocument.upsert({
       where: {
