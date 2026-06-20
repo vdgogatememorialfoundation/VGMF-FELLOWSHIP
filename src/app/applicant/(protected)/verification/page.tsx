@@ -17,18 +17,22 @@ type ApplicationSummary = {
 
 export default function ApplicantVerificationPage() {
   const [application, setApplication] = useState<ApplicationSummary | null>(null);
+  const [onlineIdentityEnabled, setOnlineIdentityEnabled] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/applications")
-      .then((r) => r.json())
-      .then((data) => {
-        const apps = (data.applications ?? []) as ApplicationSummary[];
+    Promise.all([
+      fetch("/api/applications").then((r) => r.json()),
+      fetch("/api/digio/session?purpose=APPLICANT_IDENTITY").then((r) => r.json()),
+    ])
+      .then(([appsData, digioData]) => {
+        const apps = (appsData.applications ?? []) as ApplicationSummary[];
         const active =
           apps.find((app) => !["DRAFT", "INCOMPLETE", "WITHDRAWN", "REJECTED"].includes(app.status)) ??
           apps[0] ??
           null;
         setApplication(active);
+        setOnlineIdentityEnabled(Boolean(digioData.configured));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -60,30 +64,58 @@ export default function ApplicantVerificationPage() {
         <p className="mt-1 font-mono text-sm text-gray-600">
           Application {formatApplicationNumber(application.applicationNumber)}
         </p>
-        <p className="mt-2 text-sm text-gray-600">
-          Complete secure online identity verification during document scrutiny. Have your government ID
-          ready and ensure good lighting for the camera check.
-        </p>
+        {onlineIdentityEnabled ? (
+          <p className="mt-2 text-sm text-gray-600">
+            Complete secure online identity verification during document scrutiny. Have your government
+            ID ready and ensure good lighting for the camera check.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-gray-600">
+            The Foundation verifies applicant identity manually from your uploaded documents and
+            registration proof. No online Digio step is required for this application.
+          </p>
+        )}
       </div>
 
       {showPanel ? (
-        <DigioVerificationPanel
-          purpose="APPLICANT_IDENTITY"
-          applicationId={application.id}
-          title="Applicant identity verification"
-          description="Verify your name and photo against your uploaded application details. This step is required before the Foundation can approve your documents when Digio is enabled."
-          verifiedAt={application.identityVerifiedAt}
-          onStatusChange={(status) =>
-            setApplication((prev) =>
-              prev ? { ...prev, identityVerificationStatus: status } : prev
-            )
-          }
-        />
+        onlineIdentityEnabled ? (
+          <DigioVerificationPanel
+            purpose="APPLICANT_IDENTITY"
+            applicationId={application.id}
+            title="Applicant identity verification"
+            description="Verify your name and photo against your uploaded application details through Digio."
+            verifiedAt={application.identityVerifiedAt}
+            onStatusChange={(status) =>
+              setApplication((prev) =>
+                prev ? { ...prev, identityVerificationStatus: status } : prev
+              )
+            }
+          />
+        ) : (
+          <div className="space-y-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+            <p className="font-medium text-green-950">Manual identity verification</p>
+            <p>
+              Your application is under document scrutiny. The verification team will confirm your identity
+              from the documents you submitted. You do not need to complete an online KYC session.
+            </p>
+            <p className="text-green-800">
+              Continue uploading or updating documents as requested. Bank account verification on My
+              Fellowship uses Digio separately when you reach that stage.
+            </p>
+            {application.identityVerificationStatus === "APPROVED" &&
+              application.identityVerifiedAt && (
+                <p className="font-medium">
+                  Identity verified on{" "}
+                  {new Date(application.identityVerifiedAt).toLocaleString("en-IN")}.
+                </p>
+              )}
+          </div>
+        )
       ) : (
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-            Identity verification is available when your application is under document scrutiny. Current
-            status: <strong>{application.status.replace(/_/g, " ")}</strong>.
+            Identity verification is reviewed during document scrutiny. Current status:{" "}
+            <strong>{application.status.replace(/_/g, " ")}</strong>.
             {application.identityVerificationStatus === "APPROVED" && application.identityVerifiedAt && (
               <p className="mt-2 text-green-800">
                 Identity verified on {new Date(application.identityVerifiedAt).toLocaleString("en-IN")}.

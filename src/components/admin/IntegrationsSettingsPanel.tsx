@@ -53,6 +53,8 @@ type IntegrationsState = {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
     digioConfigured: boolean;
+  digioBankConfigured?: boolean;
+  digioIdentityConfigured?: boolean;
     emailSource: string;
     whatsappSource: string;
     digioSource: string;
@@ -211,7 +213,8 @@ export function IntegrationsSettingsPanel({
         >
           <p className="font-semibold">Digio Verification</p>
           <p className="text-sm text-gray-600">
-            {integrations.status.digioConfigured ? "Configured" : "Not configured"} · Source:{" "}
+            Bank: {integrations.status.digioBankConfigured ? "Active" : "Off"} · Identity KYC:{" "}
+            {integrations.status.digioIdentityConfigured ? "Active" : "Manual"} · Source:{" "}
             {integrations.status.digioSource}
           </p>
         </div>
@@ -718,12 +721,12 @@ export function IntegrationsSettingsPanel({
           }
         />
         <Input
-          label="Template — Applicant identity (DigiStudio)"
+          label="Template — Applicant identity (optional DigiStudio KYC)"
           value={integrations.digioTemplateIdentity}
           onChange={(e) =>
             onIntegrationsChange({ ...integrations, digioTemplateIdentity: e.target.value })
           }
-          placeholder="e.g. DIGILOCKER_AADHAAR_PAN"
+          placeholder="Leave empty for manual identity verification during scrutiny"
         />
         <Input
           label="Template — Bank account (optional DigiStudio flow)"
@@ -742,9 +745,9 @@ export function IntegrationsSettingsPanel({
           placeholder="Optional — face-match / re-KYC template"
         />
         <p className="text-xs text-gray-500">
-          Create templates in Digio DigiStudio. Identity and undertaking flows use the Web SDK.
-          Bank verification uses Digio penny drop (IMPS) with the fellowship bank details on file.
-          Docs:{" "}
+          Client ID and secret are enough for bank penny-drop verification. Online applicant identity
+          KYC is optional — leave the identity template empty to verify applicants manually from
+          uploaded documents. Undertaking flows use the undertaking template when set. Docs:{" "}
           <a
             className="text-primary-700 underline"
             href="https://documentation.digio.in/digikyc/"
@@ -784,7 +787,8 @@ export function IntegrationsSettingsPanel({
               })
             }
           />
-          Require Digio identity verification before admin document scrutiny approval
+          Require Digio online identity verification before admin document scrutiny approval
+          {integrations.digioTemplateIdentity.trim() ? "" : " (set an identity template first)"}
         </label>
       </div>
 

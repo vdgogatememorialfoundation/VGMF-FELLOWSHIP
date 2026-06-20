@@ -279,7 +279,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   }
 
   const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents, {
-    requireDigioIdentity: digioMeta?.requireIdentityForScrutiny,
+    requireDigioIdentity:
+      !!digioMeta?.requireIdentityForScrutiny && !!digioMeta?.identityTemplateConfigured,
     identityVerificationStatus: app.identityVerificationStatus,
   });
   const nextActions = getNextActions(app.status as never);

@@ -28,7 +28,7 @@ export function shouldTrackIdentityVerification(
 ): boolean {
   if (!input.enabled) return false;
   if (input.status !== "NOT_STARTED") return true;
-  if (input.required) return SCRUTINY_PHASE_STATUSES.includes(applicationStatus);
+  if (!input.required) return false;
   return SCRUTINY_PHASE_STATUSES.includes(applicationStatus);
 }
 

@@ -209,13 +209,15 @@ export function DigioVerificationPanel({
   }
 
   if (!state.configured) {
+    const manualCopy =
+      purpose === "APPLICANT_IDENTITY"
+        ? "Online Digio KYC is not enabled for applicant identity. The Foundation verifies identity manually from your submitted documents — no action is required on this step."
+        : "Online verification is not active. Submit your documents as instructed — the Foundation will verify manually.";
+
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-        <p className="font-medium text-gray-800">{title}</p>
-        <p className="mt-1">
-          Online verification is not active. Submit your documents as instructed — the Foundation
-          will verify manually.
-        </p>
+      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+        <p className="font-medium text-green-950">{title}</p>
+        <p className="mt-1">{manualCopy}</p>
       </div>
     );
   }

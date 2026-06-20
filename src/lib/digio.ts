@@ -122,22 +122,54 @@ export async function getDigioConfig(): Promise<DigioConfig> {
   };
 }
 
-export async function isDigioConfigured(purpose?: VerificationPurpose): Promise<boolean> {
+const WORKFLOW_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUsableDigioTemplateName(value: string | null | undefined): boolean {
+  if (!value?.trim()) return false;
+  if (WORKFLOW_UUID_RE.test(value.trim())) return false;
+  return true;
+}
+
+export async function isDigioBankConfigured(): Promise<boolean> {
   const config = await getDigioConfig();
-  if (!config.enabled) return false;
-  if (!config.clientId || !config.clientSecret) return false;
+  return !!(config.enabled && config.clientId && config.clientSecret);
+}
+
+export async function isDigioIdentityConfigured(): Promise<boolean> {
+  const config = await getDigioConfig();
+  return !!(
+    config.enabled &&
+    config.clientId &&
+    config.clientSecret &&
+    isUsableDigioTemplateName(config.templateIdentity)
+  );
+}
+export async function isDigioConfigured(purpose?: VerificationPurpose): Promise<boolean> {
+  if (purpose === "BANK_ACCOUNT") {
+    return isDigioBankConfigured();
+  }
+  if (purpose === "APPLICANT_IDENTITY") {
+    return isDigioIdentityConfigured();
+  }
+
+  const config = await getDigioConfig();
+  if (!config.enabled || !config.clientId || !config.clientSecret) return false;
 
   if (!purpose) {
-    return !!(config.templateIdentity || config.templateBank || config.templateUndertaking);
+    return (
+      (await isDigioIdentityConfigured()) ||
+      (await isDigioBankConfigured()) ||
+      isUsableDigioTemplateName(config.templateUndertaking)
+    );
   }
 
   switch (purpose) {
-    case "APPLICANT_IDENTITY":
-      return !!config.templateIdentity;
-    case "BANK_ACCOUNT":
-      return true;
     case "UNDERTAKING_IDENTITY":
-      return !!(config.templateUndertaking || config.templateIdentity);
+      return (
+        isUsableDigioTemplateName(config.templateUndertaking) ||
+        isUsableDigioTemplateName(config.templateIdentity)
+      );
     default:
       return false;
   }
@@ -149,11 +181,14 @@ export function getTemplateForPurpose(
 ): string | null {
   switch (purpose) {
     case "APPLICANT_IDENTITY":
-      return config.templateIdentity;
+      return isUsableDigioTemplateName(config.templateIdentity) ? config.templateIdentity : null;
     case "BANK_ACCOUNT":
-      return config.templateBank;
+      return isUsableDigioTemplateName(config.templateBank) ? config.templateBank : null;
     case "UNDERTAKING_IDENTITY":
-      return config.templateUndertaking || config.templateIdentity;
+      if (isUsableDigioTemplateName(config.templateUndertaking)) {
+        return config.templateUndertaking;
+      }
+      return isUsableDigioTemplateName(config.templateIdentity) ? config.templateIdentity : null;
     default:
       return null;
   }

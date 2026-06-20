@@ -1,4 +1,5 @@
 import prisma from "./db";
+import { isDigioBankConfigured, isDigioIdentityConfigured } from "./digio";
 import { maskSecret } from "./site-content";
 import {
   mergeNotificationTemplates,
@@ -159,14 +160,7 @@ export async function isWhatsAppConfigured(): Promise<boolean> {
 }
 
 export async function isDigioIntegrationConfigured(): Promise<boolean> {
-  const config = await getIntegrationConfig();
-  return !!(
-    config.digio.clientId &&
-    config.digio.clientSecret &&
-    (config.digio.templateIdentity ||
-      config.digio.templateBank ||
-      config.digio.templateUndertaking)
-  );
+  return (await isDigioBankConfigured()) || (await isDigioIdentityConfigured());
 }
 
 export async function getIntegrationSettingsForAdmin() {
@@ -210,6 +204,8 @@ export async function getIntegrationSettingsForAdmin() {
       emailConfigured: !!(config.email.token && config.email.fromEmail),
       whatsappConfigured: !!(config.whatsapp.token && config.whatsapp.phoneNumberId),
       digioConfigured: await isDigioIntegrationConfigured(),
+      digioBankConfigured: await isDigioBankConfigured(),
+      digioIdentityConfigured: await isDigioIdentityConfigured(),
       emailSource: db?.zeptomailToken ? "database" : process.env.ZEPTOMAIL_TOKEN ? "environment" : "none",
       whatsappSource: db?.whatsappToken ? "database" : process.env.WHATSAPP_TOKEN ? "environment" : "none",
       digioSource: db?.digioClientId ? "database" : process.env.DIGIO_CLIENT_ID ? "environment" : "none",

@@ -20,6 +20,7 @@ import {
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { repairApplicationIfNeeded } from "@/lib/fellowship-access";
 import { getIntegrationConfig } from "@/lib/integrations";
+import { isDigioIdentityConfigured } from "@/lib/digio";
 import { shouldTrackIdentityVerification } from "@/lib/identity-verification-tracking";
 import {
   buildTrackingHeadline,
@@ -64,12 +65,7 @@ export async function GET() {
   });
 
   const integrationConfig = await getIntegrationConfig();
-  const digioIdentityEnabled = Boolean(
-    integrationConfig.digio.enabled &&
-      integrationConfig.digio.clientId &&
-      integrationConfig.digio.clientSecret &&
-      integrationConfig.digio.templateIdentity
-  );
+  const digioIdentityEnabled = await isDigioIdentityConfigured();
 
   const payload = await Promise.all(
     applications.map(async (app) => {

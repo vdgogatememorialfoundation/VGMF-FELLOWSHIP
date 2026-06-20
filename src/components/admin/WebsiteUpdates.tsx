@@ -149,6 +149,8 @@ interface Integrations {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
     digioConfigured: boolean;
+    digioBankConfigured?: boolean;
+    digioIdentityConfigured?: boolean;
     emailSource: string;
     whatsappSource: string;
     digioSource: string;
