@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
+import {
+  isDigioWebCallbackSuccess,
+  launchDigioWebKyc,
+  type DigioWebSdkEnvironment,
+  type DigioWebSdkInstance,
+} from "@/lib/digio-web-sdk";
 
 type VerificationPurpose = "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
 
@@ -20,19 +26,6 @@ type VerificationState = {
   } | null;
 };
 
-type DigioSdkInstance = {
-  init: () => void;
-  submit: (requestId: string, identifier: string, tokenId?: string) => void;
-};
-
-declare global {
-  interface Window {
-    Digio?: new (options: Record<string, unknown>) => DigioSdkInstance;
-  }
-}
-
-const DIGIO_SDK_URL = "https://ext-app.digio.in/sdk/v10/digio.js";
-
 const STATUS_STYLES: Record<string, string> = {
   APPROVED: "bg-green-50 text-green-800 border-green-200",
   DECLINED: "bg-red-50 text-red-800 border-red-200",
@@ -47,30 +40,14 @@ function formatStatus(status: string) {
   return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-let sdkLoadPromise: Promise<void> | null = null;
-
-function loadDigioSdk(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.Digio) return Promise.resolve();
-  if (sdkLoadPromise) return sdkLoadPromise;
-
-  sdkLoadPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${DIGIO_SDK_URL}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Digio SDK")));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = DIGIO_SDK_URL;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Digio SDK"));
-    document.body.appendChild(script);
-  });
-
-  return sdkLoadPromise;
+function redirectPathForPurpose(purpose: VerificationPurpose): string {
+  switch (purpose) {
+    case "UNDERTAKING_IDENTITY":
+      return "/applicant/undertaking";
+    case "APPLICANT_IDENTITY":
+    default:
+      return "/applicant/verification";
+  }
 }
 
 interface DigioVerificationPanelProps {
@@ -100,7 +77,7 @@ export function DigioVerificationPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [polling, setPolling] = useState(false);
-  const digioRef = useRef<DigioSdkInstance | null>(null);
+  const digioRef = useRef<DigioWebSdkInstance | null>(null);
 
   const query = new URLSearchParams({ purpose });
   if (applicationId) query.set("applicationId", applicationId);
@@ -136,34 +113,24 @@ export function DigioVerificationPanel({
     accessToken?: string | null;
     environment?: string;
   }) {
-    await loadDigioSdk();
-    if (!window.Digio) {
-      throw new Error("Digio Web SDK is not available");
-    }
+    const environment = (data.environment === "sandbox" ? "sandbox" : "production") as DigioWebSdkEnvironment;
 
-    const digio = new window.Digio({
-      environment: data.environment === "sandbox" ? "sandbox" : "production",
-      is_iframe: true,
-      callback: (response: { error_code?: number | string }) => {
-        if (response?.error_code) {
-          setError("Verification was cancelled or failed. You can try again.");
+    const digio = await launchDigioWebKyc({
+      environment,
+      requestId: data.requestId,
+      customerIdentifier: data.customerIdentifier,
+      accessToken: data.accessToken,
+      redirectNextPath: redirectPathForPurpose(purpose),
+      onComplete: (response) => {
+        if (!isDigioWebCallbackSuccess(response)) {
+          setError("Verification was cancelled or did not complete. You can try again.");
         }
         setPolling(true);
-        loadStatus();
-      },
-      theme: {
-        primaryColor: "#1e3a5f",
-        secondaryColor: "#111827",
+        void loadStatus();
       },
     });
 
-    digio.init();
     digioRef.current = digio;
-    digio.submit(
-      data.requestId,
-      data.customerIdentifier,
-      data.accessToken ?? undefined
-    );
   }
 
   async function startVerification(forceNew = false) {
@@ -233,6 +200,9 @@ export function DigioVerificationPanel({
           <div>
             <h3 className="font-semibold text-gray-900">{title}</h3>
             <p className="mt-1 text-sm text-gray-600">{description}</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Powered by Digio Web SDK — secure ID scan and liveness check in your browser.
+            </p>
           </div>
           <span
             className={`rounded-full border px-3 py-1 text-xs font-medium ${

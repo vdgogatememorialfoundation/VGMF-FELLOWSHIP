@@ -10,6 +10,7 @@ import {
   isDigioConfigured,
   DigioApiError,
   getDigioSdkEnvironment,
+  getDigioWebSdkScriptUrlForConfig,
 } from "@/lib/digio";
 import { getFellowshipForApplicant } from "@/lib/fellowship-access";
 
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
         accessToken: latest.accessToken,
         status: latest.status,
         environment: (await getDigioConfig()).environment,
+        sdkScriptUrl: getDigioWebSdkScriptUrlForConfig(await getDigioConfig()),
         reused: true,
       });
     }
@@ -115,6 +117,7 @@ export async function POST(request: NextRequest) {
         accessToken: latest.accessToken,
         status: latest.status,
         environment: (await getDigioConfig()).environment,
+        sdkScriptUrl: getDigioWebSdkScriptUrlForConfig(await getDigioConfig()),
         reused: true,
       });
     }
@@ -153,6 +156,7 @@ export async function POST(request: NextRequest) {
       accessToken: digioRequest.access_token ?? null,
       status: digioRequest.status ?? "requested",
       environment: getDigioSdkEnvironment(config),
+      sdkScriptUrl: getDigioWebSdkScriptUrlForConfig(config),
       reused: false,
     });
   } catch (error) {

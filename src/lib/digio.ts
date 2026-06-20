@@ -500,6 +500,14 @@ export function getDigioSdkEnvironment(config: DigioConfig): "sandbox" | "produc
   return config.environment;
 }
 
+export function getDigioWebSdkScriptUrlForConfig(config: DigioConfig): string {
+  const version = process.env.NEXT_PUBLIC_DIGIO_WEB_SDK_VERSION || "v11";
+  if (config.environment === "sandbox") {
+    return `https://ext-app.digio.in/sdk/${version}/digio.js`;
+  }
+  return `https://app.digio.in/sdk/${version}/digio.js`;
+}
+
 export async function fetchDigioKycResponse(requestId: string): Promise<Record<string, unknown> | null> {
   const config = await getDigioConfig();
   if (!config.clientId || !config.clientSecret) return null;
