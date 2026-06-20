@@ -18,6 +18,8 @@ import {
   parseNoticeAttachment,
 } from "@/lib/notice-assets";
 
+export const dynamic = "force-dynamic";
+
 async function broadcastNoticeToApplicants(title: string, content: string) {
   const applicants = await prisma.user.findMany({
     where: { role: "APPLICANT", isActive: true },
@@ -102,7 +104,27 @@ function pickSiteSettingsUpdate(data: Record<string, unknown>) {
   for (const key of SITE_SETTINGS_UPDATE_KEYS) {
     if (key in data) update[key] = data[key];
   }
+
+  for (const key of ["contactEmail", "contactPhone", "contactAddress"] as const) {
+    if (key in update && typeof update[key] === "string") {
+      const trimmed = (update[key] as string).trim();
+      update[key] = trimmed || null;
+    }
+  }
+
   return update;
+}
+
+function formatSiteSettingsForAdmin(
+  settings: NonNullable<Awaited<ReturnType<typeof prisma.siteSettings.findUnique>>>
+) {
+  return {
+    ...settings,
+    logoData: undefined,
+    faviconData: undefined,
+    logoUrl: resolveLogoUrl(settings),
+    faviconUrl: resolveFaviconUrl(settings),
+  };
 }
 
 function resolveAppUrlSetting(
@@ -140,21 +162,20 @@ export async function GET() {
     getIntegrationSettingsForAdmin(),
   ]);
 
-  return NextResponse.json({
-    settings: settings
-      ? {
-          ...settings,
-          logoData: undefined,
-          faviconData: undefined,
-          logoUrl: resolveLogoUrl(settings),
-          faviconUrl: resolveFaviconUrl(settings),
-        }
-      : null,
-    pages,
-    notices,
-    forms,
-    integrations,
-  });
+  return NextResponse.json(
+    {
+      settings: settings ? formatSiteSettingsForAdmin(settings) : null,
+      pages,
+      notices,
+      forms,
+      integrations,
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    }
+  );
 }
 
 export async function PUT(request: NextRequest) {
@@ -170,7 +191,14 @@ export async function PUT(request: NextRequest) {
       update: pickSiteSettingsUpdate(data),
       create: { id: "default", ...pickSiteSettingsUpdate(data) },
     });
-    return NextResponse.json({ settings });
+    return NextResponse.json(
+      { settings: formatSiteSettingsForAdmin(settings) },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   }
 
   if (section === "integrations") {

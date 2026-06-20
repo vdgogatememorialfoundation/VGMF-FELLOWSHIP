@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { NOTICE_CATEGORIES, getNoticeCategoryLabel } from "@/lib/notices";
 import type { NoticeCategory } from "@/lib/notices";
 import type { NavLink, FaqItem, HeroStat, SnapshotItem, HighlightTile, JourneyStep } from "@/lib/site-content";
+import { pickPartialSiteSettings } from "@/lib/site-content";
 import type { NotificationEventTemplate } from "@/lib/notification-templates";
 import { IntegrationsSettingsPanel } from "@/components/admin/IntegrationsSettingsPanel";
 import { SeoSettingsPanel } from "@/components/admin/SeoSettingsPanel";
@@ -37,6 +38,88 @@ const PAGE_SLUGS = [
   { slug: "PRIVACY", label: "Privacy Policy", route: "/privacy" },
   { slug: "REFUND", label: "Refund Policy", route: "/refund-policy" },
 ];
+
+const CMS_BRANDING_KEYS = [
+  "siteName",
+  "siteTagline",
+  "logoUrl",
+  "faviconUrl",
+  "headerOrgName",
+  "utilityBarText",
+  "contactEmail",
+  "contactPhone",
+  "contactAddress",
+] as const;
+
+const CMS_SEO_KEYS = [
+  "publicSiteUrl",
+  "seoMetaTitle",
+  "seoMetaDescription",
+  "seoKeywords",
+  "googleSiteVerification",
+  "googleAnalyticsId",
+  "seoIndexingEnabled",
+  "seoStructuredDataEnabled",
+  "siteName",
+  "siteTagline",
+] as const;
+
+const CMS_ACCESS_KEYS = [
+  "signupEnabled",
+  "loginEnabled",
+  "signupDisabledMessage",
+  "loginDisabledMessage",
+  "signupOtpEmailEnabled",
+  "signupOtpWhatsappEnabled",
+  "signupPasswordEnabled",
+  "loginPasswordEnabled",
+  "loginOtpWhatsappEnabled",
+  "loginOtpEmailEnabled",
+  "applicationNotifyEmailEnabled",
+  "applicationNotifyWhatsappEnabled",
+  "welcomeEmailEnabled",
+  "welcomeWhatsappEnabled",
+  "alertsEmailEnabled",
+  "alertsWhatsappEnabled",
+  "statusNotifyEmailEnabled",
+  "statusNotifyWhatsappEnabled",
+  "maintenanceModeEnabled",
+  "maintenanceMessage",
+  "maintenanceAllowPortals",
+] as const;
+
+const CMS_HEADER_KEYS = ["navLinks"] as const;
+
+const CMS_FOOTER_KEYS = [
+  "footerText",
+  "footerAboutText",
+  "footerDeveloperCredit",
+  "footerQuickLinks",
+  "footerLegalLinks",
+] as const;
+
+const CMS_HOMEPAGE_KEYS = [
+  "heroBadge",
+  "heroTitle",
+  "heroSubtitle",
+  "heroStats",
+  "heroSnapshot",
+  "highlightsTitle",
+  "highlightsSubtitle",
+  "highlights",
+  "journeyTitle",
+  "journeySubtitle",
+  "journeySteps",
+  "aboutBadge",
+  "aboutTitle",
+  "aboutContent",
+  "aboutCtaLabel",
+  "aboutCtaHref",
+] as const;
+
+const CMS_FAQ_KEYS = ["faqTitle", "faqSubtitle", "faqItems"] as const;
+
+const CMS_TICKER_KEYS = ["tickerText", "tickerEnabled"] as const;
 
 interface SiteSettingsState {
   siteName?: string;
@@ -218,6 +301,7 @@ export function WebsiteUpdates() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const [settings, setSettings] = useState<SiteSettingsState>({});
   const [pages, setPages] = useState<Record<string, { title: string; content: string; isPublished?: boolean }>>({});
@@ -242,10 +326,11 @@ export function WebsiteUpdates() {
   const [testEmail, setTestEmail] = useState("");
 
   const load = useCallback(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
         if (d.settings) setSettings(d.settings);
+        setSettingsLoaded(true);
         if (d.integrations) {
           setIntegrations({
             ...d.integrations,
@@ -266,6 +351,10 @@ export function WebsiteUpdates() {
         });
         setPages(map);
         setNotices(d.notices || []);
+      })
+      .catch(() => {
+        setError("Failed to load website settings. Refresh the page and try again.");
+        setSettingsLoaded(true);
       });
   }, []);
 
@@ -289,23 +378,25 @@ export function WebsiteUpdates() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         section: "settings",
-        data: {
-          signupOtpEmailEnabled: settings.signupOtpEmailEnabled,
-          signupOtpWhatsappEnabled: settings.signupOtpWhatsappEnabled,
-          signupPasswordEnabled: settings.signupPasswordEnabled,
-          loginPasswordEnabled: settings.loginPasswordEnabled,
-          loginOtpWhatsappEnabled: settings.loginOtpWhatsappEnabled,
-          loginOtpEmailEnabled: settings.loginOtpEmailEnabled,
-          applicationNotifyEmailEnabled: settings.applicationNotifyEmailEnabled,
-          applicationNotifyWhatsappEnabled: settings.applicationNotifyWhatsappEnabled,
-          welcomeEmailEnabled: settings.welcomeEmailEnabled,
-          welcomeWhatsappEnabled: settings.welcomeWhatsappEnabled,
-          alertsEmailEnabled: settings.alertsEmailEnabled,
-          alertsWhatsappEnabled: settings.alertsWhatsappEnabled,
-          statusNotifyEmailEnabled: settings.statusNotifyEmailEnabled,
-          statusNotifyWhatsappEnabled: settings.statusNotifyWhatsappEnabled,
-        },
+        data: pickPartialSiteSettings(settings as Record<string, unknown>, [
+          "signupOtpEmailEnabled",
+          "signupOtpWhatsappEnabled",
+          "signupPasswordEnabled",
+          "loginPasswordEnabled",
+          "loginOtpWhatsappEnabled",
+          "loginOtpEmailEnabled",
+          "applicationNotifyEmailEnabled",
+          "applicationNotifyWhatsappEnabled",
+          "welcomeEmailEnabled",
+          "welcomeWhatsappEnabled",
+          "alertsEmailEnabled",
+          "alertsWhatsappEnabled",
+          "statusNotifyEmailEnabled",
+          "statusNotifyWhatsappEnabled",
+        ]),
       }),
+      cache: "no-store",
+      credentials: "include",
     });
 
     const integrationsRes = await fetch("/api/admin/cms", {
@@ -323,6 +414,8 @@ export function WebsiteUpdates() {
           digioWebhookSecret: integrations.digioWebhookSecret.trim() || undefined,
         },
       }),
+      cache: "no-store",
+      credentials: "include",
     });
 
     setLoading(false);
@@ -400,15 +493,30 @@ export function WebsiteUpdates() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ section, data }),
+      cache: "no-store",
+      credentials: "include",
     });
     setLoading(false);
     if (res.ok) {
+      const d = await res.json().catch(() => ({}));
+      if (d.settings) {
+        setSettings((prev) => ({ ...prev, ...d.settings }));
+      }
       setMessage("Saved successfully!");
-      load();
+      if (section !== "settings") {
+        load();
+      }
     } else {
       const d = await res.json();
       setError(d.error || "Failed to save");
     }
+  }
+
+  function saveSettingsKeys(keys: readonly string[]) {
+    return saveSection(
+      "settings",
+      pickPartialSiteSettings(settings as Record<string, unknown>, keys)
+    );
   }
 
   async function uploadAsset(field: "logo" | "favicon", file: File) {
@@ -518,6 +626,9 @@ export function WebsiteUpdates() {
 
       {activeTab === "branding" && (
         <div className="card space-y-4">
+          {!settingsLoaded && (
+            <p className="text-sm text-gray-500">Loading saved branding settings…</p>
+          )}
           <h2 className="font-semibold">Branding & General</h2>
           <p className="text-sm text-muted">
             Upload logo (max 2MB) and favicon (max 512KB). PNG or JPG recommended.
@@ -561,7 +672,13 @@ export function WebsiteUpdates() {
             Click Save Branding below after editing contact details — changes are stored in the database
             and will not reset on refresh once saved.
           </p>
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Branding</Button>
+          <Button
+            loading={loading}
+            disabled={!settingsLoaded}
+            onClick={() => saveSettingsKeys(CMS_BRANDING_KEYS)}
+          >
+            Save Branding
+          </Button>
         </div>
       )}
 
@@ -571,7 +688,7 @@ export function WebsiteUpdates() {
           integrationAppUrl={integrations?.appUrl}
           loading={loading}
           onChange={setSettings}
-          onSave={() => saveSection("settings", settings)}
+          onSave={() => saveSettingsKeys(CMS_SEO_KEYS)}
         />
       )}
 
@@ -788,7 +905,7 @@ export function WebsiteUpdates() {
             </label>
           </div>
 
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>
+          <Button loading={loading} disabled={!settingsLoaded} onClick={() => saveSettingsKeys(CMS_ACCESS_KEYS)}>
             Save Access & Notification Settings
           </Button>
         </div>
@@ -798,7 +915,7 @@ export function WebsiteUpdates() {
         <div className="card space-y-4">
           <h2 className="font-semibold">Header Navigation</h2>
           <LinkListEditor label="Main navigation links" links={navLinks} onChange={(links) => setSettings({ ...settings, navLinks: links })} />
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Header</Button>
+          <Button loading={loading} disabled={!settingsLoaded} onClick={() => saveSettingsKeys(CMS_HEADER_KEYS)}>Save Header</Button>
         </div>
       )}
 
@@ -810,7 +927,7 @@ export function WebsiteUpdates() {
           <Input label="Developer Credit Line" value={settings.footerDeveloperCredit || ""} onChange={(e) => setSettings({ ...settings, footerDeveloperCredit: e.target.value })} />
           <LinkListEditor label="Quick links" links={footerQuickLinks} onChange={(links) => setSettings({ ...settings, footerQuickLinks: links })} />
           <LinkListEditor label="Legal links" links={footerLegalLinks} onChange={(links) => setSettings({ ...settings, footerLegalLinks: links })} />
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Footer</Button>
+          <Button loading={loading} disabled={!settingsLoaded} onClick={() => saveSettingsKeys(CMS_FOOTER_KEYS)}>Save Footer</Button>
         </div>
       )}
 
@@ -878,7 +995,7 @@ export function WebsiteUpdates() {
             </div>
           </div>
 
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Homepage</Button>
+          <Button loading={loading} disabled={!settingsLoaded} onClick={() => saveSettingsKeys(CMS_HOMEPAGE_KEYS)}>Save Homepage</Button>
         </div>
       )}
 
@@ -895,7 +1012,7 @@ export function WebsiteUpdates() {
             </div>
           ))}
           <Button type="button" variant="secondary" onClick={() => setSettings({ ...settings, faqItems: [...faqItems, { q: "New question?", a: "Answer here." }] })}>Add FAQ</Button>
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save FAQ</Button>
+          <Button loading={loading} disabled={!settingsLoaded} onClick={() => saveSettingsKeys(CMS_FAQ_KEYS)}>Save FAQ</Button>
         </div>
       )}
 
@@ -907,7 +1024,7 @@ export function WebsiteUpdates() {
             <input type="checkbox" checked={!!settings.tickerEnabled} onChange={(e) => setSettings({ ...settings, tickerEnabled: e.target.checked })} />
             Enable announcement ticker on public site
           </label>
-          <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Ticker</Button>
+          <Button loading={loading} disabled={!settingsLoaded} onClick={() => saveSettingsKeys(CMS_TICKER_KEYS)}>Save Ticker</Button>
         </div>
       )}
 

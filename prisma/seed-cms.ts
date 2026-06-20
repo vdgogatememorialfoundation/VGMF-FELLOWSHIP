@@ -32,8 +32,6 @@ async function seedAdmin() {
   const admin = await prisma.user.upsert({
     where: { email: "admin@vaidyagogate.org" },
     update: {
-      passwordHash,
-      adminPassword,
       role: "ADMIN",
       isActive: true,
     },

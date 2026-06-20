@@ -167,3 +167,15 @@ export function resolveOptionalSetting(
   if (!trimmed) return existing;
   return trimmed;
 }
+
+/** Save only the fields edited on a Website Updates tab — avoids overwriting other CMS values. */
+export function pickPartialSiteSettings(
+  data: Record<string, unknown>,
+  keys: readonly string[]
+): Record<string, unknown> {
+  const update: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (key in data) update[key] = data[key];
+  }
+  return update;
+}
