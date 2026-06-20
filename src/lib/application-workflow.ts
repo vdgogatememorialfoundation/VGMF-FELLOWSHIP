@@ -88,7 +88,7 @@ export function canApproveScrutiny(
   status: ApplicationStatus,
   documents: TrackingDocument[],
   options?: {
-    requireDiditIdentity?: boolean;
+    requireDigioIdentity?: boolean;
     identityVerificationStatus?: string;
   }
 ): { ok: boolean; reason?: string } {
@@ -105,7 +105,7 @@ export function canApproveScrutiny(
     };
   }
   if (
-    options?.requireDiditIdentity &&
+    options?.requireDigioIdentity &&
     options.identityVerificationStatus !== "APPROVED"
   ) {
     return {

@@ -13,7 +13,7 @@ import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel"
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
 import { AdminApplicationEditor } from "@/components/admin/AdminApplicationEditor";
-import { AdminDiditVerificationPanel } from "@/components/admin/AdminDiditVerificationPanel";
+import { AdminDigioVerificationPanel } from "@/components/admin/AdminDigioVerificationPanel";
 import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
 import {
   canApproveScrutiny,
@@ -123,15 +123,15 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [diditMeta, setDiditMeta] = useState<{
+  const [digioMeta, setDigioMeta] = useState<{
     requireIdentityForScrutiny: boolean;
-    identityWorkflowConfigured: boolean;
+    identityTemplateConfigured: boolean;
     webhookUrl: string;
   } | null>(null);
-  const [diditSessions, setDiditSessions] = useState<
+  const [verificationSessions, setVerificationSessions] = useState<
     Array<{
       id: string;
-      diditSessionId: string;
+      providerRequestId: string;
       purpose: "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
       status: string;
       completedAt: string | null;
@@ -150,8 +150,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       return;
     }
     setApp(data.application);
-    setDiditMeta(data.didit ?? null);
-    setDiditSessions(data.diditSessions ?? []);
+    setDigioMeta(data.digio ?? null);
+    setVerificationSessions(data.verificationSessions ?? []);
     setAdminNotes(data.application.adminNotes ?? "");
     setRejectionReason(data.application.rejectionReason ?? "");
   }
@@ -279,7 +279,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   }
 
   const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents, {
-    requireDiditIdentity: diditMeta?.requireIdentityForScrutiny,
+    requireDigioIdentity: digioMeta?.requireIdentityForScrutiny,
     identityVerificationStatus: app.identityVerificationStatus,
   });
   const nextActions = getNextActions(app.status as never);
@@ -374,16 +374,16 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           {!scrutinyCheck.ok && (
             <p className="mt-2 text-sm text-amber-700">{scrutinyCheck.reason}</p>
           )}
-          {diditMeta?.identityWorkflowConfigured && (
+          {digioMeta?.identityTemplateConfigured && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4">
-              <p className="text-sm font-medium text-gray-900">Didit identity verification</p>
+              <p className="text-sm font-medium text-gray-900">Digio identity verification</p>
               <p className="mt-1 text-sm text-gray-600">
                 Status:{" "}
                 <strong>{(app.identityVerificationStatus ?? "NOT_STARTED").replace(/_/g, " ")}</strong>
                 {app.identityVerifiedAt &&
                   ` · Verified ${new Date(app.identityVerifiedAt).toLocaleString("en-IN")}`}
               </p>
-              {diditMeta.requireIdentityForScrutiny && (
+              {digioMeta.requireIdentityForScrutiny && (
                 <p className="mt-2 text-xs text-amber-800">
                   Required before marking documents verified (enabled in API Settings).
                 </p>
@@ -393,11 +393,11 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {diditMeta?.identityWorkflowConfigured && (
+      {digioMeta?.identityTemplateConfigured && (
         <div className="card space-y-4">
-          <h2 className="font-semibold">Didit Verification Details</h2>
-          <AdminDiditVerificationPanel
-            sessions={diditSessions}
+          <h2 className="font-semibold">Digio Verification Details</h2>
+          <AdminDigioVerificationPanel
+            sessions={verificationSessions}
             identityStatus={app.identityVerificationStatus}
             identityVerifiedAt={app.identityVerifiedAt}
           />

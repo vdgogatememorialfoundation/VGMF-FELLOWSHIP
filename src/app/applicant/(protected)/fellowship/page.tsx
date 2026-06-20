@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InstallmentDocumentsPanel } from "@/components/fellowship/InstallmentDocumentsPanel";
-import { DiditVerificationPanel } from "@/components/verification/DiditVerificationPanel";
+import { DigioBankVerificationPanel } from "@/components/verification/DigioBankVerificationPanel";
 
 type Installment = {
   id: string;
@@ -293,12 +293,7 @@ export default function ApplicantFellowshipPage() {
         </Button>
 
         {f.bankSubmittedAt && !f.bankVerifiedAt && (
-          <DiditVerificationPanel
-            purpose="BANK_ACCOUNT"
-            fellowshipId={f.id}
-            title="Bank account verification"
-            description="Verify the bank account holder name and account details through Didit. Complete this after submitting your bank details above."
-          />
+          <DigioBankVerificationPanel fellowshipId={f.id} />
         )}
       </div>
 

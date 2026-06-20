@@ -1,24 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { DiditSdk } from "@didit-protocol/sdk-web";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 
-type DiditPurpose = "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
+type VerificationPurpose = "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
 
 type VerificationState = {
   configured: boolean;
   status: string;
+  environment?: string;
   session: {
     id: string;
     status: string;
-    verificationUrl: string | null;
+    customerIdentifier: string | null;
     completedAt: string | null;
     createdAt: string;
     updatedAt: string;
   } | null;
 };
+
+type DigioSdkInstance = {
+  init: () => void;
+  submit: (requestId: string, identifier: string, tokenId?: string) => void;
+};
+
+declare global {
+  interface Window {
+    Digio?: new (options: Record<string, unknown>) => DigioSdkInstance;
+  }
+}
+
+const DIGIO_SDK_URL = "https://ext-app.digio.in/sdk/v10/digio.js";
 
 const STATUS_STYLES: Record<string, string> = {
   APPROVED: "bg-green-50 text-green-800 border-green-200",
@@ -34,8 +47,34 @@ function formatStatus(status: string) {
   return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-interface DiditVerificationPanelProps {
-  purpose: DiditPurpose;
+let sdkLoadPromise: Promise<void> | null = null;
+
+function loadDigioSdk(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.Digio) return Promise.resolve();
+  if (sdkLoadPromise) return sdkLoadPromise;
+
+  sdkLoadPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${DIGIO_SDK_URL}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Failed to load Digio SDK")));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = DIGIO_SDK_URL;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Digio SDK"));
+    document.body.appendChild(script);
+  });
+
+  return sdkLoadPromise;
+}
+
+interface DigioVerificationPanelProps {
+  purpose: VerificationPurpose;
   title: string;
   description: string;
   applicationId?: string;
@@ -46,7 +85,7 @@ interface DiditVerificationPanelProps {
   verifiedAt?: string | null;
 }
 
-export function DiditVerificationPanel({
+export function DigioVerificationPanel({
   purpose,
   title,
   description,
@@ -56,11 +95,12 @@ export function DiditVerificationPanel({
   onStatusChange,
   showTracking = true,
   verifiedAt = null,
-}: DiditVerificationPanelProps) {
+}: DigioVerificationPanelProps) {
   const [state, setState] = useState<VerificationState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [polling, setPolling] = useState(false);
+  const digioRef = useRef<DigioSdkInstance | null>(null);
 
   const query = new URLSearchParams({ purpose });
   if (applicationId) query.set("applicationId", applicationId);
@@ -69,7 +109,7 @@ export function DiditVerificationPanel({
   const queryString = query.toString();
 
   const loadStatus = useCallback(async () => {
-    const res = await fetch(`/api/didit/session?${queryString}`);
+    const res = await fetch(`/api/digio/session?${queryString}`);
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || "Failed to load verification status");
@@ -90,25 +130,48 @@ export function DiditVerificationPanel({
     return () => clearInterval(timer);
   }, [polling, loadStatus]);
 
-  useEffect(() => {
-    DiditSdk.shared.onComplete = (result) => {
-      if (result.type === "completed" || result.type === "cancelled") {
+  async function launchDigioFlow(data: {
+    requestId: string;
+    customerIdentifier: string;
+    accessToken?: string | null;
+    environment?: string;
+  }) {
+    await loadDigioSdk();
+    if (!window.Digio) {
+      throw new Error("Digio Web SDK is not available");
+    }
+
+    const digio = new window.Digio({
+      environment: data.environment === "sandbox" ? "sandbox" : "production",
+      is_iframe: true,
+      callback: (response: { error_code?: number | string }) => {
+        if (response?.error_code) {
+          setError("Verification was cancelled or failed. You can try again.");
+        }
         setPolling(true);
         loadStatus();
-      }
-    };
+      },
+      theme: {
+        primaryColor: "#1e3a5f",
+        secondaryColor: "#111827",
+      },
+    });
 
-    return () => {
-      DiditSdk.shared.onComplete = undefined;
-    };
-  }, [loadStatus]);
+    digio.init();
+    digioRef.current = digio;
+    digio.submit(
+      data.requestId,
+      data.customerIdentifier,
+      data.accessToken ?? undefined
+    );
+  }
 
   async function startVerification(forceNew = false) {
     setLoading(true);
     setError("");
 
     try {
-      const res = await fetch("/api/didit/session", {
+      const res = await fetch("/api/digio/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -124,20 +187,18 @@ export function DiditVerificationPanel({
         return;
       }
 
-      const verificationUrl = data.verificationUrl || data.url;
-      if (!verificationUrl) {
-        setError(data.error || "Verification URL missing from Didit response");
+      if (!data.requestId || !data.customerIdentifier) {
+        setError("Digio response was incomplete. Check API Settings.");
         return;
       }
 
       setPolling(true);
-      DiditSdk.shared.startVerification({
-        url: verificationUrl,
-        configuration: {
-          closeModalOnComplete: true,
-        },
-      });
+      await launchDigioFlow(data);
       await loadStatus();
+    } catch (launchError) {
+      setError(
+        launchError instanceof Error ? launchError.message : "Could not launch Digio verification"
+      );
     } finally {
       setLoading(false);
     }

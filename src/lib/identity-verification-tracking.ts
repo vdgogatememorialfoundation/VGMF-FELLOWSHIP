@@ -1,10 +1,10 @@
-import type { ApplicationStatus, DiditVerificationStatus } from "@prisma/client";
+import type { ApplicationStatus, VerificationStatus } from "@prisma/client";
 import type { TrackingTimelineStep } from "./tracking-timeline";
 
 export type IdentityVerificationTrackingInput = {
   enabled: boolean;
   required: boolean;
-  status: DiditVerificationStatus;
+  status: VerificationStatus;
   verifiedAt: Date | string | null;
   sessionUpdatedAt?: Date | string | null;
   sessionStartedAt?: Date | string | null;
@@ -33,7 +33,7 @@ export function shouldTrackIdentityVerification(
 }
 
 export function mapIdentityVerificationTimelineState(
-  status: DiditVerificationStatus,
+  status: VerificationStatus,
   applicationStatus: ApplicationStatus
 ): TrackingTimelineStep["state"] {
   if (status === "APPROVED") return "complete";
@@ -47,7 +47,7 @@ export function mapIdentityVerificationTimelineState(
 }
 
 export function buildIdentityVerificationTimelineStep(input: {
-  status: DiditVerificationStatus;
+  status: VerificationStatus;
   applicationStatus: ApplicationStatus;
   verifiedAt: Date | string | null;
   sessionUpdatedAt?: Date | string | null;
@@ -58,9 +58,9 @@ export function buildIdentityVerificationTimelineStep(input: {
   if (input.status === "APPROVED") {
     description = "Your online identity verification is complete.";
   } else if (input.status === "IN_REVIEW") {
-    description = "Didit is reviewing your verification. No action needed right now.";
+    description = "Digio is reviewing your verification. No action needed right now.";
   } else if (input.status === "IN_PROGRESS") {
-    description = "Finish the Didit session if you closed it before completing all checks.";
+    description = "Finish the Digio session if you closed it before completing all checks.";
   } else if (input.status === "DECLINED") {
     description = "Verification was declined. Start a new session from Identity Verification.";
   } else if (input.status === "ABANDONED" || input.status === "EXPIRED") {
@@ -88,7 +88,7 @@ const DETAIL_STEPS = [
   {
     key: "identity-start",
     label: "Start verification",
-    description: "Open the secure Didit session from this page.",
+    description: "Open the secure Digio session from this page.",
   },
   {
     key: "identity-id",
@@ -108,7 +108,7 @@ const DETAIL_STEPS = [
 ] as const;
 
 function detailStepStates(
-  status: DiditVerificationStatus
+  status: VerificationStatus
 ): TrackingTimelineStep["state"][] {
   switch (status) {
     case "APPROVED":
@@ -129,7 +129,7 @@ function detailStepStates(
 }
 
 export function buildIdentityVerificationDetailSteps(input: {
-  status: DiditVerificationStatus;
+  status: VerificationStatus;
   verifiedAt: Date | string | null;
   sessionUpdatedAt?: Date | string | null;
   sessionStartedAt?: Date | string | null;
@@ -163,6 +163,6 @@ export function buildIdentityVerificationDetailSteps(input: {
   });
 }
 
-export function getIdentityVerificationStatusLabel(status: DiditVerificationStatus): string {
+export function getIdentityVerificationStatusLabel(status: VerificationStatus): string {
   return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }

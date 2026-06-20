@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { DiditVerificationPurpose } from "@prisma/client";
+import type { VerificationPurpose } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import {
-  createDiditSession,
-  buildDiditCallbackUrl,
-  getDiditConfig,
-  getLatestDiditSession,
-  isDiditConfigured,
-  DiditApiError,
-} from "@/lib/didit";
+  createDigioKycRequest,
+  getDigioConfig,
+  getLatestVerificationSession,
+  isDigioConfigured,
+  DigioApiError,
+  getDigioSdkEnvironment,
+} from "@/lib/digio";
 import { getFellowshipForApplicant } from "@/lib/fellowship-access";
 
 const purposeSchema = z.enum([
@@ -34,18 +34,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = createSessionSchema.parse(await request.json());
-    const purpose = body.purpose as DiditVerificationPurpose;
+    const purpose = body.purpose as VerificationPurpose;
     const forceNew = body.forceNew === true;
 
-    if (!(await isDiditConfigured(purpose))) {
+    if (purpose === "BANK_ACCOUNT") {
       return NextResponse.json(
-        { error: "Didit verification is not configured for this step" },
+        { error: "Use bank verification on the fellowship page for penny drop verification." },
+        { status: 400 }
+      );
+    }
+
+    if (!(await isDigioConfigured(purpose))) {
+      return NextResponse.json(
+        { error: "Digio verification is not configured for this step" },
         { status: 503 }
       );
     }
 
     let applicationId = body.applicationId ?? null;
-    let fellowshipId = body.fellowshipId ?? null;
+    const fellowshipId = body.fellowshipId ?? null;
 
     if (purpose === "APPLICANT_IDENTITY" || purpose === "UNDERTAKING_IDENTITY") {
       const application = applicationId
@@ -74,26 +81,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (purpose === "BANK_ACCOUNT") {
-      const fellowship = fellowshipId
-        ? await getFellowshipForApplicant(user.id, fellowshipId)
-        : await getFellowshipForApplicant(user.id);
-
-      if (!fellowship) {
-        return NextResponse.json({ error: "No fellowship found" }, { status: 404 });
-      }
-
-      if (!fellowship.bankSubmittedAt) {
-        return NextResponse.json(
-          { error: "Submit bank details before starting bank verification" },
-          { status: 400 }
-        );
-      }
-
-      fellowshipId = fellowship.id;
-    }
-
-    const latest = await getLatestDiditSession({
+    const latest = await getLatestVerificationSession({
       purpose,
       userId: user.id,
       applicationId: applicationId ?? undefined,
@@ -106,9 +94,11 @@ export async function POST(request: NextRequest) {
       ["APPROVED", "IN_REVIEW"].includes(latest.status)
     ) {
       return NextResponse.json({
-        sessionId: latest.diditSessionId,
-        verificationUrl: latest.verificationUrl,
+        requestId: latest.providerRequestId,
+        customerIdentifier: latest.customerIdentifier,
+        accessToken: latest.accessToken,
         status: latest.status,
+        environment: (await getDigioConfig()).environment,
         reused: true,
       });
     }
@@ -117,19 +107,27 @@ export async function POST(request: NextRequest) {
       !forceNew &&
       latest &&
       latest.status === "IN_PROGRESS" &&
-      latest.verificationUrl
+      latest.providerRequestId
     ) {
       return NextResponse.json({
-        sessionId: latest.diditSessionId,
-        verificationUrl: latest.verificationUrl,
+        requestId: latest.providerRequestId,
+        customerIdentifier: latest.customerIdentifier,
+        accessToken: latest.accessToken,
         status: latest.status,
+        environment: (await getDigioConfig()).environment,
         reused: true,
       });
     }
 
-    const diditConfig = await getDiditConfig();
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { phone: true, email: true, profile: { select: { name: true } } },
+    });
 
-    const vendorData = [
+    const customerIdentifier = dbUser?.phone?.trim() || dbUser?.email.trim() || user.email.trim();
+    const customerName = dbUser?.profile?.name?.trim() || user.name.trim() || user.email.split("@")[0];
+
+    const referenceId = [
       purpose,
       user.id,
       applicationId ?? "",
@@ -137,33 +135,29 @@ export async function POST(request: NextRequest) {
       Date.now().toString(),
     ].join(":");
 
-    const callbackPath = buildDiditCallbackUrl(
-      diditConfig.appUrl,
-      purpose === "BANK_ACCOUNT"
-        ? "/applicant/fellowship?verified=bank"
-        : purpose === "UNDERTAKING_IDENTITY"
-          ? "/applicant/undertaking?verified=identity"
-          : "/applicant/verification?verified=identity"
-    );
-
-    const { session } = await createDiditSession({
+    const { request: digioRequest } = await createDigioKycRequest({
       purpose,
       userId: user.id,
       applicationId,
       fellowshipId,
-      vendorData,
-      callbackPath,
+      customerIdentifier,
+      customerName,
+      referenceId,
     });
 
+    const config = await getDigioConfig();
+
     return NextResponse.json({
-      sessionId: session.session_id,
-      verificationUrl: session.url || session.verification_url,
-      status: session.status,
+      requestId: digioRequest.id,
+      customerIdentifier,
+      accessToken: digioRequest.access_token ?? null,
+      status: digioRequest.status ?? "requested",
+      environment: getDigioSdkEnvironment(config),
       reused: false,
     });
   } catch (error) {
-    console.error("Didit session error:", error);
-    if (error instanceof DiditApiError) {
+    console.error("Digio session error:", error);
+    if (error instanceof DigioApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     const message = error instanceof Error ? error.message : "Failed to create verification session";
@@ -177,7 +171,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const purpose = request.nextUrl.searchParams.get("purpose") as DiditVerificationPurpose | null;
+  const purpose = request.nextUrl.searchParams.get("purpose") as VerificationPurpose | null;
   const applicationId = request.nextUrl.searchParams.get("applicationId") ?? undefined;
   const fellowshipId = request.nextUrl.searchParams.get("fellowshipId") ?? undefined;
 
@@ -185,9 +179,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid purpose" }, { status: 400 });
   }
 
-  const configured = await isDiditConfigured(purpose);
+  const configured = await isDigioConfigured(purpose);
 
-  const latest = await getLatestDiditSession({
+  const latest = await getLatestVerificationSession({
     purpose,
     userId: user.id,
     applicationId,
@@ -223,15 +217,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const config = await getDigioConfig();
+
   return NextResponse.json({
     configured,
     purpose,
     status: summaryStatus,
+    environment: config.environment,
     session: latest
       ? {
-          id: latest.diditSessionId,
+          id: latest.providerRequestId,
           status: latest.status,
-          verificationUrl: latest.verificationUrl,
+          customerIdentifier: latest.customerIdentifier,
           completedAt: latest.completedAt,
           createdAt: latest.createdAt,
           updatedAt: latest.updatedAt,

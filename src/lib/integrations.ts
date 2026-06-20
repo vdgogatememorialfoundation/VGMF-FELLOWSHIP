@@ -28,15 +28,17 @@ export interface IntegrationConfig {
   appUrl: string;
   email: EmailIntegrationConfig;
   whatsapp: WhatsAppIntegrationConfig;
-  didit: DiditIntegrationConfig;
+  digio: DigioIntegrationConfig;
 }
 
-export interface DiditIntegrationConfig {
-  apiKey: string | null;
+export interface DigioIntegrationConfig {
+  clientId: string | null;
+  clientSecret: string | null;
   webhookSecret: string | null;
-  workflowIdIdentity: string | null;
-  workflowIdBank: string | null;
-  workflowIdUndertaking: string | null;
+  templateIdentity: string | null;
+  templateBank: string | null;
+  templateUndertaking: string | null;
+  environment: "sandbox" | "production";
   requireIdentityForScrutiny: boolean;
   enabled: boolean;
 }
@@ -75,6 +77,10 @@ export function normalizeAppUrl(url: string | null | undefined): string {
   }
 
   return normalized;
+}
+
+function resolveDigioEnvironment(value: string | null | undefined): "sandbox" | "production" {
+  return value?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production";
 }
 
 export async function getIntegrationConfig(): Promise<IntegrationConfig> {
@@ -119,21 +125,25 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
         db?.whatsappApiVersion || process.env.WHATSAPP_API_VERSION || "v22.0",
       defaultTemplateLanguage: otpTemplateLanguage,
     },
-    didit: {
-      apiKey: db?.diditApiKey || process.env.DIDIT_API_KEY || null,
-      webhookSecret: db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET || null,
-      workflowIdIdentity:
-        db?.diditWorkflowIdIdentity ||
-        process.env.DIDIT_WORKFLOW_ID ||
-        process.env.DIDIT_WORKFLOW_ID_IDENTITY ||
+    digio: {
+      clientId: db?.digioClientId || process.env.DIGIO_CLIENT_ID || null,
+      clientSecret: db?.digioClientSecret || process.env.DIGIO_CLIENT_SECRET || null,
+      webhookSecret: db?.digioWebhookSecret || process.env.DIGIO_WEBHOOK_SECRET || null,
+      templateIdentity:
+        db?.digioTemplateIdentity ||
+        process.env.DIGIO_TEMPLATE_IDENTITY ||
+        process.env.DIGIO_TEMPLATE_NAME ||
         null,
-      workflowIdBank: db?.diditWorkflowIdBank || process.env.DIDIT_WORKFLOW_ID_BANK || null,
-      workflowIdUndertaking:
-        db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || null,
+      templateBank: db?.digioTemplateBank || process.env.DIGIO_TEMPLATE_BANK || null,
+      templateUndertaking:
+        db?.digioTemplateUndertaking || process.env.DIGIO_TEMPLATE_UNDERTAKING || null,
+      environment: resolveDigioEnvironment(
+        db?.digioEnvironment || process.env.DIGIO_ENVIRONMENT
+      ),
       requireIdentityForScrutiny:
-        db?.diditRequireIdentityForScrutiny ??
-        process.env.DIDIT_REQUIRE_IDENTITY_FOR_SCRUTINY === "true",
-      enabled: db?.diditEnabled ?? process.env.DIDIT_ENABLED !== "false",
+        db?.digioRequireIdentityForScrutiny ??
+        process.env.DIGIO_REQUIRE_IDENTITY_FOR_SCRUTINY === "true",
+      enabled: db?.digioEnabled ?? process.env.DIGIO_ENABLED !== "false",
     },
   };
 }
@@ -148,14 +158,14 @@ export async function isWhatsAppConfigured(): Promise<boolean> {
   return !!(config.whatsapp.token && config.whatsapp.phoneNumberId);
 }
 
-export async function isDiditIntegrationConfigured(): Promise<boolean> {
+export async function isDigioIntegrationConfigured(): Promise<boolean> {
   const config = await getIntegrationConfig();
   return !!(
-    config.didit.apiKey &&
-    config.didit.webhookSecret &&
-    (config.didit.workflowIdIdentity ||
-      config.didit.workflowIdBank ||
-      config.didit.workflowIdUndertaking)
+    config.digio.clientId &&
+    config.digio.clientSecret &&
+    (config.digio.templateIdentity ||
+      config.digio.templateBank ||
+      config.digio.templateUndertaking)
   );
 }
 
@@ -182,25 +192,27 @@ export async function getIntegrationSettingsForAdmin() {
       db?.emailOtpSubject || "Verify your email — VGMF Fellowship Portal",
     notificationTemplates: mergeNotificationTemplates(db?.notificationTemplatesJson),
     whatsappWebhookUrl: `${normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL)}/api/webhooks/whatsapp`,
-    diditApiKey: maskSecret(db?.diditApiKey || process.env.DIDIT_API_KEY),
-    diditWebhookSecret: maskSecret(db?.diditWebhookSecret || process.env.DIDIT_WEBHOOK_SECRET),
-    diditWorkflowIdIdentity:
-      db?.diditWorkflowIdIdentity ||
-      process.env.DIDIT_WORKFLOW_ID ||
-      process.env.DIDIT_WORKFLOW_ID_IDENTITY ||
+    digioClientId: maskSecret(db?.digioClientId || process.env.DIGIO_CLIENT_ID),
+    digioClientSecret: maskSecret(db?.digioClientSecret || process.env.DIGIO_CLIENT_SECRET),
+    digioWebhookSecret: maskSecret(db?.digioWebhookSecret || process.env.DIGIO_WEBHOOK_SECRET),
+    digioTemplateIdentity:
+      db?.digioTemplateIdentity ||
+      process.env.DIGIO_TEMPLATE_IDENTITY ||
+      process.env.DIGIO_TEMPLATE_NAME ||
       "",
-    diditWorkflowIdBank: db?.diditWorkflowIdBank || process.env.DIDIT_WORKFLOW_ID_BANK || "",
-    diditWorkflowIdUndertaking:
-      db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || "",
-    diditRequireIdentityForScrutiny: config.didit.requireIdentityForScrutiny,
-    diditEnabled: config.didit.enabled,
+    digioTemplateBank: db?.digioTemplateBank || process.env.DIGIO_TEMPLATE_BANK || "",
+    digioTemplateUndertaking:
+      db?.digioTemplateUndertaking || process.env.DIGIO_TEMPLATE_UNDERTAKING || "",
+    digioEnvironment: config.digio.environment,
+    digioRequireIdentityForScrutiny: config.digio.requireIdentityForScrutiny,
+    digioEnabled: config.digio.enabled,
     status: {
       emailConfigured: !!(config.email.token && config.email.fromEmail),
       whatsappConfigured: !!(config.whatsapp.token && config.whatsapp.phoneNumberId),
-      diditConfigured: await isDiditIntegrationConfigured(),
+      digioConfigured: await isDigioIntegrationConfigured(),
       emailSource: db?.zeptomailToken ? "database" : process.env.ZEPTOMAIL_TOKEN ? "environment" : "none",
       whatsappSource: db?.whatsappToken ? "database" : process.env.WHATSAPP_TOKEN ? "environment" : "none",
-      diditSource: db?.diditApiKey ? "database" : process.env.DIDIT_API_KEY ? "environment" : "none",
+      digioSource: db?.digioClientId ? "database" : process.env.DIGIO_CLIENT_ID ? "environment" : "none",
     },
   };
 }

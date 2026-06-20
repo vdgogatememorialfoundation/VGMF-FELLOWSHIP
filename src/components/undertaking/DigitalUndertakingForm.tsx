@@ -6,7 +6,7 @@ import { SignaturePad } from "@/components/undertaking/SignaturePad";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { compressSignatureDataUrl } from "@/lib/signature-image";
-import { DiditVerificationPanel } from "@/components/verification/DiditVerificationPanel";
+import { DigioVerificationPanel } from "@/components/verification/DigioVerificationPanel";
 
 type UndertakingRecord = {
   id: string;
@@ -175,11 +175,11 @@ export function DigitalUndertakingForm() {
           </a>
         </div>
 
-        <DiditVerificationPanel
+        <DigioVerificationPanel
           purpose="UNDERTAKING_IDENTITY"
           applicationId={application.id}
           title="Undertaking identity verification"
-          description="Optional step to confirm your identity matches the signed undertaking. Required only if your Foundation admin enables this workflow."
+          description="Optional step to confirm your identity matches the signed undertaking. Required only if your Foundation admin enables this template."
         />
 
         <Link href="/applicant/forms" className="text-sm text-primary-700 underline">

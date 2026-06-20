@@ -136,20 +136,22 @@ interface Integrations {
   emailOtpSubject: string;
   whatsappWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
-  diditApiKey: string;
-  diditWebhookSecret: string;
-  diditWorkflowIdIdentity: string;
-  diditWorkflowIdBank: string;
-  diditWorkflowIdUndertaking: string;
-  diditRequireIdentityForScrutiny: boolean;
-  diditEnabled: boolean;
+  digioClientId: string;
+  digioClientSecret: string;
+  digioWebhookSecret: string;
+  digioTemplateIdentity: string;
+  digioTemplateBank: string;
+  digioTemplateUndertaking: string;
+  digioEnvironment: string;
+  digioRequireIdentityForScrutiny: boolean;
+  digioEnabled: boolean;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
-    diditConfigured: boolean;
+    digioConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
-    diditSource: string;
+    digioSource: string;
   };
 }
 
@@ -247,8 +249,9 @@ export function WebsiteUpdates() {
             ...d.integrations,
             zeptomailToken: "",
             whatsappToken: "",
-            diditApiKey: "",
-            diditWebhookSecret: "",
+            digioClientId: "",
+            digioClientSecret: "",
+            digioWebhookSecret: "",
           });
         }
 
@@ -313,8 +316,9 @@ export function WebsiteUpdates() {
           zeptomailToken: integrations.zeptomailToken.trim() || undefined,
           whatsappToken: integrations.whatsappToken.trim() || undefined,
           whatsappWebhookVerifyToken: integrations.whatsappWebhookVerifyToken.trim() || undefined,
-          diditApiKey: integrations.diditApiKey.trim() || undefined,
-          diditWebhookSecret: integrations.diditWebhookSecret.trim() || undefined,
+          digioClientId: integrations.digioClientId.trim() || undefined,
+          digioClientSecret: integrations.digioClientSecret.trim() || undefined,
+          digioWebhookSecret: integrations.digioWebhookSecret.trim() || undefined,
         },
       }),
     });

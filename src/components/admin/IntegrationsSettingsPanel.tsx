@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import type {
   NotificationChannelOption,
@@ -39,20 +40,22 @@ type IntegrationsState = {
   emailOtpSubject: string;
   whatsappWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
-  diditApiKey: string;
-  diditWebhookSecret: string;
-  diditWorkflowIdIdentity: string;
-  diditWorkflowIdBank: string;
-  diditWorkflowIdUndertaking: string;
-  diditRequireIdentityForScrutiny: boolean;
-  diditEnabled: boolean;
+  digioClientId: string;
+  digioClientSecret: string;
+  digioWebhookSecret: string;
+  digioTemplateIdentity: string;
+  digioTemplateBank: string;
+  digioTemplateUndertaking: string;
+  digioEnvironment: string;
+  digioRequireIdentityForScrutiny: boolean;
+  digioEnabled: boolean;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
-    diditConfigured: boolean;
+    digioConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
-    diditSource: string;
+    digioSource: string;
   };
 };
 
@@ -204,12 +207,12 @@ export function IntegrationsSettingsPanel({
           </p>
         </div>
         <div
-          className={`rounded-lg border p-4 ${integrations.status.diditConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
+          className={`rounded-lg border p-4 ${integrations.status.digioConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
         >
-          <p className="font-semibold">Didit Verification</p>
+          <p className="font-semibold">Digio Verification</p>
           <p className="text-sm text-gray-600">
-            {integrations.status.diditConfigured ? "Configured" : "Not configured"} · Source:{" "}
-            {integrations.status.diditSource}
+            {integrations.status.digioConfigured ? "Configured" : "Not configured"} · Source:{" "}
+            {integrations.status.digioSource}
           </p>
         </div>
       </div>
@@ -223,7 +226,7 @@ export function IntegrationsSettingsPanel({
           onChange={(e) => onIntegrationsChange({ ...integrations, appUrl: e.target.value })}
         />
         <p className="text-xs text-gray-500">
-          Used for login links, Didit callbacks, and the default WhatsApp webhook URL below.
+          Used for login links, Digio callbacks, and the default WhatsApp webhook URL below.
           For Google SEO, set the fellowship URL in the SEO & Google tab.
         </p>
       </div>
@@ -643,82 +646,145 @@ export function IntegrationsSettingsPanel({
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-semibold">Didit Identity Verification</h2>
+        <h2 className="font-semibold">Digio DigiKYC & Bank Verification</h2>
         <p className="text-sm text-gray-600">
-          When online Didit verification is disabled, applicants submit documents manually and the
-          Foundation verifies offline. Webhook URL:{" "}
+          When online Digio verification is disabled, applicants submit documents manually and the
+          Foundation verifies offline. Register this webhook URL in the Digio dashboard:{" "}
           <code className="text-xs">
             {integrations.appUrl
-              ? `${integrations.appUrl.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}/api/didit/webhook`
-              : "https://your-domain/api/didit/webhook"}
+              ? `${integrations.appUrl.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}/api/digio/webhook`
+              : "https://your-domain/api/digio/webhook"}
           </code>
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={integrations.diditEnabled !== false}
+            checked={integrations.digioEnabled !== false}
             onChange={(e) =>
-              onIntegrationsChange({ ...integrations, diditEnabled: e.target.checked })
+              onIntegrationsChange({ ...integrations, digioEnabled: e.target.checked })
             }
           />
-          Enable online Didit verification for applicants
+          Enable online Digio verification for applicants
         </label>
-        {integrations.status.diditConfigured && integrations.diditEnabled !== false && (
-          <p className="text-sm text-green-700">Didit credentials are saved. Leave secret fields empty to keep them.</p>
+        {integrations.status.digioConfigured && integrations.digioEnabled !== false && (
+          <p className="text-sm text-green-700">
+            Digio credentials are saved. Leave secret fields empty to keep them.
+          </p>
         )}
-        <Input
-          label="Didit API Key"
-          type="password"
-          value={integrations.diditApiKey}
-          placeholder={integrations.status.diditConfigured ? "Leave empty to keep saved key" : "Paste DIDIT_API_KEY"}
-          onChange={(e) => onIntegrationsChange({ ...integrations, diditApiKey: e.target.value })}
+        <Select
+          label="Digio environment"
+          value={integrations.digioEnvironment || "production"}
+          onChange={(e) =>
+            onIntegrationsChange({ ...integrations, digioEnvironment: e.target.value })
+          }
+          options={[
+            { value: "production", label: "Production (api.digio.in)" },
+            { value: "sandbox", label: "Sandbox (ext.digio.in)" },
+          ]}
         />
         <Input
-          label="Didit Webhook Secret"
+          label="Digio Client ID"
           type="password"
-          value={integrations.diditWebhookSecret}
+          value={integrations.digioClientId}
           placeholder={
-            integrations.status.diditConfigured ? "Leave empty to keep saved secret" : "Paste DIDIT_WEBHOOK_SECRET"
+            integrations.status.digioConfigured ? "Leave empty to keep saved ID" : "Paste DIGIO_CLIENT_ID"
           }
-          onChange={(e) => onIntegrationsChange({ ...integrations, diditWebhookSecret: e.target.value })}
+          onChange={(e) => onIntegrationsChange({ ...integrations, digioClientId: e.target.value })}
         />
         <Input
-          label="Workflow ID — Applicant identity"
-          value={integrations.diditWorkflowIdIdentity}
+          label="Digio Client Secret"
+          type="password"
+          value={integrations.digioClientSecret}
+          placeholder={
+            integrations.status.digioConfigured
+              ? "Leave empty to keep saved secret"
+              : "Paste DIGIO_CLIENT_SECRET"
+          }
           onChange={(e) =>
-            onIntegrationsChange({ ...integrations, diditWorkflowIdIdentity: e.target.value })
+            onIntegrationsChange({ ...integrations, digioClientSecret: e.target.value })
           }
-          placeholder="Use a KYC workflow (ID + Liveness), not Biometric Authentication"
         />
         <Input
-          label="Workflow ID — Bank account verification"
-          value={integrations.diditWorkflowIdBank}
-          onChange={(e) => onIntegrationsChange({ ...integrations, diditWorkflowIdBank: e.target.value })}
-        />
-        <Input
-          label="Workflow ID — Undertaking identity"
-          value={integrations.diditWorkflowIdUndertaking}
+          label="Digio Webhook Secret"
+          type="password"
+          value={integrations.digioWebhookSecret}
+          placeholder={
+            integrations.status.digioConfigured
+              ? "Leave empty to keep saved secret"
+              : "Paste DIGIO_WEBHOOK_SECRET"
+          }
           onChange={(e) =>
-            onIntegrationsChange({ ...integrations, diditWorkflowIdUndertaking: e.target.value })
+            onIntegrationsChange({ ...integrations, digioWebhookSecret: e.target.value })
           }
-          placeholder="Optional — face-match re-check; uses approved identity portrait"
+        />
+        <Input
+          label="Template — Applicant identity (DigiStudio)"
+          value={integrations.digioTemplateIdentity}
+          onChange={(e) =>
+            onIntegrationsChange({ ...integrations, digioTemplateIdentity: e.target.value })
+          }
+          placeholder="e.g. DIGILOCKER_AADHAAR_PAN"
+        />
+        <Input
+          label="Template — Bank account (optional DigiStudio flow)"
+          value={integrations.digioTemplateBank}
+          onChange={(e) =>
+            onIntegrationsChange({ ...integrations, digioTemplateBank: e.target.value })
+          }
+          placeholder="Optional — bank step uses penny drop API by default"
+        />
+        <Input
+          label="Template — Undertaking identity"
+          value={integrations.digioTemplateUndertaking}
+          onChange={(e) =>
+            onIntegrationsChange({ ...integrations, digioTemplateUndertaking: e.target.value })
+          }
+          placeholder="Optional — face-match / re-KYC template"
         />
         <p className="text-xs text-gray-500">
-          portrait_image errors mean the workflow expects a stored reference selfie. Use KYC for first-time
-          applicant checks. Undertaking re-checks reuse the portrait from the approved applicant identity session.
+          Create templates in Digio DigiStudio. Identity and undertaking flows use the Web SDK.
+          Bank verification uses Digio penny drop (IMPS) with the fellowship bank details on file.
+          Docs:{" "}
+          <a
+            className="text-primary-700 underline"
+            href="https://documentation.digio.in/digikyc/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            DigiKYC
+          </a>
+          ,{" "}
+          <a
+            className="text-primary-700 underline"
+            href="https://documentation.digio.in/digikyc/bank_account_verification/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Bank verification
+          </a>
+          ,{" "}
+          <a
+            className="text-primary-700 underline"
+            href="https://documentation.digio.in/webhooks/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Webhooks
+          </a>
+          .
         </p>
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="checkbox"
-            checked={integrations.diditRequireIdentityForScrutiny}
+            checked={integrations.digioRequireIdentityForScrutiny}
             onChange={(e) =>
               onIntegrationsChange({
                 ...integrations,
-                diditRequireIdentityForScrutiny: e.target.checked,
+                digioRequireIdentityForScrutiny: e.target.checked,
               })
             }
           />
-          Require Didit identity verification before admin document scrutiny approval
+          Require Digio identity verification before admin document scrutiny approval
         </label>
       </div>
 

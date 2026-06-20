@@ -45,7 +45,7 @@ export async function GET() {
       interview: true,
       trusteeApproval: true,
       budget: true,
-      diditSessions: {
+      verificationSessions: {
         where: { purpose: "APPLICANT_IDENTITY" },
         orderBy: { updatedAt: "desc" },
         take: 1,
@@ -64,10 +64,11 @@ export async function GET() {
   });
 
   const integrationConfig = await getIntegrationConfig();
-  const diditIdentityEnabled = Boolean(
-    integrationConfig.didit.enabled &&
-      integrationConfig.didit.apiKey &&
-      integrationConfig.didit.workflowIdIdentity
+  const digioIdentityEnabled = Boolean(
+    integrationConfig.digio.enabled &&
+      integrationConfig.digio.clientId &&
+      integrationConfig.digio.clientSecret &&
+      integrationConfig.digio.templateIdentity
   );
 
   const payload = await Promise.all(
@@ -77,11 +78,11 @@ export async function GET() {
       const effectiveStatus = repaired.status as typeof app.status;
       const fellowship = repaired.fellowship ?? app.fellowship;
       const fellowshipStage = fellowship?.currentStage ?? null;
-      const identitySession = app.diditSessions[0] ?? null;
-      const identityVerification = diditIdentityEnabled
+      const identitySession = app.verificationSessions[0] ?? null;
+      const identityVerification = digioIdentityEnabled
         ? {
             enabled: true,
-            required: integrationConfig.didit.requireIdentityForScrutiny,
+            required: integrationConfig.digio.requireIdentityForScrutiny,
             status: app.identityVerificationStatus,
             verifiedAt: app.identityVerifiedAt,
             sessionUpdatedAt: identitySession?.updatedAt ?? null,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { DiditVerificationPanel } from "@/components/verification/DiditVerificationPanel";
+import { DigioVerificationPanel } from "@/components/verification/DigioVerificationPanel";
 import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 import { formatApplicationNumber } from "@/lib/application-number";
 
@@ -67,11 +67,11 @@ export default function ApplicantVerificationPage() {
       </div>
 
       {showPanel ? (
-        <DiditVerificationPanel
+        <DigioVerificationPanel
           purpose="APPLICANT_IDENTITY"
           applicationId={application.id}
           title="Applicant identity verification"
-          description="Verify your name and photo against your uploaded application details. This step is required before the Foundation can approve your documents when Didit is enabled."
+          description="Verify your name and photo against your uploaded application details. This step is required before the Foundation can approve your documents when Digio is enabled."
           verifiedAt={application.identityVerifiedAt}
           onStatusChange={(status) =>
             setApplication((prev) =>

@@ -53,7 +53,7 @@ export function VerificationCompleteClient() {
           {isSuccess ? "Verification complete" : "Verification finished"}
         </h1>
         <p className="mt-2 text-sm text-gray-600">
-          Didit status: <strong>{status.replace(/_/g, " ")}</strong>
+          Digio status: <strong>{status.replace(/_/g, " ")}</strong>
         </p>
 
         {isSuccess ? (

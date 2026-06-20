@@ -143,13 +143,13 @@ enum ReviewPhase {
   VERIFICATION
 }
 
-enum DiditVerificationPurpose {
+enum VerificationPurpose {
   APPLICANT_IDENTITY
   BANK_ACCOUNT
   UNDERTAKING_IDENTITY
 }
 
-enum DiditVerificationStatus {
+enum VerificationStatus {
   NOT_STARTED
   IN_PROGRESS
   APPROVED
@@ -214,7 +214,7 @@ model User {
   queriesRaised        ApplicationQuery[]          @relation("QueriesRaised")
   notifications        Notification[]
   sessions             Session[]
-  diditSessions        DiditVerificationSession[]
+  verificationSessions VerificationSession[]
 
   @@map("users")
 }
@@ -285,7 +285,7 @@ model Application {
   termsAcceptedAt       DateTime?         @map("terms_accepted_at")
   undertakingAcceptedAt DateTime?         @map("undertaking_accepted_at")
   verificationNotes     String?           @map("verification_notes")
-  identityVerificationStatus DiditVerificationStatus @default(NOT_STARTED) @map("identity_verification_status")
+  identityVerificationStatus VerificationStatus @default(NOT_STARTED) @map("identity_verification_status")
   identityVerifiedAt    DateTime?         @map("identity_verified_at")
   eligibilityNotes      String?           @map("eligibility_notes")
   queryNotes            String?           @map("query_notes")
@@ -309,7 +309,7 @@ model Application {
   digitalUndertaking DigitalUndertaking?
   reviewAssignments  ApplicationReviewAssignment[]
   applicationQueries ApplicationQuery[]
-  diditSessions      DiditVerificationSession[]
+  verificationSessions VerificationSession[]
 
   @@map("applications")
 }
@@ -552,8 +552,8 @@ model Fellowship {
   bankBranch        String?   @map("bank_branch")
   bankSubmittedAt   DateTime? @map("bank_submitted_at")
   bankVerifiedAt    DateTime? @map("bank_verified_at")
-  bankVerificationStatus DiditVerificationStatus @default(NOT_STARTED) @map("bank_verification_status")
-  bankDiditVerifiedAt DateTime? @map("bank_didit_verified_at")
+  bankVerificationStatus VerificationStatus @default(NOT_STARTED) @map("bank_verification_status")
+  bankDigioVerifiedAt DateTime? @map("bank_didit_verified_at")
   agreementPdfData  String?   @map("agreement_pdf_data") @db.Text
   agreementGeneratedAt DateTime? @map("agreement_generated_at")
   isActive         Boolean  @default(true) @map("is_active")
@@ -570,7 +570,7 @@ model Fellowship {
   certificates     Certificate[]
   fellowshipDocuments FellowshipDocument[]
   reminders        FellowshipReminder[]
-  diditSessions    DiditVerificationSession[]
+  verificationSessions VerificationSession[]
 
   @@map("fellowships")
 }
@@ -833,34 +833,36 @@ model IntegrationSettings {
   whatsappWebhookVerifyToken  String?  @map("whatsapp_webhook_verify_token")
   emailOtpSubject             String?  @map("email_otp_subject")
   notificationTemplatesJson   Json?    @map("notification_templates_json")
-  diditApiKey                 String?  @map("didit_api_key")
-  diditWebhookSecret          String?  @map("didit_webhook_secret")
-  diditWorkflowIdIdentity     String?  @map("didit_workflow_id_identity")
-  diditWorkflowIdBank         String?  @map("didit_workflow_id_bank")
-  diditWorkflowIdUndertaking  String?  @map("didit_workflow_id_undertaking")
-  diditRequireIdentityForScrutiny Boolean @default(false) @map("didit_require_identity_for_scrutiny")
-  diditEnabled                    Boolean @default(true) @map("didit_enabled")
+  digioClientId                   String?  @map("digio_client_id")
+  digioClientSecret               String?  @map("digio_client_secret")
+  digioWebhookSecret              String?  @map("digio_webhook_secret")
+  digioTemplateIdentity           String?  @map("digio_template_identity")
+  digioTemplateBank               String?  @map("digio_template_bank")
+  digioTemplateUndertaking        String?  @map("digio_template_undertaking")
+  digioEnvironment                String?  @default("production") @map("digio_environment")
+  digioRequireIdentityForScrutiny Boolean  @default(false) @map("digio_require_identity_for_scrutiny")
+  digioEnabled                    Boolean  @default(true) @map("digio_enabled")
   updatedAt                   DateTime @updatedAt @map("updated_at")
 
   @@map("integration_settings")
 }
 
-model DiditVerificationSession {
-  id               String                   @id @default(cuid())
-  diditSessionId   String                   @unique @map("didit_session_id")
-  sessionToken     String?                  @map("session_token") @db.Text
-  verificationUrl  String?                  @map("verification_url") @db.Text
-  purpose          DiditVerificationPurpose
-  status           DiditVerificationStatus  @default(NOT_STARTED)
-  vendorData       String                   @map("vendor_data")
-  userId           String                   @map("user_id")
-  applicationId    String?                  @map("application_id")
-  fellowshipId     String?                  @map("fellowship_id")
-  decisionJson     Json?                    @map("decision_json")
-  webhookPayload   Json?                    @map("webhook_payload")
-  completedAt      DateTime?                @map("completed_at")
-  createdAt        DateTime                 @default(now()) @map("created_at")
-  updatedAt        DateTime                 @updatedAt @map("updated_at")
+model VerificationSession {
+  id                 String               @id @default(cuid())
+  providerRequestId  String               @unique @map("didit_session_id")
+  accessToken        String?              @map("session_token") @db.Text
+  customerIdentifier String?              @map("verification_url") @db.Text
+  purpose            VerificationPurpose
+  status             VerificationStatus   @default(NOT_STARTED)
+  referenceId        String               @map("vendor_data")
+  userId             String               @map("user_id")
+  applicationId      String?              @map("application_id")
+  fellowshipId       String?              @map("fellowship_id")
+  decisionJson       Json?                @map("decision_json")
+  webhookPayload     Json?                @map("webhook_payload")
+  completedAt        DateTime?            @map("completed_at")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)

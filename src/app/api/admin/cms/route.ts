@@ -206,16 +206,22 @@ export async function PUT(request: NextRequest) {
         ),
         emailOtpSubject: data.emailOtpSubject?.trim() || null,
         notificationTemplatesJson: serializeNotificationTemplates(notificationTemplates),
-        diditApiKey: resolveSecret(data.diditApiKey, existing?.diditApiKey ?? null),
-        diditWebhookSecret: resolveSecret(
-          data.diditWebhookSecret,
-          existing?.diditWebhookSecret ?? null
+        digioClientId: resolveSecret(data.digioClientId, existing?.digioClientId ?? null),
+        digioClientSecret: resolveSecret(
+          data.digioClientSecret,
+          existing?.digioClientSecret ?? null
         ),
-        diditWorkflowIdIdentity: data.diditWorkflowIdIdentity?.trim() || null,
-        diditWorkflowIdBank: data.diditWorkflowIdBank?.trim() || null,
-        diditWorkflowIdUndertaking: data.diditWorkflowIdUndertaking?.trim() || null,
-        diditRequireIdentityForScrutiny: Boolean(data.diditRequireIdentityForScrutiny),
-        diditEnabled: data.diditEnabled !== false,
+        digioWebhookSecret: resolveSecret(
+          data.digioWebhookSecret,
+          existing?.digioWebhookSecret ?? null
+        ),
+        digioTemplateIdentity: data.digioTemplateIdentity?.trim() || null,
+        digioTemplateBank: data.digioTemplateBank?.trim() || null,
+        digioTemplateUndertaking: data.digioTemplateUndertaking?.trim() || null,
+        digioEnvironment:
+          data.digioEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
+        digioRequireIdentityForScrutiny: Boolean(data.digioRequireIdentityForScrutiny),
+        digioEnabled: data.digioEnabled !== false,
       },
       create: {
         id: "default",
@@ -235,15 +241,20 @@ export async function PUT(request: NextRequest) {
         ),
         emailOtpSubject: data.emailOtpSubject?.trim() || null,
         notificationTemplatesJson: serializeNotificationTemplates(notificationTemplates),
-        diditApiKey: isMaskedSecret(data.diditApiKey) ? null : data.diditApiKey?.trim() || null,
-        diditWebhookSecret: isMaskedSecret(data.diditWebhookSecret)
+        digioClientId: isMaskedSecret(data.digioClientId) ? null : data.digioClientId?.trim() || null,
+        digioClientSecret: isMaskedSecret(data.digioClientSecret)
           ? null
-          : data.diditWebhookSecret?.trim() || null,
-        diditWorkflowIdIdentity: data.diditWorkflowIdIdentity?.trim() || null,
-        diditWorkflowIdBank: data.diditWorkflowIdBank?.trim() || null,
-        diditWorkflowIdUndertaking: data.diditWorkflowIdUndertaking?.trim() || null,
-        diditRequireIdentityForScrutiny: Boolean(data.diditRequireIdentityForScrutiny),
-        diditEnabled: data.diditEnabled !== false,
+          : data.digioClientSecret?.trim() || null,
+        digioWebhookSecret: isMaskedSecret(data.digioWebhookSecret)
+          ? null
+          : data.digioWebhookSecret?.trim() || null,
+        digioTemplateIdentity: data.digioTemplateIdentity?.trim() || null,
+        digioTemplateBank: data.digioTemplateBank?.trim() || null,
+        digioTemplateUndertaking: data.digioTemplateUndertaking?.trim() || null,
+        digioEnvironment:
+          data.digioEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
+        digioRequireIdentityForScrutiny: Boolean(data.digioRequireIdentityForScrutiny),
+        digioEnabled: data.digioEnabled !== false,
       },
     });
 

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
-import { getDiditConfig, refreshDiditSessionDecision } from "@/lib/didit";
+import { getDigioConfig, refreshVerificationSessionDecision } from "@/lib/digio";
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
 import { updateApplicationByAdmin } from "@/lib/admin-application-update";
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    let diditSessions = await prisma.diditVerificationSession.findMany({
+    let verificationSessions = await prisma.verificationSession.findMany({
       where: {
         OR: [{ applicationId: id }, ...(application.fellowship ? [{ fellowshipId: application.fellowship.id }] : [])],
       },
@@ -50,30 +50,30 @@ export async function GET(request: NextRequest) {
     });
 
     await Promise.all(
-      diditSessions
+      verificationSessions
         .filter(
           (session) =>
             !session.decisionJson &&
             ["APPROVED", "IN_REVIEW", "DECLINED"].includes(session.status)
         )
-        .map((session) => refreshDiditSessionDecision(session.diditSessionId))
+        .map((session) => refreshVerificationSessionDecision(session.providerRequestId))
     );
 
-    diditSessions = await prisma.diditVerificationSession.findMany({
+    verificationSessions = await prisma.verificationSession.findMany({
       where: {
         OR: [{ applicationId: id }, ...(application.fellowship ? [{ fellowshipId: application.fellowship.id }] : [])],
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const diditConfig = await getDiditConfig();
+    const digioConfig = await getDigioConfig();
     return NextResponse.json({
       application,
-      diditSessions,
-      didit: {
-        identityWorkflowConfigured: !!diditConfig.workflowIdIdentity,
-        requireIdentityForScrutiny: diditConfig.requireIdentityForScrutiny,
-        webhookUrl: `${diditConfig.appUrl}/api/didit/webhook`,
+      verificationSessions,
+      digio: {
+        identityTemplateConfigured: !!digioConfig.templateIdentity,
+        requireIdentityForScrutiny: digioConfig.requireIdentityForScrutiny,
+        webhookUrl: `${digioConfig.appUrl}/api/digio/webhook`,
       },
     });
   }
@@ -113,16 +113,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (status === "SCRUTINY_APPROVED") {
-      const diditConfig = await getDiditConfig();
+      const digioConfig = await getDigioConfig();
       if (
-        diditConfig.requireIdentityForScrutiny &&
-        diditConfig.workflowIdIdentity &&
+        digioConfig.requireIdentityForScrutiny &&
+        digioConfig.templateIdentity &&
         existing.identityVerificationStatus !== "APPROVED"
       ) {
         return NextResponse.json(
           {
             error:
-              "Applicant must complete Didit identity verification before document verification can be approved",
+              "Applicant must complete Digio identity verification before document verification can be approved",
           },
           { status: 400 }
         );

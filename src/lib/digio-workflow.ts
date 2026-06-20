@@ -1,17 +1,47 @@
-import type { DiditVerificationPurpose, DiditVerificationStatus, Prisma } from "@prisma/client";
+import type { Prisma, VerificationPurpose, VerificationStatus } from "@prisma/client";
 import prisma from "./db";
-import { mapDiditStatus, type DiditWebhookPayload } from "./didit";
+import {
+  extractKycRequestFromWebhook,
+  mapDigioEventToStatus,
+  mapDigioKycStatus,
+  type DigioWebhookPayload,
+} from "./digio";
 
-function isTerminalStatus(status: DiditVerificationStatus): boolean {
+function isTerminalStatus(status: VerificationStatus): boolean {
   return ["APPROVED", "DECLINED", "ABANDONED", "EXPIRED"].includes(status);
 }
 
-export async function applyDiditWebhook(payload: DiditWebhookPayload) {
-  const mappedStatus = mapDiditStatus(payload.status);
-  const now = new Date();
+function resolveWebhookStatus(
+  payload: DigioWebhookPayload & Record<string, unknown>
+): VerificationStatus {
+  if (typeof payload.event === "string" && payload.event.trim()) {
+    return mapDigioEventToStatus(payload.event);
+  }
 
-  const existing = await prisma.diditVerificationSession.findUnique({
-    where: { diditSessionId: payload.session_id },
+  const kycRequest = extractKycRequestFromWebhook(payload);
+  if (typeof kycRequest.status === "string") {
+    return mapDigioKycStatus(kycRequest.status);
+  }
+
+  return "IN_PROGRESS";
+}
+
+export async function applyDigioWebhook(payload: DigioWebhookPayload & Record<string, unknown>) {
+  const mappedStatus = resolveWebhookStatus(payload);
+  const now = new Date();
+  const kycRequest = extractKycRequestFromWebhook(payload);
+
+  const requestId =
+    (typeof kycRequest.id === "string" && kycRequest.id) ||
+    (typeof payload.id === "string" && payload.id) ||
+    "";
+
+  if (!requestId) {
+    return { ok: false as const, reason: "Missing request ID" };
+  }
+
+  const existing = await prisma.verificationSession.findUnique({
+    where: { providerRequestId: requestId },
     include: {
       application: true,
       fellowship: true,
@@ -22,10 +52,10 @@ export async function applyDiditWebhook(payload: DiditWebhookPayload) {
     return { ok: false as const, reason: "Unknown session" };
   }
 
-  const decisionJson = (payload.decision ?? null) as Prisma.InputJsonValue;
+  const decisionJson = (kycRequest ?? payload) as Prisma.InputJsonValue;
 
   await prisma.$transaction(async (tx) => {
-    await tx.diditVerificationSession.update({
+    await tx.verificationSession.update({
       where: { id: existing.id },
       data: {
         status: mappedStatus,
@@ -59,7 +89,7 @@ export async function applyDiditWebhook(payload: DiditWebhookPayload) {
       const fellowship = existing.fellowship;
       const bankUpdate: Prisma.FellowshipUpdateInput = {
         bankVerificationStatus: mappedStatus,
-        bankDiditVerifiedAt: mappedStatus === "APPROVED" ? now : null,
+        bankDigioVerifiedAt: mappedStatus === "APPROVED" ? now : null,
       };
 
       if (mappedStatus === "APPROVED" && fellowship) {
@@ -82,23 +112,9 @@ export async function applyDiditWebhook(payload: DiditWebhookPayload) {
 
   return {
     ok: true as const,
-    purpose: existing.purpose as DiditVerificationPurpose,
+    purpose: existing.purpose as VerificationPurpose,
     status: mappedStatus,
     applicationId: existing.applicationId,
     fellowshipId: existing.fellowshipId,
   };
-}
-
-export async function syncDiditSummaryFromSession(sessionId: string) {
-  const session = await prisma.diditVerificationSession.findUnique({
-    where: { diditSessionId: sessionId },
-  });
-  if (!session) return null;
-
-  return applyDiditWebhook({
-    session_id: session.diditSessionId,
-    status: session.status.replace(/_/g, " "),
-    vendor_data: session.vendorData,
-    decision: (session.decisionJson as Record<string, unknown> | null) ?? undefined,
-  });
 }

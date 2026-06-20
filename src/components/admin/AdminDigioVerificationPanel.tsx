@@ -1,10 +1,14 @@
 "use client";
 
-import { summarizeDiditDecision, getDiditPurposeLabel, getDiditStatusLabel } from "@/lib/didit-decision";
+import {
+  summarizeDigioDecision,
+  getVerificationPurposeLabel,
+  getVerificationStatusLabel,
+} from "@/lib/digio-decision";
 
-type DiditSessionRecord = {
+type VerificationSessionRecord = {
   id: string;
-  diditSessionId: string;
+  providerRequestId: string;
   purpose: "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
   status: string;
   completedAt: string | null;
@@ -28,19 +32,19 @@ function DetailGrid({ items }: { items: Array<{ label: string; value: string | n
   );
 }
 
-export function AdminDiditVerificationPanel({
+export function AdminDigioVerificationPanel({
   sessions,
   identityStatus,
   identityVerifiedAt,
 }: {
-  sessions: DiditSessionRecord[];
+  sessions: VerificationSessionRecord[];
   identityStatus?: string | null;
   identityVerifiedAt?: string | null;
 }) {
   if (sessions.length === 0 && !identityStatus) {
     return (
       <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600">
-        No Didit verification sessions recorded for this application yet.
+        No Digio verification sessions recorded for this application yet.
       </div>
     );
   }
@@ -57,21 +61,23 @@ export function AdminDiditVerificationPanel({
       )}
 
       {sessions.map((session) => {
-        const summary = summarizeDiditDecision(session.decisionJson);
+        const summary = summarizeDigioDecision(session.decisionJson);
         const idCheck = summary.idVerifications[0];
         const liveness = summary.livenessChecks[0];
         const faceMatch = summary.faceMatches[0];
-        const aml = summary.amlScreenings[0];
+        const bank = summary.bankVerification;
 
         return (
           <div key={session.id} className="rounded-lg border border-gray-200 bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-medium text-gray-900">{getDiditPurposeLabel(session.purpose)}</p>
-                <p className="mt-1 font-mono text-xs text-gray-500">{session.diditSessionId}</p>
+                <p className="font-medium text-gray-900">
+                  {getVerificationPurposeLabel(session.purpose)}
+                </p>
+                <p className="mt-1 font-mono text-xs text-gray-500">{session.providerRequestId}</p>
               </div>
               <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
-                {getDiditStatusLabel(session.status)}
+                {getVerificationStatusLabel(session.status)}
               </span>
             </div>
 
@@ -101,8 +107,27 @@ export function AdminDiditVerificationPanel({
               </div>
             )}
 
-            {(liveness || faceMatch || aml) && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {session.purpose === "BANK_ACCOUNT" && (bank.beneficiaryName || bank.accountNumber) && (
+              <div className="mt-4 rounded-lg bg-gray-50 p-3">
+                <p className="text-sm font-medium text-gray-900">Bank verification</p>
+                <DetailGrid
+                  items={[
+                    { label: "Status", value: bank.status },
+                    { label: "Account holder", value: bank.beneficiaryName },
+                    { label: "Account number", value: bank.accountNumber },
+                    { label: "IFSC", value: bank.ifsc },
+                    {
+                      label: "Name match score",
+                      value:
+                        bank.fuzzyMatchScore != null ? String(bank.fuzzyMatchScore) : null,
+                    },
+                  ]}
+                />
+              </div>
+            )}
+
+            {(liveness || faceMatch) && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {liveness && (
                   <div className="rounded-lg bg-gray-50 p-3 text-sm">
                     <p className="font-medium text-gray-900">Liveness</p>
@@ -121,22 +146,13 @@ export function AdminDiditVerificationPanel({
                     )}
                   </div>
                 )}
-                {aml && (
-                  <div className="rounded-lg bg-gray-50 p-3 text-sm">
-                    <p className="font-medium text-gray-900">AML screening</p>
-                    <p className="mt-1 text-gray-700">{aml.status}</p>
-                    {aml.totalHits != null && (
-                      <p className="text-xs text-gray-500">Hits: {aml.totalHits}</p>
-                    )}
-                  </div>
-                )}
               </div>
             )}
 
             {!session.decisionJson && (
               <p className="mt-3 text-sm text-amber-800">
-                Detailed verification data is not stored yet. It will appear after the Didit webhook
-                delivers the decision or when the session is refreshed.
+                Detailed verification data is not stored yet. It will appear after the Digio webhook
+                delivers the response or when the session is refreshed.
               </p>
             )}
           </div>

@@ -173,7 +173,7 @@ export function buildTrackingHeadline(
     if (identityVerification.status === "IN_REVIEW") {
       return {
         title: "Identity verification under review",
-        subtitle: "Didit is reviewing your session — document scrutiny continues in parallel",
+        subtitle: "Digio is reviewing your session — document scrutiny continues in parallel",
         tone: "progress",
       };
     }
