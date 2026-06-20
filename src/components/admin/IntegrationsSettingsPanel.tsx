@@ -213,8 +213,8 @@ export function IntegrationsSettingsPanel({
         >
           <p className="font-semibold">Digio Verification</p>
           <p className="text-sm text-gray-600">
-            Bank: {integrations.status.digioBankConfigured ? "Active" : "Off"} · Identity KYC:{" "}
-            {integrations.status.digioIdentityConfigured ? "Active" : "Manual"} · Source:{" "}
+            Identity KYC: {integrations.status.digioIdentityConfigured ? "Active" : "Off"} · Bank
+            penny drop: {integrations.status.digioBankConfigured ? "Active" : "Off"} · Source:{" "}
             {integrations.status.digioSource}
           </p>
         </div>
@@ -721,12 +721,12 @@ export function IntegrationsSettingsPanel({
           }
         />
         <Input
-          label="Template — Applicant identity (optional DigiStudio KYC)"
+          label="Template — Applicant identity (optional override)"
           value={integrations.digioTemplateIdentity}
           onChange={(e) =>
             onIntegrationsChange({ ...integrations, digioTemplateIdentity: e.target.value })
           }
-          placeholder="Leave empty for manual identity verification during scrutiny"
+          placeholder="Optional — uses standard Digio KYC when empty"
         />
         <Input
           label="Template — Bank account (optional DigiStudio flow)"
@@ -734,7 +734,7 @@ export function IntegrationsSettingsPanel({
           onChange={(e) =>
             onIntegrationsChange({ ...integrations, digioTemplateBank: e.target.value })
           }
-          placeholder="Optional — bank step uses penny drop API by default"
+          placeholder="Bank verification uses penny drop API with client credentials"
         />
         <Input
           label="Template — Undertaking identity"
@@ -745,9 +745,9 @@ export function IntegrationsSettingsPanel({
           placeholder="Optional — face-match / re-KYC template"
         />
         <p className="text-xs text-gray-500">
-          Client ID and secret are enough for bank penny-drop verification. Online applicant identity
-          KYC is optional — leave the identity template empty to verify applicants manually from
-          uploaded documents. Undertaking flows use the undertaking template when set. Docs:{" "}
+          Client ID and secret enable standard Digio identity KYC (no custom template required) and
+          bank penny-drop verification on My Fellowship. Override the identity template only if your
+          Digio account uses a different DigiStudio workflow. Docs:{" "}
           <a
             className="text-primary-700 underline"
             href="https://documentation.digio.in/digikyc/"
@@ -788,7 +788,7 @@ export function IntegrationsSettingsPanel({
             }
           />
           Require Digio online identity verification before admin document scrutiny approval
-          {integrations.digioTemplateIdentity.trim() ? "" : " (set an identity template first)"}
+          {!integrations.status.digioIdentityConfigured ? " (add Digio client credentials first)" : ""}
         </label>
       </div>
 

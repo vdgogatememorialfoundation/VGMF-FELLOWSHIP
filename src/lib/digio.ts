@@ -131,19 +131,30 @@ export function isUsableDigioTemplateName(value: string | null | undefined): boo
   return true;
 }
 
-export async function isDigioBankConfigured(): Promise<boolean> {
+/** Standard Digio identity KYC template — included on accounts without custom DigiStudio setup. */
+export const DIGIO_DEFAULT_IDENTITY_TEMPLATE =
+  process.env.DIGIO_DEFAULT_IDENTITY_TEMPLATE?.trim() || "DIGILOCKER_AADHAAR_PAN";
+
+export async function isDigioCredentialsConfigured(): Promise<boolean> {
   const config = await getDigioConfig();
   return !!(config.enabled && config.clientId && config.clientSecret);
 }
 
+/** Bank penny-drop verification — requires Digio client credentials (paid API). */
+export async function isDigioBankConfigured(): Promise<boolean> {
+  return isDigioCredentialsConfigured();
+}
+
+/** Applicant identity KYC — free with client credentials; custom template is optional. */
 export async function isDigioIdentityConfigured(): Promise<boolean> {
-  const config = await getDigioConfig();
-  return !!(
-    config.enabled &&
-    config.clientId &&
-    config.clientSecret &&
-    isUsableDigioTemplateName(config.templateIdentity)
-  );
+  return isDigioCredentialsConfigured();
+}
+
+export function resolveIdentityKycTemplate(config: DigioConfig): string {
+  if (isUsableDigioTemplateName(config.templateIdentity)) {
+    return config.templateIdentity!.trim();
+  }
+  return DIGIO_DEFAULT_IDENTITY_TEMPLATE;
 }
 export async function isDigioConfigured(purpose?: VerificationPurpose): Promise<boolean> {
   if (purpose === "BANK_ACCOUNT") {
@@ -168,7 +179,7 @@ export async function isDigioConfigured(purpose?: VerificationPurpose): Promise<
     case "UNDERTAKING_IDENTITY":
       return (
         isUsableDigioTemplateName(config.templateUndertaking) ||
-        isUsableDigioTemplateName(config.templateIdentity)
+        (await isDigioIdentityConfigured())
       );
     default:
       return false;
@@ -181,14 +192,17 @@ export function getTemplateForPurpose(
 ): string | null {
   switch (purpose) {
     case "APPLICANT_IDENTITY":
-      return isUsableDigioTemplateName(config.templateIdentity) ? config.templateIdentity : null;
+      return resolveIdentityKycTemplate(config);
     case "BANK_ACCOUNT":
       return isUsableDigioTemplateName(config.templateBank) ? config.templateBank : null;
     case "UNDERTAKING_IDENTITY":
       if (isUsableDigioTemplateName(config.templateUndertaking)) {
         return config.templateUndertaking;
       }
-      return isUsableDigioTemplateName(config.templateIdentity) ? config.templateIdentity : null;
+      if (isUsableDigioTemplateName(config.templateIdentity)) {
+        return config.templateIdentity;
+      }
+      return resolveIdentityKycTemplate(config);
     default:
       return null;
   }

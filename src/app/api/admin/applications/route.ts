@@ -4,7 +4,11 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
-import { getDigioConfig, refreshVerificationSessionDecision, isUsableDigioTemplateName } from "@/lib/digio";
+import {
+  getDigioConfig,
+  refreshVerificationSessionDecision,
+  isDigioIdentityConfigured,
+} from "@/lib/digio";
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
 import { updateApplicationByAdmin } from "@/lib/admin-application-update";
@@ -71,7 +75,7 @@ export async function GET(request: NextRequest) {
       application,
       verificationSessions,
       digio: {
-        identityTemplateConfigured: isUsableDigioTemplateName(digioConfig.templateIdentity),
+        identityConfigured: await isDigioIdentityConfigured(),
         requireIdentityForScrutiny: digioConfig.requireIdentityForScrutiny,
         webhookUrl: `${digioConfig.appUrl}/api/digio/webhook`,
       },
@@ -116,7 +120,7 @@ export async function PATCH(request: NextRequest) {
       const digioConfig = await getDigioConfig();
       if (
         digioConfig.requireIdentityForScrutiny &&
-        isUsableDigioTemplateName(digioConfig.templateIdentity) &&
+        (await isDigioIdentityConfigured()) &&
         existing.identityVerificationStatus !== "APPROVED"
       ) {
         return NextResponse.json(

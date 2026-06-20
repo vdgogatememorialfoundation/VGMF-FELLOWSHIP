@@ -125,7 +125,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [pageLoading, setPageLoading] = useState(true);
   const [digioMeta, setDigioMeta] = useState<{
     requireIdentityForScrutiny: boolean;
-    identityTemplateConfigured: boolean;
+    identityConfigured: boolean;
     webhookUrl: string;
   } | null>(null);
   const [verificationSessions, setVerificationSessions] = useState<
@@ -280,7 +280,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
   const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents, {
     requireDigioIdentity:
-      !!digioMeta?.requireIdentityForScrutiny && !!digioMeta?.identityTemplateConfigured,
+      !!digioMeta?.requireIdentityForScrutiny && !!digioMeta?.identityConfigured,
     identityVerificationStatus: app.identityVerificationStatus,
   });
   const nextActions = getNextActions(app.status as never);
@@ -375,7 +375,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           {!scrutinyCheck.ok && (
             <p className="mt-2 text-sm text-amber-700">{scrutinyCheck.reason}</p>
           )}
-          {digioMeta?.identityTemplateConfigured && (
+          {digioMeta?.identityConfigured && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4">
               <p className="text-sm font-medium text-gray-900">Digio identity verification</p>
               <p className="mt-1 text-sm text-gray-600">
@@ -394,7 +394,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {digioMeta?.identityTemplateConfigured && (
+      {digioMeta?.identityConfigured && (
         <div className="card space-y-4">
           <h2 className="font-semibold">Digio Verification Details</h2>
           <AdminDigioVerificationPanel
