@@ -745,9 +745,9 @@ export function IntegrationsSettingsPanel({
           placeholder="Optional — face-match / re-KYC template"
         />
         <p className="text-xs text-gray-500">
-          Client ID and secret enable standard Digio identity KYC (no custom template required) and
-          bank penny-drop verification on My Fellowship. Override the identity template only if your
-          Digio account uses a different DigiStudio workflow. Docs:{" "}
+          Client ID and secret enable standard Digio identity KYC and bank penny-drop verification.
+          When Digio is disabled, applicants upload ID documents and bank proof for manual review.
+          Override the identity template only if your Digio account uses a different workflow. Docs:{" "}
           <a
             className="text-primary-700 underline"
             href="https://documentation.digio.in/digikyc/"

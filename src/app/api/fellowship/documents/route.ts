@@ -7,6 +7,7 @@ import type { FellowshipDocType } from "@prisma/client";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { canReplaceFellowshipDocument } from "@/lib/document-review";
 import { notifyDocumentReviewed } from "@/lib/notifications";
+import { isDigioBankAvailable, syncManualBankVerification } from "@/lib/manual-verification";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -183,6 +184,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if (docType === "BANK_VERIFICATION" && !(await isDigioBankAvailable())) {
+      await syncManualBankVerification(fellowshipId);
+    }
+
     return NextResponse.json({ success: true, document });
   } catch (error) {
     console.error("Fellowship document upload error:", error);
@@ -229,6 +234,7 @@ export async function PATCH(request: NextRequest) {
         where: { id: document.fellowshipId },
         data: {
           bankVerifiedAt: new Date(),
+          bankVerificationStatus: "APPROVED",
           currentStage:
             document.fellowship.currentStage === "BANK_VERIFICATION"
               ? "SANCTIONED"
@@ -243,8 +249,15 @@ export async function PATCH(request: NextRequest) {
     ) {
       await prisma.fellowship.update({
         where: { id: document.fellowshipId },
-        data: { bankVerifiedAt: null },
+        data: {
+          bankVerifiedAt: null,
+          bankVerificationStatus: "DECLINED",
+        },
       });
+    }
+
+    if (document.type === "BANK_VERIFICATION" && !(await isDigioBankAvailable())) {
+      await syncManualBankVerification(document.fellowshipId);
     }
 
     await notifyDocumentReviewed(

@@ -66,6 +66,7 @@ export async function GET() {
 
   const integrationConfig = await getIntegrationConfig();
   const digioIdentityEnabled = await isDigioIdentityConfigured();
+  const manualIdentityEnabled = !digioIdentityEnabled;
 
   const payload = await Promise.all(
     applications.map(async (app) => {
@@ -75,16 +76,18 @@ export async function GET() {
       const fellowship = repaired.fellowship ?? app.fellowship;
       const fellowshipStage = fellowship?.currentStage ?? null;
       const identitySession = app.verificationSessions[0] ?? null;
-      const identityVerification = digioIdentityEnabled
-        ? {
-            enabled: true,
-            required: integrationConfig.digio.requireIdentityForScrutiny,
-            status: app.identityVerificationStatus,
-            verifiedAt: app.identityVerifiedAt,
-            sessionUpdatedAt: identitySession?.updatedAt ?? null,
-            sessionStartedAt: identitySession?.createdAt ?? null,
-          }
-        : null;
+      const identityVerification =
+        digioIdentityEnabled || manualIdentityEnabled
+          ? {
+              enabled: true,
+              required: integrationConfig.digio.requireIdentityForScrutiny,
+              status: app.identityVerificationStatus,
+              verifiedAt: app.identityVerifiedAt,
+              sessionUpdatedAt: identitySession?.updatedAt ?? null,
+              sessionStartedAt: identitySession?.createdAt ?? null,
+              manual: manualIdentityEnabled,
+            }
+          : null;
       const milestoneStates = getMilestoneStates(effectiveStatus, fellowshipStage);
       const fellowshipStepStates = fellowshipStage
         ? getFellowshipStepStates(fellowshipStage)
@@ -129,8 +132,12 @@ export async function GET() {
             label: "Complete identity verification",
             detail:
               identityVerification.status === "DECLINED"
-                ? "Your previous session was declined. Start a new verification from Identity Verification."
-                : "Verify your government ID online so the Foundation can approve your documents.",
+                ? manualIdentityEnabled
+                  ? "Your identity documents need to be resubmitted. Open Identity Verification."
+                  : "Your previous session was declined. Start a new verification from Identity Verification."
+                : manualIdentityEnabled
+                  ? "Upload your government ID and photo for manual verification."
+                  : "Verify your government ID online so the Foundation can approve your documents.",
             href: "/applicant/verification",
             urgent: true,
           },

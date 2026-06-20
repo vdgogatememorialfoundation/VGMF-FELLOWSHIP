@@ -275,6 +275,7 @@ export async function PATCH(request: NextRequest) {
         where: { id: fellowshipId },
         data: {
           bankVerifiedAt: new Date(),
+          bankVerificationStatus: "APPROVED",
           currentStage: "SANCTIONED",
         },
       });

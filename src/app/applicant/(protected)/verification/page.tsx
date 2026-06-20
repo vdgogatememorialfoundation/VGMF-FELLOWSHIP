@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DigioVerificationPanel } from "@/components/verification/DigioVerificationPanel";
+import { ManualIdentityVerificationPanel } from "@/components/verification/ManualIdentityVerificationPanel";
 import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 import { formatApplicationNumber } from "@/lib/application-number";
 
@@ -17,18 +18,31 @@ type ApplicationSummary = {
 
 export default function ApplicantVerificationPage() {
   const [application, setApplication] = useState<ApplicationSummary | null>(null);
+  const [verificationMode, setVerificationMode] = useState<"digio" | "manual" | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/applications")
       .then((r) => r.json())
-      .then((data) => {
+      .then(async (data) => {
         const apps = (data.applications ?? []) as ApplicationSummary[];
         const active =
           apps.find((app) => !["DRAFT", "INCOMPLETE", "WITHDRAWN", "REJECTED"].includes(app.status)) ??
           apps[0] ??
           null;
         setApplication(active);
+
+        if (active) {
+          const modeRes = await fetch(
+            `/api/verification/manual/identity?applicationId=${encodeURIComponent(active.id)}`
+          );
+          const modeData = await modeRes.json();
+          if (modeRes.ok) {
+            setVerificationMode(modeData.mode === "digio" ? "digio" : "manual");
+          } else {
+            setVerificationMode("manual");
+          }
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -61,24 +75,36 @@ export default function ApplicantVerificationPage() {
           Application {formatApplicationNumber(application.applicationNumber)}
         </p>
         <p className="mt-2 text-sm text-gray-600">
-          Complete secure online identity verification during document scrutiny. Have your government
-          ID ready and ensure good lighting for the camera check.
+          {verificationMode === "digio"
+            ? "Complete secure online identity verification during document scrutiny. Have your government ID ready and ensure good lighting for the camera check."
+            : "Upload your government ID and a recent photo for manual verification by the Foundation team."}
         </p>
       </div>
 
       {showPanel ? (
-        <DigioVerificationPanel
-          purpose="APPLICANT_IDENTITY"
-          applicationId={application.id}
-          title="Applicant identity verification"
-          description="Verify your name and photo against your uploaded application details through Digio."
-          verifiedAt={application.identityVerifiedAt}
-          onStatusChange={(status) =>
-            setApplication((prev) =>
-              prev ? { ...prev, identityVerificationStatus: status } : prev
-            )
-          }
-        />
+        verificationMode === "digio" ? (
+          <DigioVerificationPanel
+            purpose="APPLICANT_IDENTITY"
+            applicationId={application.id}
+            title="Applicant identity verification"
+            description="Verify your name and photo against your uploaded application details through Digio."
+            verifiedAt={application.identityVerifiedAt}
+            onStatusChange={(status) =>
+              setApplication((prev) =>
+                prev ? { ...prev, identityVerificationStatus: status } : prev
+              )
+            }
+          />
+        ) : (
+          <ManualIdentityVerificationPanel
+            applicationId={application.id}
+            onStatusChange={(status) =>
+              setApplication((prev) =>
+                prev ? { ...prev, identityVerificationStatus: status } : prev
+              )
+            }
+          />
+        )
       ) : (
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">

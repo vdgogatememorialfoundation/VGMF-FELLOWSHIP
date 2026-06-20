@@ -120,7 +120,6 @@ export async function PATCH(request: NextRequest) {
       const digioConfig = await getDigioConfig();
       if (
         digioConfig.requireIdentityForScrutiny &&
-        (await isDigioIdentityConfigured()) &&
         existing.identityVerificationStatus !== "APPROVED"
       ) {
         return NextResponse.json(

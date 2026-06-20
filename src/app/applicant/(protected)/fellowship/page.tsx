@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InstallmentDocumentsPanel } from "@/components/fellowship/InstallmentDocumentsPanel";
 import { DigioBankVerificationPanel } from "@/components/verification/DigioBankVerificationPanel";
+import { ManualBankVerificationPanel } from "@/components/verification/ManualBankVerificationPanel";
 
 type Installment = {
   id: string;
@@ -65,17 +66,26 @@ export default function ApplicantFellowshipPage() {
   const [bankBranch, setBankBranch] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [bankVerificationMode, setBankVerificationMode] = useState<"digio" | "manual">("manual");
 
   const reload = useCallback(() => {
     fetch("/api/fellowship")
       .then((r) => r.json())
-      .then((payload) => {
+      .then(async (payload) => {
         setData(payload);
         if (payload.fellowship) {
           setBankHolder(payload.fellowship.bankAccountHolder || payload.fellowship.fellowName || "");
           setBankName(payload.fellowship.bankName || "");
           setBankIfsc(payload.fellowship.bankIfsc || "");
           setBankBranch(payload.fellowship.bankBranch || "");
+
+          const modeRes = await fetch(
+            `/api/verification/manual/bank?fellowshipId=${encodeURIComponent(payload.fellowship.id)}`
+          );
+          const modeData = await modeRes.json();
+          if (modeRes.ok) {
+            setBankVerificationMode(modeData.mode === "digio" ? "digio" : "manual");
+          }
         }
       });
   }, []);
@@ -293,7 +303,14 @@ export default function ApplicantFellowshipPage() {
         </Button>
 
         {f.bankSubmittedAt && !f.bankVerifiedAt && (
-          <DigioBankVerificationPanel fellowshipId={f.id} />
+          bankVerificationMode === "digio" ? (
+            <DigioBankVerificationPanel fellowshipId={f.id} />
+          ) : (
+            <ManualBankVerificationPanel
+              fellowshipId={f.id}
+              bankSubmitted={Boolean(f.bankSubmittedAt)}
+            />
+          )
         )}
       </div>
 

@@ -56,6 +56,8 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   ETHICAL_CLEARANCE: "Ethical Clearance",
   PUBLICATIONS: "Publications",
   RECOMMENDATION_LETTER: "Recommendation Letter",
+  GOVERNMENT_ID: "Government ID",
+  IDENTITY_SELFIE: "Identity Photo / Selfie",
 };
 
 export function getDocumentLabel(type: string): string {

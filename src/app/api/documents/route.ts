@@ -5,6 +5,11 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { canReplaceApplicationDocument } from "@/lib/document-review";
+import {
+  isDigioIdentityAvailable,
+  isManualIdentityDocumentType,
+  syncManualIdentityVerification,
+} from "@/lib/manual-verification";
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -115,6 +120,13 @@ export async function POST(request: NextRequest) {
           },
         });
 
+    if (
+      isManualIdentityDocumentType(docType) &&
+      !(await isDigioIdentityAvailable())
+    ) {
+      await syncManualIdentityVerification(applicationId);
+    }
+
     return NextResponse.json({ success: true, document });
   } catch (error) {
     console.error("Upload error:", error);
@@ -162,6 +174,13 @@ export async function PATCH(request: NextRequest) {
       status,
       rejectionReason
     );
+
+    if (
+      isManualIdentityDocumentType(document.type) &&
+      !(await isDigioIdentityAvailable())
+    ) {
+      await syncManualIdentityVerification(document.applicationId);
+    }
 
     return NextResponse.json({ success: true, document });
   } catch (error) {

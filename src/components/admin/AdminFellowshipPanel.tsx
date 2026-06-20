@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
 import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
+import { ManualBankReviewPanel } from "@/components/admin/ManualBankReviewPanel";
 import { formatCurrency } from "@/lib/utils";
 import { FELLOWSHIP_STAGE_LABELS } from "@/lib/lifecycle-workflow";
 import { INSTALLMENT_REQUIREMENTS } from "@/lib/installment-requirements";
@@ -315,6 +316,7 @@ export function AdminFellowshipPanel({
                 Mark Bank Verified
               </Button>
             </div>
+            <ManualBankReviewPanel fellowshipId={fellowship.id} onUpdated={load} />
           </div>
 
           <div className="rounded-xl border p-4 space-y-4">

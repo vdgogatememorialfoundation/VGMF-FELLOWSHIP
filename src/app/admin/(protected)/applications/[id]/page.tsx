@@ -15,6 +15,7 @@ import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
 import { AdminApplicationEditor } from "@/components/admin/AdminApplicationEditor";
 import { AdminDigioVerificationPanel } from "@/components/admin/AdminDigioVerificationPanel";
 import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
+import { ManualIdentityReviewPanel } from "@/components/admin/ManualIdentityReviewPanel";
 import {
   canApproveScrutiny,
   getNextActions,
@@ -402,6 +403,13 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             identityStatus={app.identityVerificationStatus}
             identityVerifiedAt={app.identityVerifiedAt}
           />
+        </div>
+      )}
+
+      {!digioMeta?.identityConfigured && (
+        <div className="card space-y-4">
+          <h2 className="font-semibold">Manual Identity Verification</h2>
+          <ManualIdentityReviewPanel applicationId={id} onUpdated={reload} />
         </div>
       )}
 
