@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import {
-  verifyPassword,
   createSession,
   setSessionCookie,
   getPortalPath,
 } from "@/lib/auth";
-import { loginSchema } from "@/lib/validations";
+import { loginOtpSchema } from "@/lib/validations";
 import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
 import { phoneLookupVariants } from "@/lib/phone";
-import { assertApplicantLoginEnabled, getAccessControl } from "@/lib/access-control";
+import {
+  assertApplicantLoginEnabled,
+  assertLoginOtpChannel,
+  getAccessControl,
+} from "@/lib/access-control";
+import { verifyOtp } from "@/lib/otp";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const parsed = loginSchema.safeParse(body);
+    const parsed = loginOtpSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -23,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { identifier, password, portal } = parsed.data;
+    const { channel, phone, email, code, portal } = parsed.data;
     const access = await getAccessControl();
 
     if (portal === "applicant") {
@@ -32,43 +36,54 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: loginCheck.message }, { status: 403 });
       }
 
-      if (!access.loginPasswordEnabled) {
+      if (!access.loginOtpWhatsappEnabled && !access.loginOtpEmailEnabled) {
         return NextResponse.json(
-          {
-            error:
-              "Password login is disabled for applicants. Sign in with WhatsApp OTP instead.",
-          },
+          { error: "OTP login is not enabled for applicants." },
           { status: 403 }
         );
       }
+    } else if (portal) {
+      return NextResponse.json(
+        { error: "OTP login is only available for the applicant portal." },
+        { status: 403 }
+      );
     }
 
-    const trimmedIdentifier = identifier.trim();
-    const phoneVariants = phoneLookupVariants(trimmedIdentifier);
+    const otpCheck = await assertLoginOtpChannel(channel);
+    if (!otpCheck.allowed) {
+      return NextResponse.json({ error: otpCheck.message }, { status: 403 });
+    }
+
+    const otpResult = await verifyOtp({
+      channel,
+      phone,
+      email,
+      code,
+      purpose: "LOGIN",
+    });
+
+    if (!otpResult.valid) {
+      return NextResponse.json({ error: otpResult.error }, { status: 400 });
+    }
+
+    const normalizedEmail = email?.trim().toLowerCase();
+    const phoneVariants = phone ? phoneLookupVariants(phone) : [];
 
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: trimmedIdentifier.toLowerCase() },
-          ...phoneVariants.map((phone) => ({ phone })),
-        ],
         isActive: true,
+        OR: [
+          ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
+          ...phoneVariants.map((variant) => ({ phone: variant })),
+        ],
       },
       include: { profile: true },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid email/phone or password" },
-        { status: 401 }
-      );
-    }
-
-    const valid = await verifyPassword(password, user.passwordHash);
-    if (!valid) {
-      return NextResponse.json(
-        { error: "Invalid email/phone or password" },
-        { status: 401 }
+        { error: "No account found for this email or phone number." },
+        { status: 404 }
       );
     }
 
@@ -98,7 +113,7 @@ export async function POST(request: NextRequest) {
       redirect: getPortalPath(user.role),
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("OTP login error:", error);
     return NextResponse.json(
       { error: "Login failed. Please try again." },
       { status: 500 }

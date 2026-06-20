@@ -151,7 +151,10 @@ export function DiditVerificationPanel({
     return (
       <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
         <p className="font-medium text-gray-800">{title}</p>
-        <p className="mt-1">Online verification is not configured yet. The Foundation will verify manually.</p>
+        <p className="mt-1">
+          Online verification is not active. Submit your documents as instructed — the Foundation
+          will verify manually.
+        </p>
       </div>
     );
   }

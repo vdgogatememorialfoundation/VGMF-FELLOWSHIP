@@ -45,6 +45,7 @@ type IntegrationsState = {
   diditWorkflowIdBank: string;
   diditWorkflowIdUndertaking: string;
   diditRequireIdentityForScrutiny: boolean;
+  diditEnabled: boolean;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
@@ -614,14 +615,25 @@ export function IntegrationsSettingsPanel({
       <div className="card space-y-4">
         <h2 className="font-semibold">Didit Identity Verification</h2>
         <p className="text-sm text-gray-600">
-          Webhook URL:{" "}
+          When online Didit verification is disabled, applicants submit documents manually and the
+          Foundation verifies offline. Webhook URL:{" "}
           <code className="text-xs">
             {integrations.appUrl
               ? `${integrations.appUrl.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}/api/didit/webhook`
               : "https://your-domain/api/didit/webhook"}
           </code>
         </p>
-        {integrations.status.diditConfigured && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={integrations.diditEnabled !== false}
+            onChange={(e) =>
+              onIntegrationsChange({ ...integrations, diditEnabled: e.target.checked })
+            }
+          />
+          Enable online Didit verification for applicants
+        </label>
+        {integrations.status.diditConfigured && integrations.diditEnabled !== false && (
           <p className="text-sm text-green-700">Didit credentials are saved. Leave secret fields empty to keep them.</p>
         )}
         <Input

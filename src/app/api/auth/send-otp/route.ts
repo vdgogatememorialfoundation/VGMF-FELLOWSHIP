@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/db";
 import { sendOtpSchema } from "@/lib/validations";
 import { createAndSendOtp } from "@/lib/otp";
-import { assertSignupEnabled, assertSignupOtpChannel } from "@/lib/access-control";
+import {
+  assertSignupEnabled,
+  assertSignupOtpChannel,
+  assertApplicantLoginEnabled,
+  assertLoginOtpChannel,
+} from "@/lib/access-control";
+import { phoneLookupVariants } from "@/lib/phone";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +33,38 @@ export async function POST(request: NextRequest) {
       const otpCheck = await assertSignupOtpChannel(channel);
       if (!otpCheck.allowed) {
         return NextResponse.json({ error: otpCheck.message }, { status: 403 });
+      }
+    }
+
+    if (purpose === "LOGIN") {
+      const loginCheck = await assertApplicantLoginEnabled();
+      if (!loginCheck.allowed) {
+        return NextResponse.json({ error: loginCheck.message }, { status: 403 });
+      }
+
+      const otpCheck = await assertLoginOtpChannel(channel);
+      if (!otpCheck.allowed) {
+        return NextResponse.json({ error: otpCheck.message }, { status: 403 });
+      }
+
+      const normalizedEmail = email?.trim().toLowerCase();
+      const phoneVariants = phone ? phoneLookupVariants(phone) : [];
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          isActive: true,
+          OR: [
+            ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
+            ...phoneVariants.map((variant) => ({ phone: variant })),
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (!existingUser) {
+        return NextResponse.json(
+          { error: "No account found for this email or phone number." },
+          { status: 404 }
+        );
       }
     }
 

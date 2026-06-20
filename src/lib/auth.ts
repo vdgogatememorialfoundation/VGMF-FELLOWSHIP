@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import prisma from "./db";
 import type { UserRole } from "@prisma/client";
@@ -28,6 +29,10 @@ export async function verifyPassword(
   hash: string
 ): Promise<boolean> {
   return bcrypt.compare(password, hash);
+}
+
+export function generateInternalPassword(): string {
+  return randomBytes(24).toString("base64url");
 }
 
 export {

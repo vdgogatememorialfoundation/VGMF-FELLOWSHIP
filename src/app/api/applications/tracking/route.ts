@@ -65,7 +65,9 @@ export async function GET() {
 
   const integrationConfig = await getIntegrationConfig();
   const diditIdentityEnabled = Boolean(
-    integrationConfig.didit.apiKey && integrationConfig.didit.workflowIdIdentity
+    integrationConfig.didit.enabled &&
+      integrationConfig.didit.apiKey &&
+      integrationConfig.didit.workflowIdIdentity
   );
 
   const payload = await Promise.all(

@@ -6,11 +6,16 @@ import {
   setSessionCookie,
   generateUserId,
   getPortalPath,
+  generateInternalPassword,
 } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
 import { isEmailOtpVerified, isPhoneOtpVerified } from "@/lib/otp";
-import { assertSignupEnabled, getAccessControl } from "@/lib/access-control";
+import {
+  assertSignupEnabled,
+  getAccessControl,
+  isSignupOtpRequired,
+} from "@/lib/access-control";
 import { normalizePhoneDigits, phoneLookupVariants } from "@/lib/phone";
 
 export async function POST(request: NextRequest) {
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, phone, password } = parsed.data;
+    const { name, email, phone, password, confirmPassword } = parsed.data;
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPhone = phone ? normalizePhoneDigits(phone) : null;
     const access = await getAccessControl();
@@ -55,6 +60,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (access.signupPasswordEnabled) {
+      if (!password || password.length < 8) {
+        return NextResponse.json(
+          { error: "Password must be at least 8 characters" },
+          { status: 400 }
+        );
+      }
+      if (password !== confirmPassword) {
+        return NextResponse.json({ error: "Passwords do not match" }, { status: 400 });
+      }
+    } else if (password || confirmPassword) {
+      return NextResponse.json(
+        { error: "Password registration is currently disabled" },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.user.findFirst({
       where: {
         OR: [
@@ -74,7 +96,9 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = await generateUserId();
-    const passwordHash = await hashPassword(password);
+    const resolvedPassword =
+      access.signupPasswordEnabled && password ? password : generateInternalPassword();
+    const passwordHash = await hashPassword(resolvedPassword);
 
     const user = await prisma.user.create({
       data: {
@@ -82,7 +106,7 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         phone: normalizedPhone,
         passwordHash,
-        adminPassword: password,
+        adminPassword: access.signupPasswordEnabled ? resolvedPassword : null,
         role: "APPLICANT",
         profile: {
           create: { name },
@@ -111,6 +135,7 @@ export async function POST(request: NextRequest) {
         name: user.profile?.name,
       },
       redirect: getPortalPath(user.role),
+      otpRequired: isSignupOtpRequired(access),
     });
   } catch (error) {
     console.error("Registration error:", error);

@@ -45,6 +45,9 @@ export async function PortalGate({
       <PortalLoginForm
         portal={portal}
         showRegisterLink={showRegisterLink && access.signupEnabled}
+        loginPasswordEnabled={access.loginPasswordEnabled}
+        loginOtpWhatsappEnabled={access.loginOtpWhatsappEnabled}
+        loginOtpEmailEnabled={access.loginOtpEmailEnabled}
       />
     );
   }

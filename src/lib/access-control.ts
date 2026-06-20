@@ -19,6 +19,10 @@ export async function getAccessControl() {
       settings.loginDisabledMessage || DEFAULT_LOGIN_DISABLED_MESSAGE,
     signupOtpEmailEnabled: settings.signupOtpEmailEnabled,
     signupOtpWhatsappEnabled: settings.signupOtpWhatsappEnabled,
+    signupPasswordEnabled: settings.signupPasswordEnabled,
+    loginPasswordEnabled: settings.loginPasswordEnabled,
+    loginOtpWhatsappEnabled: settings.loginOtpWhatsappEnabled,
+    loginOtpEmailEnabled: settings.loginOtpEmailEnabled,
     applicationNotifyEmailEnabled: settings.applicationNotifyEmailEnabled,
     applicationNotifyWhatsappEnabled: settings.applicationNotifyWhatsappEnabled,
     welcomeEmailEnabled: settings.welcomeEmailEnabled,
@@ -67,6 +71,30 @@ export async function assertSignupOtpChannel(channel: OtpChannel) {
   }
 
   return { allowed: true as const };
+}
+
+export async function assertLoginOtpChannel(channel: OtpChannel) {
+  const access = await getAccessControl();
+
+  if (channel === "email" && !access.loginOtpEmailEnabled) {
+    return {
+      allowed: false as const,
+      message: "Email OTP login is currently disabled.",
+    };
+  }
+
+  if (channel === "phone" && !access.loginOtpWhatsappEnabled) {
+    return {
+      allowed: false as const,
+      message: "WhatsApp OTP login is currently disabled.",
+    };
+  }
+
+  return { allowed: true as const };
+}
+
+export function isSignupOtpRequired(access: Awaited<ReturnType<typeof getAccessControl>>) {
+  return access.signupOtpEmailEnabled || access.signupOtpWhatsappEnabled;
 }
 
 export function isEmailAlertsEnabled(access: Awaited<ReturnType<typeof getAccessControl>>) {

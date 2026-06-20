@@ -119,6 +119,7 @@ export interface DiditConfig {
   workflowIdBank: string | null;
   workflowIdUndertaking: string | null;
   requireIdentityForScrutiny: boolean;
+  enabled: boolean;
   appUrl: string;
 }
 
@@ -146,12 +147,14 @@ export async function getDiditConfig(): Promise<DiditConfig> {
     requireIdentityForScrutiny:
       db?.diditRequireIdentityForScrutiny ??
       process.env.DIDIT_REQUIRE_IDENTITY_FOR_SCRUTINY === "true",
+    enabled: db?.diditEnabled ?? process.env.DIDIT_ENABLED !== "false",
     appUrl: integration.appUrl.replace(/\/$/, ""),
   };
 }
 
 export async function isDiditConfigured(purpose?: DiditVerificationPurpose): Promise<boolean> {
   const config = await getDiditConfig();
+  if (!config.enabled) return false;
   if (!config.apiKey || !config.webhookSecret) return false;
 
   if (!purpose) {

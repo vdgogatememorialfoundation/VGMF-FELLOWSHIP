@@ -67,8 +67,12 @@ const DEFAULT_SITE_SETTINGS = {
   loginEnabled: true,
   signupDisabledMessage: null as string | null,
   loginDisabledMessage: null as string | null,
-  signupOtpEmailEnabled: true,
+  signupOtpEmailEnabled: false,
   signupOtpWhatsappEnabled: true,
+  signupPasswordEnabled: false,
+  loginPasswordEnabled: false,
+  loginOtpWhatsappEnabled: true,
+  loginOtpEmailEnabled: false,
   applicationNotifyEmailEnabled: true,
   applicationNotifyWhatsappEnabled: true,
   welcomeEmailEnabled: true,
@@ -134,6 +138,10 @@ export type SiteContent = {
   loginDisabledMessage: string | null;
   signupOtpEmailEnabled: boolean;
   signupOtpWhatsappEnabled: boolean;
+  signupPasswordEnabled: boolean;
+  loginPasswordEnabled: boolean;
+  loginOtpWhatsappEnabled: boolean;
+  loginOtpEmailEnabled: boolean;
   applicationNotifyEmailEnabled: boolean;
   applicationNotifyWhatsappEnabled: boolean;
   welcomeEmailEnabled: boolean;
@@ -206,8 +214,12 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     loginEnabled: settings.loginEnabled ?? true,
     signupDisabledMessage: settings.signupDisabledMessage,
     loginDisabledMessage: settings.loginDisabledMessage,
-    signupOtpEmailEnabled: settings.signupOtpEmailEnabled ?? true,
+    signupOtpEmailEnabled: settings.signupOtpEmailEnabled ?? false,
     signupOtpWhatsappEnabled: settings.signupOtpWhatsappEnabled ?? true,
+    signupPasswordEnabled: settings.signupPasswordEnabled ?? false,
+    loginPasswordEnabled: settings.loginPasswordEnabled ?? false,
+    loginOtpWhatsappEnabled: settings.loginOtpWhatsappEnabled ?? true,
+    loginOtpEmailEnabled: settings.loginOtpEmailEnabled ?? false,
     applicationNotifyEmailEnabled: settings.applicationNotifyEmailEnabled ?? true,
     applicationNotifyWhatsappEnabled: settings.applicationNotifyWhatsappEnabled ?? true,
     welcomeEmailEnabled: settings.welcomeEmailEnabled ?? true,

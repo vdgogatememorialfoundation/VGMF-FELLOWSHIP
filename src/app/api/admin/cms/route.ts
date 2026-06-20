@@ -72,6 +72,10 @@ const SITE_SETTINGS_UPDATE_KEYS = [
   "loginDisabledMessage",
   "signupOtpEmailEnabled",
   "signupOtpWhatsappEnabled",
+  "signupPasswordEnabled",
+  "loginPasswordEnabled",
+  "loginOtpWhatsappEnabled",
+  "loginOtpEmailEnabled",
   "applicationNotifyEmailEnabled",
   "applicationNotifyWhatsappEnabled",
   "welcomeEmailEnabled",
@@ -210,6 +214,7 @@ export async function PUT(request: NextRequest) {
         diditWorkflowIdBank: data.diditWorkflowIdBank?.trim() || null,
         diditWorkflowIdUndertaking: data.diditWorkflowIdUndertaking?.trim() || null,
         diditRequireIdentityForScrutiny: Boolean(data.diditRequireIdentityForScrutiny),
+        diditEnabled: data.diditEnabled !== false,
       },
       create: {
         id: "default",
@@ -237,6 +242,7 @@ export async function PUT(request: NextRequest) {
         diditWorkflowIdBank: data.diditWorkflowIdBank?.trim() || null,
         diditWorkflowIdUndertaking: data.diditWorkflowIdUndertaking?.trim() || null,
         diditRequireIdentityForScrutiny: Boolean(data.diditRequireIdentityForScrutiny),
+        diditEnabled: data.diditEnabled !== false,
       },
     });
 

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyOtpSchema } from "@/lib/validations";
 import { verifyOtp } from "@/lib/otp";
-import { assertSignupEnabled, assertSignupOtpChannel } from "@/lib/access-control";
+import {
+  assertSignupEnabled,
+  assertSignupOtpChannel,
+  assertApplicantLoginEnabled,
+  assertLoginOtpChannel,
+} from "@/lib/access-control";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +29,18 @@ export async function POST(request: NextRequest) {
       }
 
       const otpCheck = await assertSignupOtpChannel(channel);
+      if (!otpCheck.allowed) {
+        return NextResponse.json({ error: otpCheck.message }, { status: 403 });
+      }
+    }
+
+    if (purpose === "LOGIN") {
+      const loginCheck = await assertApplicantLoginEnabled();
+      if (!loginCheck.allowed) {
+        return NextResponse.json({ error: loginCheck.message }, { status: 403 });
+      }
+
+      const otpCheck = await assertLoginOtpChannel(channel);
       if (!otpCheck.allowed) {
         return NextResponse.json({ error: otpCheck.message }, { status: 403 });
       }

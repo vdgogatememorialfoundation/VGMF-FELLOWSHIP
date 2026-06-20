@@ -81,6 +81,10 @@ interface SiteSettingsState {
   loginDisabledMessage?: string;
   signupOtpEmailEnabled?: boolean;
   signupOtpWhatsappEnabled?: boolean;
+  signupPasswordEnabled?: boolean;
+  loginPasswordEnabled?: boolean;
+  loginOtpWhatsappEnabled?: boolean;
+  loginOtpEmailEnabled?: boolean;
   applicationNotifyEmailEnabled?: boolean;
   applicationNotifyWhatsappEnabled?: boolean;
   welcomeEmailEnabled?: boolean;
@@ -137,6 +141,7 @@ interface Integrations {
   diditWorkflowIdBank: string;
   diditWorkflowIdUndertaking: string;
   diditRequireIdentityForScrutiny: boolean;
+  diditEnabled: boolean;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
@@ -281,6 +286,10 @@ export function WebsiteUpdates() {
         data: {
           signupOtpEmailEnabled: settings.signupOtpEmailEnabled,
           signupOtpWhatsappEnabled: settings.signupOtpWhatsappEnabled,
+          signupPasswordEnabled: settings.signupPasswordEnabled,
+          loginPasswordEnabled: settings.loginPasswordEnabled,
+          loginOtpWhatsappEnabled: settings.loginOtpWhatsappEnabled,
+          loginOtpEmailEnabled: settings.loginOtpEmailEnabled,
           applicationNotifyEmailEnabled: settings.applicationNotifyEmailEnabled,
           applicationNotifyWhatsappEnabled: settings.applicationNotifyWhatsappEnabled,
           welcomeEmailEnabled: settings.welcomeEmailEnabled,
@@ -628,16 +637,9 @@ export function WebsiteUpdates() {
           <div className="card space-y-4">
             <h2 className="font-semibold">Registration OTP Verification</h2>
             <p className="text-sm text-gray-600">
-              Choose which OTP channels are required during public applicant signup. Disable both to allow password-only registration.
+              WhatsApp OTP is enabled by default for signup. Email OTP is off by default. Disable both
+              to allow direct registration without OTP (password optional below).
             </p>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={settings.signupOtpEmailEnabled !== false}
-                onChange={(e) => setSettings({ ...settings, signupOtpEmailEnabled: e.target.checked })}
-              />
-              Require email OTP during signup
-            </label>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -645,6 +647,54 @@ export function WebsiteUpdates() {
                 onChange={(e) => setSettings({ ...settings, signupOtpWhatsappEnabled: e.target.checked })}
               />
               Require WhatsApp OTP during signup
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.signupOtpEmailEnabled === true}
+                onChange={(e) => setSettings({ ...settings, signupOtpEmailEnabled: e.target.checked })}
+              />
+              Require email OTP during signup (disabled by default)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.signupPasswordEnabled === true}
+                onChange={(e) => setSettings({ ...settings, signupPasswordEnabled: e.target.checked })}
+              />
+              Require password during signup
+            </label>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="font-semibold">Applicant Login Methods</h2>
+            <p className="text-sm text-gray-600">
+              Applicant login uses WhatsApp OTP by default. Password login is optional. Staff and admin
+              portals always use password login.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.loginOtpWhatsappEnabled !== false}
+                onChange={(e) => setSettings({ ...settings, loginOtpWhatsappEnabled: e.target.checked })}
+              />
+              Enable WhatsApp OTP login for applicants
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.loginOtpEmailEnabled === true}
+                onChange={(e) => setSettings({ ...settings, loginOtpEmailEnabled: e.target.checked })}
+              />
+              Enable email OTP login for applicants
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.loginPasswordEnabled === true}
+                onChange={(e) => setSettings({ ...settings, loginPasswordEnabled: e.target.checked })}
+              />
+              Enable password login for applicants
             </label>
           </div>
 

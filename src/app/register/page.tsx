@@ -28,6 +28,7 @@ export default async function RegisterPage() {
       loginEnabled={access.loginEnabled}
       signupOtpEmailEnabled={access.signupOtpEmailEnabled}
       signupOtpWhatsappEnabled={access.signupOtpWhatsappEnabled}
+      signupPasswordEnabled={access.signupPasswordEnabled}
     />
   );
 }

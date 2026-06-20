@@ -38,6 +38,7 @@ export interface DiditIntegrationConfig {
   workflowIdBank: string | null;
   workflowIdUndertaking: string | null;
   requireIdentityForScrutiny: boolean;
+  enabled: boolean;
 }
 
 async function getDbSettings() {
@@ -132,6 +133,7 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
       requireIdentityForScrutiny:
         db?.diditRequireIdentityForScrutiny ??
         process.env.DIDIT_REQUIRE_IDENTITY_FOR_SCRUTINY === "true",
+      enabled: db?.diditEnabled ?? process.env.DIDIT_ENABLED !== "false",
     },
   };
 }
@@ -191,6 +193,7 @@ export async function getIntegrationSettingsForAdmin() {
     diditWorkflowIdUndertaking:
       db?.diditWorkflowIdUndertaking || process.env.DIDIT_WORKFLOW_ID_UNDERTAKING || "",
     diditRequireIdentityForScrutiny: config.didit.requireIdentityForScrutiny,
+    diditEnabled: config.didit.enabled,
     status: {
       emailConfigured: !!(config.email.token && config.email.fromEmail),
       whatsappConfigured: !!(config.whatsapp.token && config.whatsapp.phoneNumberId),

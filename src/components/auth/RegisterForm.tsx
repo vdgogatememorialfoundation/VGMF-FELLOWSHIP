@@ -12,12 +12,14 @@ interface RegisterFormProps {
   loginEnabled?: boolean;
   signupOtpEmailEnabled?: boolean;
   signupOtpWhatsappEnabled?: boolean;
+  signupPasswordEnabled?: boolean;
 }
 
 export function RegisterForm({
   loginEnabled = true,
-  signupOtpEmailEnabled = true,
+  signupOtpEmailEnabled = false,
   signupOtpWhatsappEnabled = true,
+  signupPasswordEnabled = false,
 }: RegisterFormProps) {
   const [form, setForm] = useState({
     name: "",
@@ -42,7 +44,9 @@ export function RegisterForm({
 
   const emailOk = !signupOtpEmailEnabled || emailOtpVerified;
   const phoneOk = !signupOtpWhatsappEnabled || phoneOtpVerified;
-  const verificationComplete = emailOk && phoneOk;
+  const otpRequired = signupOtpEmailEnabled || signupOtpWhatsappEnabled;
+  const verificationComplete = otpRequired ? emailOk && phoneOk : true;
+  const canSubmit = verificationComplete && (!signupPasswordEnabled || form.password.length >= 8);
 
   function resetEmailOtpState() {
     setEmailOtpSent(false);
@@ -176,14 +180,25 @@ export function RegisterForm({
     setError("");
     setMessage("");
 
-    if (signupOtpWhatsappEnabled && !phoneOtpVerified) {
+    if (otpRequired && signupOtpWhatsappEnabled && !phoneOtpVerified) {
       setError("Please verify your mobile number with WhatsApp OTP first");
       return;
     }
 
-    if (signupOtpEmailEnabled && !emailOtpVerified) {
+    if (otpRequired && signupOtpEmailEnabled && !emailOtpVerified) {
       setError("Please verify your email address with email OTP first");
       return;
+    }
+
+    if (signupPasswordEnabled) {
+      if (!form.password || form.password.length < 8) {
+        setError("Password must be at least 8 characters");
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
     }
 
     setLoading(true);
@@ -192,7 +207,14 @@ export function RegisterForm({
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          ...(signupPasswordEnabled
+            ? { password: form.password, confirmPassword: form.confirmPassword }
+            : {}),
+        }),
       });
 
       const data = await res.json();
@@ -247,8 +269,10 @@ export function RegisterForm({
               : signupOtpEmailEnabled
                 ? "Verify your email via OTP to register"
                 : signupOtpWhatsappEnabled
-                  ? "Verify your mobile via WhatsApp OTP to register"
-                  : "Complete the form below to register"}
+                  ? "Verify your mobile via WhatsApp OTP, then complete registration"
+                  : signupPasswordEnabled
+                    ? "Complete the form below to register"
+                    : "Enter your details to create your applicant account"}
           </p>
         </div>
 
@@ -393,28 +417,32 @@ export function RegisterForm({
               </div>
             )}
 
-            <Input
-              label="Password"
-              type="password"
-              value={form.password}
-              onChange={(e) => updateField("password", e.target.value)}
-              required
-              disabled={!verificationComplete}
-            />
-            <Input
-              label="Confirm Password"
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => updateField("confirmPassword", e.target.value)}
-              required
-              disabled={!verificationComplete}
-            />
+            {signupPasswordEnabled && (
+              <>
+                <Input
+                  label="Password"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => updateField("password", e.target.value)}
+                  required
+                  disabled={!verificationComplete}
+                />
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(e) => updateField("confirmPassword", e.target.value)}
+                  required
+                  disabled={!verificationComplete}
+                />
+              </>
+            )}
 
             <Button
               type="submit"
               loading={loading}
               className="w-full"
-              disabled={!verificationComplete}
+              disabled={!canSubmit}
             >
               Register
             </Button>

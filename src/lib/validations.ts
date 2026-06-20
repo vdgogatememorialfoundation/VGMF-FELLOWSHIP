@@ -1,16 +1,35 @@
 import { z } from "zod";
 
-export const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Phone must be at least 10 digits"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
-  otp: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+export const registerSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    phone: z.string().min(10, "Phone must be at least 10 digits"),
+    password: z.string().optional(),
+    confirmPassword: z.string().optional(),
+    otp: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.password !== undefined && data.password.length > 0 && data.password.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Password must be at least 8 characters",
+        path: ["password"],
+      });
+    }
+
+    if (
+      data.password !== undefined &&
+      data.confirmPassword !== undefined &&
+      data.password !== data.confirmPassword
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+      });
+    }
+  });
 
 const otpPurposeSchema = z.enum(["REGISTER", "LOGIN", "RESET_PASSWORD"]).default("REGISTER");
 
@@ -76,6 +95,35 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
   portal: z.enum(["applicant", "admin", "staff", "reviewer", "trustee"]).optional(),
 });
+
+export const loginOtpSchema = z
+  .object({
+    channel: z.enum(["phone", "email"]),
+    phone: z.string().optional(),
+    email: z.string().email("Invalid email address").optional(),
+    code: z.string().length(6, "OTP must be 6 digits"),
+    portal: z.enum(["applicant", "admin", "staff", "reviewer", "trustee"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.channel === "phone") {
+      if (!data.phone || data.phone.replace(/\s/g, "").length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Valid phone number required",
+          path: ["phone"],
+        });
+      }
+      return;
+    }
+
+    if (!data.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Valid email address required",
+        path: ["email"],
+      });
+    }
+  });
 
 const passwordFields = {
   password: z.string().min(8, "Password must be at least 8 characters"),
