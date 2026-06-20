@@ -7,7 +7,7 @@ import {
   getManualIdentityDocumentLabel,
   syncManualIdentityVerification,
 } from "@/lib/manual-verification";
-import { toUploadApiUrl } from "@/lib/upload-files";
+import { applicationDocumentFileUrl } from "@/lib/upload-files";
 
 async function loadApplicationForUser(applicationId: string, userId: string, isStaff: boolean) {
   return prisma.application.findFirst({
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         uploaded: Boolean(doc),
         status: doc?.status ?? null,
         fileName: doc?.fileName ?? null,
-        filePath: toUploadApiUrl(doc?.filePath, { documentId: doc?.id }) ?? doc?.filePath ?? null,
+        filePath: doc?.id ? applicationDocumentFileUrl(doc.id) : null,
         rejectionReason: doc?.rejectionReason ?? null,
         documentId: doc?.id ?? null,
       };

@@ -12,7 +12,7 @@ import {
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
 import { updateApplicationByAdmin } from "@/lib/admin-application-update";
-import { toUploadApiUrl } from "@/lib/upload-files";
+import { toUploadApiUrl, mapApplicationDocumentForClient } from "@/lib/upload-files";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -73,7 +73,10 @@ export async function GET(request: NextRequest) {
 
     const digioConfig = await getDigioConfig();
     return NextResponse.json({
-      application,
+      application: {
+        ...application,
+        documents: application.documents.map(mapApplicationDocumentForClient),
+      },
       verificationSessions,
       digio: {
         identityConfigured: await isDigioIdentityConfigured(),

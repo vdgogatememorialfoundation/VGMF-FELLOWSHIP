@@ -10,7 +10,7 @@ import {
   isManualIdentityDocumentType,
   syncManualIdentityVerification,
 } from "@/lib/manual-verification";
-import { toUploadApiUrl, encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
+import { encodeFileData, writeUploadToDisk, resolveApplicationStoredFileName, mapApplicationDocumentForClient } from "@/lib/upload-files";
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -89,7 +89,11 @@ export async function POST(request: NextRequest) {
     const uploadDir = path.join(process.cwd(), "public", "uploads", applicationId);
     await mkdir(uploadDir, { recursive: true });
 
-    const fileName = `${docType}_${Date.now()}_${file.name}`;
+    const fileName = resolveApplicationStoredFileName({
+      docType,
+      originalFileName: file.name,
+      existingFilePath: existingDoc?.filePath,
+    });
     const filePath = path.join(uploadDir, fileName);
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
@@ -134,12 +138,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      document: {
-        ...document,
-        filePath:
-          toUploadApiUrl(document.filePath, { documentId: document.id }) ??
-          document.filePath,
-      },
+      document: mapApplicationDocumentForClient(document),
     });
   } catch (error) {
     console.error("Upload error:", error);

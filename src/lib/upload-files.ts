@@ -22,6 +22,55 @@ export function fellowshipDocumentFileUrl(documentId: string): string {
   return `/api/fellowship/documents/${documentId}/file`;
 }
 
+export function mapApplicationDocumentForClient<
+  T extends { id: string; filePath: string },
+>(doc: T): T {
+  return {
+    ...doc,
+    filePath: applicationDocumentFileUrl(doc.id),
+  };
+}
+
+export function mapFellowshipDocumentForClient<
+  T extends { id: string; filePath: string },
+>(doc: T): T {
+  return {
+    ...doc,
+    filePath: fellowshipDocumentFileUrl(doc.id),
+  };
+}
+
+export function resolveApplicationStoredFileName(input: {
+  docType: string;
+  originalFileName: string;
+  existingFilePath?: string | null;
+}): string {
+  if (input.existingFilePath) {
+    const existing = input.existingFilePath.split("/").pop();
+    if (existing) return existing;
+  }
+
+  const safeName = input.originalFileName.replace(/[^\w.\-() ]+/g, "_").trim() || "upload";
+  return `${input.docType}_${Date.now()}_${safeName}`;
+}
+
+function docTypeFromStoredFileName(fileName: string): string | null {
+  const knownPrefixes = [
+    "GOVERNMENT_ID",
+    "IDENTITY_SELFIE",
+    "AADHAAR",
+    "PAN",
+    "REGISTRATION_CERTIFICATE",
+    "BAMS_DEGREE",
+    "RESEARCH_PROPOSAL",
+    "BANK_VERIFICATION",
+  ];
+  for (const prefix of knownPrefixes) {
+    if (fileName.startsWith(`${prefix}_`)) return prefix;
+  }
+  return fileName.split("_")[0] ?? null;
+}
+
 /** Resolve a client-facing download URL for stored upload paths. */
 export function toUploadApiUrl(
   storedPath: string | null | undefined,
@@ -163,6 +212,7 @@ async function readFileFromDisk(relativePath: string) {
 
 async function findStoredUploadByPath(segments: string[]) {
   const paths = storedPathsForSegments(segments);
+  const decoded = normalizeUploadSegments(segments);
 
   for (const storedPath of paths) {
     const applicationDoc = await prisma.applicationDocument.findFirst({
@@ -217,6 +267,22 @@ async function findStoredUploadByPath(segments: string[]) {
     }
   }
 
+  if (decoded[0] && decoded[0] !== "fellowships") {
+    const fileName = decoded[decoded.length - 1];
+    const docType = fileName ? docTypeFromStoredFileName(fileName) : null;
+    if (docType) {
+      const applicationDoc = await prisma.applicationDocument.findFirst({
+        where: {
+          applicationId: decoded[0],
+          type: docType as never,
+        },
+        orderBy: { uploadedAt: "desc" },
+        select: { fileData: true, mimeType: true, fileName: true, filePath: true },
+      });
+      if (applicationDoc) return applicationDoc;
+    }
+  }
+
   return null;
 }
 
@@ -228,7 +294,7 @@ export async function getApplicationDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  if (document.fileData) {
+  if (document.fileData?.trim()) {
     return {
       data: decodeFileData(document.fileData),
       fileName: document.fileName,
@@ -238,14 +304,22 @@ export async function getApplicationDocumentFile(documentId: string) {
   }
 
   const diskData = await readFileFromDisk(document.filePath);
-  if (!diskData) return null;
+  if (diskData) {
+    const fileData = encodeFileData(diskData);
+    await prisma.applicationDocument.update({
+      where: { id: document.id },
+      data: { fileData },
+    }).catch(() => undefined);
 
-  return {
-    data: diskData,
-    fileName: document.fileName,
-    mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-    applicationUserId: document.application.userId,
-  };
+    return {
+      data: diskData,
+      fileName: document.fileName,
+      mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
+      applicationUserId: document.application.userId,
+    };
+  }
+
+  return null;
 }
 
 export async function getFellowshipDocumentFile(documentId: string) {
@@ -256,7 +330,7 @@ export async function getFellowshipDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  if (document.fileData) {
+  if (document.fileData?.trim()) {
     return {
       data: decodeFileData(document.fileData),
       fileName: document.fileName,
@@ -266,14 +340,22 @@ export async function getFellowshipDocumentFile(documentId: string) {
   }
 
   const diskData = await readFileFromDisk(document.filePath);
-  if (!diskData) return null;
+  if (diskData) {
+    const fileData = encodeFileData(diskData);
+    await prisma.fellowshipDocument.update({
+      where: { id: document.id },
+      data: { fileData },
+    }).catch(() => undefined);
 
-  return {
-    data: diskData,
-    fileName: document.fileName,
-    mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-    applicationUserId: document.fellowship.application.userId,
-  };
+    return {
+      data: diskData,
+      fileName: document.fileName,
+      mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
+      applicationUserId: document.fellowship.application.userId,
+    };
+  }
+
+  return null;
 }
 
 export async function readStoredUpload(segments: string[]) {
@@ -283,7 +365,7 @@ export async function readStoredUpload(segments: string[]) {
     normalizeUploadSegments(segments)[segments.length - 1] ??
     "file";
 
-  if (record?.fileData) {
+  if (record?.fileData?.trim()) {
     return {
       data: decodeFileData(record.fileData),
       fileName,
