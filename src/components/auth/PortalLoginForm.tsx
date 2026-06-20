@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Leaf } from "lucide-react";
 import type { PortalType } from "@/lib/portal";
 import { PORTAL_LABELS, PORTAL_DASHBOARD_PATHS } from "@/lib/portal";
+import { formatOtpResendLabel, useOtpResendCooldown } from "@/lib/use-otp-resend-cooldown";
 
 type OtpChannel = "phone" | "email";
 type LoginMode = "otp" | "password";
@@ -62,6 +63,7 @@ function PortalLoginFormInner({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const otpResendCooldown = useOtpResendCooldown();
 
   const showModeTabs = useMemo(
     () => otpLoginAvailable && passwordLoginAvailable,
@@ -101,6 +103,10 @@ function PortalLoginFormInner({
   }
 
   async function handleSendLoginOtp() {
+    if (otpSent && !otpResendCooldown.canResend) {
+      return;
+    }
+
     if (otpChannel === "phone") {
       if (!identifier || identifier.replace(/\s/g, "").length < 10) {
         setError("Enter a valid mobile number first");
@@ -134,6 +140,7 @@ function PortalLoginFormInner({
       }
 
       setOtpSent(true);
+      otpResendCooldown.startCooldown();
       setMessage(
         otpChannel === "phone"
           ? "OTP sent to your WhatsApp. Enter it below to sign in."
@@ -273,6 +280,7 @@ function PortalLoginFormInner({
                       setOtpSent(false);
                       setOtp("");
                       setIdentifier("");
+                      otpResendCooldown.resetCooldown();
                     }}
                   >
                     WhatsApp
@@ -289,6 +297,7 @@ function PortalLoginFormInner({
                       setOtpSent(false);
                       setOtp("");
                       setIdentifier("");
+                      otpResendCooldown.resetCooldown();
                     }}
                   >
                     Email
@@ -304,6 +313,7 @@ function PortalLoginFormInner({
                   setIdentifier(e.target.value);
                   setOtpSent(false);
                   setOtp("");
+                  otpResendCooldown.resetCooldown();
                 }}
                 placeholder={otpChannel === "phone" ? "91XXXXXXXXXX" : "your@email.com"}
                 required
@@ -336,10 +346,15 @@ function PortalLoginFormInner({
                   </Button>
                   <button
                     type="button"
-                    className="w-full text-sm text-primary-600 hover:underline"
+                    className={`w-full text-sm ${
+                      otpResendCooldown.canResend
+                        ? "text-primary-600 hover:underline"
+                        : "cursor-not-allowed text-gray-400"
+                    }`}
+                    disabled={!otpResendCooldown.canResend || otpLoading}
                     onClick={handleSendLoginOtp}
                   >
-                    Resend OTP
+                    {formatOtpResendLabel("Resend OTP", otpResendCooldown.secondsLeft, true)}
                   </button>
                 </>
               )}

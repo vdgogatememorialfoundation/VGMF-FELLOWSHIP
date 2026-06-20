@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { formatNumericId } from "@/lib/format-ids";
+import { formatOtpResendLabel, useOtpResendCooldown } from "@/lib/use-otp-resend-cooldown";
 
 type OtpChannel = "phone" | "email";
 
@@ -41,6 +42,8 @@ export function RegisterForm({
   const [userId, setUserId] = useState("");
   const lastEmailForOtp = useRef("");
   const lastPhoneForOtp = useRef("");
+  const emailOtpCooldown = useOtpResendCooldown();
+  const phoneOtpCooldown = useOtpResendCooldown();
 
   const emailOk = !signupOtpEmailEnabled || emailOtpVerified;
   const phoneOk = !signupOtpWhatsappEnabled || phoneOtpVerified;
@@ -53,6 +56,7 @@ export function RegisterForm({
     setEmailOtpVerified(false);
     setEmailOtp("");
     lastEmailForOtp.current = "";
+    emailOtpCooldown.resetCooldown();
   }
 
   function resetPhoneOtpState() {
@@ -60,6 +64,7 @@ export function RegisterForm({
     setPhoneOtpVerified(false);
     setPhoneOtp("");
     lastPhoneForOtp.current = "";
+    phoneOtpCooldown.resetCooldown();
   }
 
   function updateField(field: string, value: string) {
@@ -81,6 +86,13 @@ export function RegisterForm({
   }
 
   async function handleSendOtp(channel: OtpChannel) {
+    const cooldown = channel === "phone" ? phoneOtpCooldown : emailOtpCooldown;
+    const alreadySent = channel === "phone" ? phoneOtpSent : emailOtpSent;
+
+    if (alreadySent && !cooldown.canResend) {
+      return;
+    }
+
     if (channel === "phone") {
       if (!form.phone || form.phone.length < 10) {
         setError("Enter a valid mobile number first");
@@ -117,10 +129,12 @@ export function RegisterForm({
         setPhoneOtpSent(true);
         lastPhoneForOtp.current = form.phone;
         setMessage("OTP sent to your WhatsApp. Please enter it below.");
+        phoneOtpCooldown.startCooldown();
       } else {
         setEmailOtpSent(true);
         lastEmailForOtp.current = form.email.trim().toLowerCase();
         setMessage("OTP sent to your email. Please enter it below.");
+        emailOtpCooldown.startCooldown();
       }
     } catch {
       setError("Failed to send OTP. Please try again.");
@@ -321,9 +335,14 @@ export function RegisterForm({
                   variant="secondary"
                   loading={otpLoading === "email"}
                   className="w-full"
+                  disabled={emailOtpSent && !emailOtpCooldown.canResend}
                   onClick={() => handleSendOtp("email")}
                 >
-                  {emailOtpSent ? "Resend OTP to Email" : "Send OTP to Email"}
+                  {formatOtpResendLabel(
+                    emailOtpSent ? "Resend OTP to Email" : "Send OTP to Email",
+                    emailOtpCooldown.secondsLeft,
+                    emailOtpSent
+                  )}
                 </Button>
               ) : null}
             </div>
@@ -384,9 +403,14 @@ export function RegisterForm({
                   variant="secondary"
                   loading={otpLoading === "phone"}
                   className="w-full"
+                  disabled={phoneOtpSent && !phoneOtpCooldown.canResend}
                   onClick={() => handleSendOtp("phone")}
                 >
-                  {phoneOtpSent ? "Resend OTP on WhatsApp" : "Send OTP on WhatsApp"}
+                  {formatOtpResendLabel(
+                    phoneOtpSent ? "Resend OTP on WhatsApp" : "Send OTP on WhatsApp",
+                    phoneOtpCooldown.secondsLeft,
+                    phoneOtpSent
+                  )}
                 </Button>
               ) : null}
             </div>
