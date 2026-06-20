@@ -658,6 +658,7 @@ export function IntegrationsSettingsPanel({
           onChange={(e) =>
             onIntegrationsChange({ ...integrations, diditWorkflowIdUndertaking: e.target.value })
           }
+          placeholder="Optional — uses Applicant identity workflow if blank"
         />
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input

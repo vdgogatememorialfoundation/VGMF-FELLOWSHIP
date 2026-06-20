@@ -9,6 +9,7 @@ import {
   getDiditConfig,
   getLatestDiditSession,
   isDiditConfigured,
+  DiditApiError,
 } from "@/lib/didit";
 import { getFellowshipForApplicant } from "@/lib/fellowship-access";
 
@@ -162,6 +163,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Didit session error:", error);
+    if (error instanceof DiditApiError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     const message = error instanceof Error ? error.message : "Failed to create verification session";
     return NextResponse.json({ error: message }, { status: 500 });
   }

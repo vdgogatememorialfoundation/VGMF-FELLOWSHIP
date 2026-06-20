@@ -4,6 +4,18 @@ import prisma from "./db";
 import { getIntegrationConfig } from "./integrations";
 
 const DIDIT_API_BASE = "https://verification.didit.me";
+const WORKFLOW_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export class DiditApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "DiditApiError";
+    this.status = status;
+  }
+}
 
 export type DiditSessionResponse = {
   session_id: string;
@@ -38,11 +50,59 @@ function extractDiditError(payload: unknown, status: number): string {
       .filter(Boolean);
     if (parts.length > 0) return parts.join("; ");
   }
+
+  const fieldMessages: string[] = [];
+  for (const [key, value] of Object.entries(record)) {
+    if (key === "detail" || key === "message") continue;
+    if (Array.isArray(value)) {
+      const msgs = value
+        .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+        .filter(Boolean);
+      if (msgs.length > 0) fieldMessages.push(`${key}: ${msgs.join(" ")}`);
+    } else if (typeof value === "string" && value.trim()) {
+      fieldMessages.push(`${key}: ${value}`);
+    }
+  }
+  if (fieldMessages.length > 0) return fieldMessages.join("; ");
+
   if (typeof record.message === "string" && record.message.trim()) {
     return record.message;
   }
 
+  if (status === 400) {
+    return "Didit rejected the verification request. Check workflow IDs, App URL, and Didit account credits in Admin → API Settings.";
+  }
+
   return `Didit session creation failed (${status})`;
+}
+
+function validateWorkflowId(workflowId: string, purpose: DiditVerificationPurpose): void {
+  if (!WORKFLOW_UUID_RE.test(workflowId)) {
+    throw new DiditApiError(
+      `Invalid Didit workflow ID for ${purpose.replace(/_/g, " ").toLowerCase()}. Copy the UUID from the Didit Business Console.`,
+      400
+    );
+  }
+}
+
+function validateCallbackUrl(callback: string): string {
+  try {
+    const parsed = new URL(callback);
+    const host = parsed.hostname.toLowerCase();
+    if (host === "0.0.0.0" || host === "127.0.0.1" || host === "localhost") {
+      throw new DiditApiError(
+        "App URL must be your public site (e.g. https://fellowship.vaidyagogate.org), not an internal server address. Update it in Admin → API Settings.",
+        400
+      );
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new DiditApiError("Didit callback URL must use http or https.", 400);
+    }
+    return callback;
+  } catch (error) {
+    if (error instanceof DiditApiError) throw error;
+    throw new DiditApiError("Invalid Didit callback URL. Check App URL in Admin → API Settings.", 400);
+  }
 }
 
 export type DiditWebhookPayload = {
@@ -108,7 +168,7 @@ export async function isDiditConfigured(purpose?: DiditVerificationPurpose): Pro
     case "BANK_ACCOUNT":
       return !!config.workflowIdBank;
     case "UNDERTAKING_IDENTITY":
-      return !!config.workflowIdUndertaking;
+      return !!(config.workflowIdUndertaking || config.workflowIdIdentity);
     default:
       return false;
   }
@@ -124,7 +184,7 @@ export function getWorkflowIdForPurpose(
     case "BANK_ACCOUNT":
       return config.workflowIdBank;
     case "UNDERTAKING_IDENTITY":
-      return config.workflowIdUndertaking;
+      return config.workflowIdUndertaking || config.workflowIdIdentity;
     default:
       return null;
   }
@@ -247,12 +307,15 @@ export async function createDiditSession(input: {
   const workflowId = getWorkflowIdForPurpose(config, input.purpose);
 
   if (!config.apiKey || !workflowId) {
-    throw new Error("Didit is not configured for this verification type");
+    throw new DiditApiError("Didit is not configured for this verification type", 503);
   }
 
-  const callback =
+  validateWorkflowId(workflowId, input.purpose);
+
+  const callback = validateCallbackUrl(
     input.callbackPath ??
-    `${config.appUrl}/applicant/verification?purpose=${input.purpose}`;
+      `${config.appUrl}/verification/complete?next=${encodeURIComponent("/applicant/verification")}`
+  );
 
   const response = await fetch(`${DIDIT_API_BASE}/v3/session/`, {
     method: "POST",
@@ -263,17 +326,22 @@ export async function createDiditSession(input: {
     body: JSON.stringify({
       workflow_id: workflowId,
       callback,
+      callback_method: "both",
       vendor_data: input.vendorData,
+      metadata: {
+        purpose: input.purpose,
+        portal: "vgmf-fellowship",
+      },
     }),
   });
 
   const payload = (await response.json().catch(() => null)) as
     | DiditSessionResponse
-    | { detail?: string | unknown[]; message?: string }
+    | Record<string, unknown>
     | null;
 
   if (!response.ok || !payload || !("session_id" in payload)) {
-    throw new Error(extractDiditError(payload, response.status));
+    throw new DiditApiError(extractDiditError(payload, response.status), response.status);
   }
 
   const session = payload as DiditSessionResponse;
