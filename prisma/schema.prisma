@@ -801,6 +801,13 @@ model SiteSettings {
   maintenanceModeEnabled           Boolean @default(false) @map("maintenance_mode_enabled")
   maintenanceMessage               String? @map("maintenance_message") @db.Text
   maintenanceAllowPortals          Boolean @default(true) @map("maintenance_allow_portals")
+  seoMetaTitle                     String? @map("seo_meta_title")
+  seoMetaDescription               String? @map("seo_meta_description") @db.Text
+  seoKeywords                      String? @map("seo_keywords") @db.Text
+  googleSiteVerification           String? @map("google_site_verification")
+  googleAnalyticsId                String? @map("google_analytics_id")
+  seoIndexingEnabled               Boolean @default(true) @map("seo_indexing_enabled")
+  seoStructuredDataEnabled         Boolean @default(true) @map("seo_structured_data_enabled")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")

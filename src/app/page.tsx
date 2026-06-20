@@ -17,22 +17,26 @@ import {
   buildWebsiteJsonLd,
   getPublicSiteUrl,
 } from "@/lib/seo";
+import { resolveSeoConfig } from "@/lib/seo-config";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const settings = await getSiteSettings();
   const siteUrl = await getPublicSiteUrl();
+  const seo = resolveSeoConfig(settings);
 
   return (
     <PublicMaintenanceGate>
-      <SeoJsonLd
-        data={[
-          buildOrganizationJsonLd(settings, siteUrl),
-          buildWebsiteJsonLd(siteUrl),
-          buildFaqJsonLd(settings.faqItems),
-        ]}
-      />
+      {seo.structuredDataEnabled && (
+        <SeoJsonLd
+          data={[
+            buildOrganizationJsonLd(settings, siteUrl),
+            buildWebsiteJsonLd(siteUrl),
+            buildFaqJsonLd(settings.faqItems),
+          ]}
+        />
+      )}
       <div className="min-h-screen mesh-bg">
         <PublicHeader />
         <HomeHero settings={settings} />

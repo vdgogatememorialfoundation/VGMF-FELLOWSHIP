@@ -80,6 +80,13 @@ const DEFAULT_SITE_SETTINGS = {
   maintenanceModeEnabled: false,
   maintenanceMessage: null as string | null,
   maintenanceAllowPortals: true,
+  seoMetaTitle: null as string | null,
+  seoMetaDescription: null as string | null,
+  seoKeywords: null as string | null,
+  googleSiteVerification: null as string | null,
+  googleAnalyticsId: null as string | null,
+  seoIndexingEnabled: true,
+  seoStructuredDataEnabled: true,
   updatedAt: new Date(),
 };
 
@@ -138,6 +145,13 @@ export type SiteContent = {
   maintenanceModeEnabled: boolean;
   maintenanceMessage: string | null;
   maintenanceAllowPortals: boolean;
+  seoMetaTitle: string | null;
+  seoMetaDescription: string | null;
+  seoKeywords: string | null;
+  googleSiteVerification: string | null;
+  googleAnalyticsId: string | null;
+  seoIndexingEnabled: boolean;
+  seoStructuredDataEnabled: boolean;
   updatedAt?: Date;
 };
 
@@ -205,6 +219,13 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     maintenanceModeEnabled: settings.maintenanceModeEnabled ?? false,
     maintenanceMessage: settings.maintenanceMessage,
     maintenanceAllowPortals: settings.maintenanceAllowPortals ?? true,
+    seoMetaTitle: settings.seoMetaTitle,
+    seoMetaDescription: settings.seoMetaDescription,
+    seoKeywords: settings.seoKeywords,
+    googleSiteVerification: settings.googleSiteVerification,
+    googleAnalyticsId: settings.googleAnalyticsId,
+    seoIndexingEnabled: settings.seoIndexingEnabled ?? true,
+    seoStructuredDataEnabled: settings.seoStructuredDataEnabled ?? true,
   };
 }
 

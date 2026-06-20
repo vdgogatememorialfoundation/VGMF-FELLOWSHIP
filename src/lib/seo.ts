@@ -3,6 +3,7 @@ import { getIntegrationConfig } from "./integrations";
 import { ORGANIZATION_NAME } from "./constants";
 import type { SiteContent } from "./cms";
 import type { FaqItem } from "./site-content";
+import { resolveSeoConfig } from "./seo-config";
 
 export const PUBLIC_CMS_SLUGS = [
   "about",
@@ -30,41 +31,21 @@ export async function getPublicSiteUrl(): Promise<string> {
   return config.appUrl.replace(/\/$/, "");
 }
 
-export function getGoogleSiteVerification(): string | undefined {
-  return process.env.GOOGLE_SITE_VERIFICATION?.trim() || undefined;
-}
-
-export function getGoogleAnalyticsId(): string | undefined {
-  return process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || undefined;
-}
-
 export async function buildRootMetadata(settings: SiteContent): Promise<Metadata> {
   const siteUrl = await getPublicSiteUrl();
-  const title = settings.siteName;
-  const description =
-    settings.siteTagline ||
-    `${ORGANIZATION_NAME} Research Fellowship Portal — apply for Ayurvedic research grants up to ₹75,000.`;
+  const seo = resolveSeoConfig(settings);
   const ogImage = settings.logoUrl
     ? new URL(settings.logoUrl, siteUrl).toString()
     : `${siteUrl}/api/site/logo`;
 
-  const verification = getGoogleSiteVerification();
-
   return {
     metadataBase: new URL(siteUrl),
     title: {
-      default: title,
+      default: seo.metaTitle,
       template: `%s | ${ORGANIZATION_NAME}`,
     },
-    description,
-    keywords: [
-      "Vaidya Gogate Memorial Foundation",
-      "VGMF Fellowship",
-      "Ayurvedic research fellowship",
-      "Viddhakarma research",
-      "BAMS fellowship India",
-      "Ayurveda grant",
-    ],
+    description: seo.metaDescription,
+    keywords: seo.keywords,
     authors: [{ name: ORGANIZATION_NAME }],
     creator: ORGANIZATION_NAME,
     publisher: ORGANIZATION_NAME,
@@ -76,8 +57,8 @@ export async function buildRootMetadata(settings: SiteContent): Promise<Metadata
       locale: "en_IN",
       url: siteUrl,
       siteName: ORGANIZATION_NAME,
-      title,
-      description,
+      title: seo.metaTitle,
+      description: seo.metaDescription,
       images: [
         {
           url: ogImage,
@@ -89,23 +70,29 @@ export async function buildRootMetadata(settings: SiteContent): Promise<Metadata
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
+      title: seo.metaTitle,
+      description: seo.metaDescription,
       images: [ogImage],
     },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
-      },
-    },
-    ...(verification
-      ? { verification: { google: verification } }
+    robots: seo.indexingEnabled
+      ? {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+            "max-video-preview": -1,
+          },
+        }
+      : {
+          index: false,
+          follow: false,
+          googleBot: { index: false, follow: false },
+        },
+    ...(seo.googleSiteVerification
+      ? { verification: { google: seo.googleSiteVerification } }
       : {}),
   };
 }
@@ -115,8 +102,10 @@ export function buildPageMetadata(input: {
   description: string;
   path: string;
   siteUrl: string;
+  indexingEnabled?: boolean;
 }): Metadata {
   const canonical = `${input.siteUrl}${input.path}`;
+  const indexingEnabled = input.indexingEnabled !== false;
 
   return {
     title: input.title,
@@ -133,6 +122,9 @@ export function buildPageMetadata(input: {
       title: input.title,
       description: input.description,
     },
+    robots: indexingEnabled
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
   };
 }
 

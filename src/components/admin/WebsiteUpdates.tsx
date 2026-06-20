@@ -11,9 +11,11 @@ import type { NoticeCategory } from "@/lib/notices";
 import type { NavLink, FaqItem, HeroStat, SnapshotItem, HighlightTile, JourneyStep } from "@/lib/site-content";
 import type { NotificationEventTemplate } from "@/lib/notification-templates";
 import { IntegrationsSettingsPanel } from "@/components/admin/IntegrationsSettingsPanel";
+import { SeoSettingsPanel } from "@/components/admin/SeoSettingsPanel";
 
 const TABS = [
   { id: "branding", label: "Branding" },
+  { id: "seo", label: "SEO & Google" },
   { id: "access", label: "Signup & Login" },
   { id: "header", label: "Header & Nav" },
   { id: "footer", label: "Footer" },
@@ -90,6 +92,13 @@ interface SiteSettingsState {
   maintenanceModeEnabled?: boolean;
   maintenanceMessage?: string;
   maintenanceAllowPortals?: boolean;
+  seoMetaTitle?: string;
+  seoMetaDescription?: string;
+  seoKeywords?: string;
+  googleSiteVerification?: string;
+  googleAnalyticsId?: string;
+  seoIndexingEnabled?: boolean;
+  seoStructuredDataEnabled?: boolean;
 }
 
 interface Notice {
@@ -534,6 +543,16 @@ export function WebsiteUpdates() {
           <Input label="Contact Address" value={settings.contactAddress || ""} onChange={(e) => setSettings({ ...settings, contactAddress: e.target.value })} />
           <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Branding</Button>
         </div>
+      )}
+
+      {activeTab === "seo" && (
+        <SeoSettingsPanel
+          settings={settings}
+          appUrl={integrations?.appUrl || ""}
+          loading={loading}
+          onChange={setSettings}
+          onSave={() => saveSection("settings", settings)}
+        />
       )}
 
       {activeTab === "access" && (

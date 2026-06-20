@@ -83,6 +83,13 @@ const SITE_SETTINGS_UPDATE_KEYS = [
   "maintenanceModeEnabled",
   "maintenanceMessage",
   "maintenanceAllowPortals",
+  "seoMetaTitle",
+  "seoMetaDescription",
+  "seoKeywords",
+  "googleSiteVerification",
+  "googleAnalyticsId",
+  "seoIndexingEnabled",
+  "seoStructuredDataEnabled",
 ] as const;
 
 function pickSiteSettingsUpdate(data: Record<string, unknown>) {

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { PublicHeader, PublicFooter } from "@/components/public/PublicLayout";
 import { PublicMaintenanceGate } from "@/components/public/PublicMaintenanceGate";
-import { getCmsPage } from "@/lib/cms";
+import { getCmsPage, getSiteSettings } from "@/lib/cms";
 import { buildPageMetadata, getPublicSiteUrl } from "@/lib/seo";
+import { resolveSeoConfig } from "@/lib/seo-config";
 import { notFound } from "next/navigation";
 import type { CmsPageSlug } from "@prisma/client";
 
@@ -29,12 +30,15 @@ export async function generateMetadata({
 
   const siteUrl = await getPublicSiteUrl();
   const plainText = page.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const siteSettings = await getSiteSettings();
+  const seo = resolveSeoConfig(siteSettings);
 
   return buildPageMetadata({
     title: page.title,
     description: plainText.slice(0, 160) || `${page.title} — VGMF Fellowship Portal`,
     path: `/${slug}`,
     siteUrl,
+    indexingEnabled: seo.indexingEnabled,
   });
 }
 

@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Libre_Baskerville, Outfit } from "next/font/google";
 import "./globals.css";
 import { getSiteSettings } from "@/lib/cms";
 import { buildRootMetadata } from "@/lib/seo";
+import { resolveSeoConfig } from "@/lib/seo-config";
 import { GoogleAnalytics } from "@/components/public/GoogleAnalytics";
 
 const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans" });
@@ -31,11 +32,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const settings = await getSiteSettings();
+  const seo = resolveSeoConfig(settings);
+
   return (
     <html lang="en">
       <body className={`${sans.variable} ${display.variable} ${serif.variable} antialiased`}>
-        <GoogleAnalytics />
+        <GoogleAnalytics measurementId={seo.googleAnalyticsId} />
         {children}
       </body>
     </html>
