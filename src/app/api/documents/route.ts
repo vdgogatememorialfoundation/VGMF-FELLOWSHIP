@@ -137,7 +137,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : "Failed to upload document";
+    return NextResponse.json(
+      {
+        error: "Failed to upload document",
+        detail: process.env.NODE_ENV !== "production" ? message : undefined,
+      },
+      { status: 500 }
+    );
   }
 }
 

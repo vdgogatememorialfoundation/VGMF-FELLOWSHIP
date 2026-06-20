@@ -55,13 +55,23 @@ export function resolveApplicationStoredFileName(input: {
   originalFileName: string;
   existingFilePath?: string | null;
 }): string {
-  if (input.existingFilePath) {
-    const existing = input.existingFilePath.split("/").pop();
-    if (existing) return existing;
+  const existingPath = input.existingFilePath?.trim();
+  if (existingPath && (existingPath.includes("/uploads/") || existingPath.startsWith("uploads/"))) {
+    const existing = existingPath.split("/").pop();
+    if (existing && existing !== "file") return existing;
   }
 
   const safeName = input.originalFileName.replace(/[^\w.\-() ]+/g, "_").trim() || "upload";
   return `${input.docType}_${Date.now()}_${safeName}`;
+}
+
+/** Normalize DB `filePath` values to `/uploads/...` storage paths. */
+export function normalizeStoragePath(filePath: string | null | undefined): string | null {
+  const trimmed = filePath?.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("/uploads/")) return trimmed;
+  if (trimmed.startsWith("uploads/")) return `/${trimmed}`;
+  return null;
 }
 
 function docTypeFromStoredFileName(fileName: string): string | null {
@@ -165,18 +175,37 @@ export async function writeStoredUpload(
 
 /** Read bytes from R2, then local disk. */
 export async function readStoredUploadBytes(relativePath: string): Promise<Buffer | null> {
+  const storagePath = normalizeStoragePath(relativePath) ?? relativePath;
+
   if (isR2Configured()) {
-    const fromR2 = await getR2Object(filePathToR2Key(relativePath));
+    const fromR2 = await getR2Object(filePathToR2Key(storagePath));
     if (fromR2) return fromR2;
   }
 
-  return readFileFromDisk(relativePath);
+  return readFileFromDisk(storagePath);
 }
 
-/** When R2 is active, store files in the bucket only — not PostgreSQL. */
+const MAX_DB_FILE_BYTES = 10 * 1024 * 1024;
+
+/** Keep a PostgreSQL copy for fallback even when R2 is configured. */
 export function prepareFileDataForStorage(buffer: Buffer): string | null {
-  if (isR2Configured()) return null;
+  if (buffer.length > MAX_DB_FILE_BYTES) return null;
   return encodeFileData(buffer);
+}
+
+async function backfillR2FromBuffer(
+  storagePath: string,
+  buffer: Buffer,
+  mimeType?: string | null
+): Promise<void> {
+  if (!isR2Configured()) return;
+  const normalized = normalizeStoragePath(storagePath);
+  if (!normalized) return;
+  try {
+    await putR2Object(filePathToR2Key(normalized), buffer, mimeType);
+  } catch (error) {
+    console.error("R2 backfill failed:", normalized, error);
+  }
 }
 
 export async function persistUpload(
@@ -186,6 +215,10 @@ export async function persistUpload(
 ): Promise<{ fileData: string | null }> {
   await writeStoredUpload(relativePath, buffer, mimeType);
   return { fileData: prepareFileDataForStorage(buffer) };
+}
+
+function resolveDocumentStoragePath(filePath: string): string | null {
+  return normalizeStoragePath(filePath);
 }
 
 export function mimeTypeFromFileName(fileName: string): string {
@@ -343,24 +376,39 @@ export async function getApplicationDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  const storedBytes = await readStoredUploadBytes(document.filePath);
-  if (storedBytes) {
+  const storagePath = resolveDocumentStoragePath(document.filePath);
+
+  if (storagePath) {
+    const storedBytes = await readStoredUploadBytes(storagePath);
+    if (storedBytes) {
+      return {
+        data: storedBytes,
+        fileName: document.fileName,
+        mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
+        applicationUserId: document.application.userId,
+      };
+    }
+  }
+
+  if (document.fileData?.trim()) {
+    const data = decodeFileData(document.fileData);
+    if (storagePath) {
+      void backfillR2FromBuffer(storagePath, data, document.mimeType);
+    }
     return {
-      data: storedBytes,
+      data,
       fileName: document.fileName,
       mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
       applicationUserId: document.application.userId,
     };
   }
 
-  if (document.fileData?.trim()) {
-    return {
-      data: decodeFileData(document.fileData),
-      fileName: document.fileName,
-      mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-      applicationUserId: document.application.userId,
-    };
-  }
+  console.error("Application document bytes missing", {
+    documentId,
+    filePath: document.filePath,
+    storagePath,
+    r2Configured: isR2Configured(),
+  });
 
   return null;
 }
@@ -373,24 +421,39 @@ export async function getFellowshipDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  const storedBytes = await readStoredUploadBytes(document.filePath);
-  if (storedBytes) {
+  const storagePath = resolveDocumentStoragePath(document.filePath);
+
+  if (storagePath) {
+    const storedBytes = await readStoredUploadBytes(storagePath);
+    if (storedBytes) {
+      return {
+        data: storedBytes,
+        fileName: document.fileName,
+        mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
+        applicationUserId: document.fellowship.application.userId,
+      };
+    }
+  }
+
+  if (document.fileData?.trim()) {
+    const data = decodeFileData(document.fileData);
+    if (storagePath) {
+      void backfillR2FromBuffer(storagePath, data, document.mimeType);
+    }
     return {
-      data: storedBytes,
+      data,
       fileName: document.fileName,
       mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
       applicationUserId: document.fellowship.application.userId,
     };
   }
 
-  if (document.fileData?.trim()) {
-    return {
-      data: decodeFileData(document.fileData),
-      fileName: document.fileName,
-      mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-      applicationUserId: document.fellowship.application.userId,
-    };
-  }
+  console.error("Fellowship document bytes missing", {
+    documentId,
+    filePath: document.filePath,
+    storagePath,
+    r2Configured: isR2Configured(),
+  });
 
   return null;
 }
@@ -403,19 +466,27 @@ export async function readStoredUpload(segments: string[]) {
     "file";
 
   if (record?.filePath) {
-    const storedBytes = await readStoredUploadBytes(record.filePath);
-    if (storedBytes) {
-      return {
-        data: storedBytes,
-        fileName,
-        mimeType: record.mimeType || mimeTypeFromFileName(fileName),
-      };
+    const storagePath = normalizeStoragePath(record.filePath);
+    if (storagePath) {
+      const storedBytes = await readStoredUploadBytes(storagePath);
+      if (storedBytes) {
+        return {
+          data: storedBytes,
+          fileName,
+          mimeType: record.mimeType || mimeTypeFromFileName(fileName),
+        };
+      }
     }
   }
 
   if (record?.fileData?.trim()) {
+    const data = decodeFileData(record.fileData);
+    const storagePath = normalizeStoragePath(record.filePath);
+    if (storagePath) {
+      void backfillR2FromBuffer(storagePath, data, record.mimeType);
+    }
     return {
-      data: decodeFileData(record.fileData),
+      data,
       fileName,
       mimeType: record.mimeType || mimeTypeFromFileName(fileName),
     };
