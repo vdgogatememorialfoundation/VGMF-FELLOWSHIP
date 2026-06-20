@@ -231,8 +231,9 @@ export function IntegrationsSettingsPanel({
       <div className="card space-y-4">
         <h2 className="font-semibold">Server keep-alive (Render free tier)</h2>
         <p className="text-sm text-gray-600">
-          Free hosting sleeps after ~15 minutes without traffic. Ping this URL every 10–14 minutes
-          using UptimeRobot, Cron-job.org, or the Render cron job in <code className="text-xs">render.yaml</code>.
+          Free hosting sleeps after ~15 minutes without traffic. This app self-pings{" "}
+          <code className="text-xs">/api/health</code> every 12 minutes in production. You can also
+          use UptimeRobot or Cron-job.org as a backup.
         </p>
         {(() => {
           const base = integrations.appUrl?.startsWith("http")
@@ -246,9 +247,10 @@ export function IntegrationsSettingsPanel({
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Ping URL</p>
               <p className="mt-1 break-all text-sm font-medium text-ink">{keepAliveUrl}</p>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
-                <li>UptimeRobot: HTTP monitor every 5 minutes</li>
-                <li>Cron-job.org: GET request every 12–14 minutes (avoid exact 15 min intervals)</li>
-                <li>Render: set env <code>KEEPALIVE_URL</code> to this URL for the bundled cron job</li>
+                <li>Built-in: self-ping every 12 min (see Render logs for [keepalive])</li>
+                <li>Optional env: KEEPALIVE_INTERVAL_MS=30000 for 30 second pings</li>
+                <li>Backup: UptimeRobot every 5 min or Cron-job.org every 12–14 min</li>
+                <li>Disable built-in ping: SELF_KEEPALIVE_ENABLED=false</li>
               </ul>
             </div>
           );

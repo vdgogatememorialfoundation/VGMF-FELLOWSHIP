@@ -20,6 +20,10 @@ services:
         sync: false
       - key: KEEPALIVE_URL
         sync: false
+      - key: KEEPALIVE_INTERVAL_MS
+        value: "720000"
+      - key: SELF_KEEPALIVE_ENABLED
+        value: "true"
       - key: ZEPTOMAIL_TOKEN
         sync: false
       - key: ZEPTOMAIL_FROM_EMAIL
