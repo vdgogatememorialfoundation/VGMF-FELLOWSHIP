@@ -38,25 +38,6 @@ export const CRITICAL_WHATSAPP_EVENTS: NotificationEventKey[] = ["OTP_VERIFICATI
 
 export const DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME = "vgmf_otp_auth";
 
-/** Single-parameter Meta template for fellowship alerts (body: {{1}}). */
-export const DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE = "vgmf_fellowship_alert";
-
-/** Legacy seminar utility templates — fixed text, no fellowship details. */
-export const WHATSAPP_SEMINAR_STATIC_TEMPLATE_NAMES = new Set([
-  "vgmf_account_created1",
-  "vgmf_registration_success",
-  "vgmf_under_review",
-  "vgmf_application_approved",
-  "vgmf_application_rejected",
-  "vgmf_payment_success",
-  "vgmf_payment_failed",
-  "vgmf_payment_pending",
-  "vgmf_checkin_success",
-  "vgmf_checkin_failed",
-  "vgmf_ticket_issued",
-  "vgmf_ticket_reissued",
-]);
-
 /** Utility / marketing templates — must never be used for OTP sends. */
 export const WHATSAPP_UTILITY_TEMPLATE_NAMES = new Set([
   "vgmf_account_created",
@@ -105,10 +86,10 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     label: "Account created / welcome",
     description: "Sent when a new applicant account is registered.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_account_created1",
     whatsappTemplateLanguage: "en",
     emailSubject: "Welcome to {{portal_title}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "OTP_VERIFICATION",
@@ -133,90 +114,90 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationEventTemplate[] = [
     label: "Application submitted",
     description: "Confirmation with 12-digit application tracking number.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_registration_success",
     whatsappTemplateLanguage: "en",
     emailSubject: "Application submitted — {{application_number}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "STATUS_UPDATE",
     label: "Application status update",
     description: "When admin changes application workflow status.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Application status: {{status_label}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "DOCUMENT_REVIEW",
     label: "Document review result",
     description: "When a document is approved, rejected, or needs resubmission.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Document update: {{document_label}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "INTERVIEW_SCHEDULED",
     label: "Interview scheduled",
     description: "Interview date, time, and meeting link.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Interview scheduled — VGMF Fellowship",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "INSTALLMENT_RELEASED",
     label: "Fellowship installment released",
     description: "When a fellowship grant installment is released.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_payment_success",
     whatsappTemplateLanguage: "en",
     emailSubject: "Installment {{installment_no}} released",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "PROGRESS_REPORT_DUE",
     label: "Progress report due",
     description: "Quarterly fellowship progress report reminders.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Progress report due — Q{{quarter}} {{year}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "SUPPORT_TICKET",
     label: "Support ticket update",
     description: "Applicant support ticket replies and updates.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Support update: {{ticket_subject}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "SITE_NOTICE",
     label: "Official site notice broadcast",
     description: "When admin publishes a notice to all applicants.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "Portal notice: {{notice_title}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
   {
     event: "PORTAL_ALERT",
     label: "General portal alert",
     description: "Other in-portal alerts and admin messages.",
     channel: "EMAIL",
-    whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+    whatsappTemplateName: "vgmf_under_review",
     whatsappTemplateLanguage: "en",
     emailSubject: "{{alert_title}}",
-    whatsappStaticTemplate: false,
+    whatsappStaticTemplate: true,
   },
 ];
 
@@ -257,14 +238,7 @@ export function mergeNotificationTemplates(
       merged.whatsappTemplateName = resolveOtpWhatsAppTemplateName([
         merged.whatsappTemplateName,
       ]);
-    } else {
       merged.whatsappStaticTemplate = false;
-      if (
-        !merged.whatsappTemplateName.trim() ||
-        WHATSAPP_SEMINAR_STATIC_TEMPLATE_NAMES.has(merged.whatsappTemplateName.trim())
-      ) {
-        merged.whatsappTemplateName = DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE;
-      }
     }
     return merged;
   });
@@ -304,7 +278,7 @@ export function applyEmailOnlyAlertChannels(
   );
 }
 
-/** Apply fellowship WhatsApp defaults — dynamic {{1}} template, not seminar static text. */
+/** Apply per-event Meta template names — static sends (no body params) except OTP. */
 export function applyRecommendedMetaTemplates(
   templates: NotificationEventTemplate[]
 ): NotificationEventTemplate[] {
@@ -314,24 +288,28 @@ export function applyRecommendedMetaTemplates(
   return templates.map((item) => {
     const catalog = byEvent.get(item.event);
     if (!catalog) return item;
-    if (item.event === "OTP_VERIFICATION") {
-      return {
-        ...item,
-        whatsappTemplateName: catalog.whatsappTemplateName,
-        whatsappTemplateLanguage: catalog.whatsappTemplateLanguage,
-      };
-    }
     return {
       ...item,
-      whatsappTemplateName: DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
+      whatsappTemplateName: catalog.whatsappTemplateName,
       whatsappTemplateLanguage: catalog.whatsappTemplateLanguage,
-      whatsappStaticTemplate: false,
+      whatsappStaticTemplate:
+        item.event === "OTP_VERIFICATION" ? false : catalog.whatsappStaticTemplate,
     };
   });
 }
 
-export function resolveStatusWhatsAppTemplateName(_status?: string | null): string {
-  return DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE;
+const STATUS_WHATSAPP_TEMPLATE: Record<string, string> = {
+  REJECTED: "vgmf_application_rejected",
+  NOT_ELIGIBLE: "vgmf_application_rejected",
+  SELECTED: "vgmf_application_approved",
+  SHORTLISTED: "vgmf_application_approved",
+  SCRUTINY_APPROVED: "vgmf_application_approved",
+  SUBMITTED: "vgmf_registration_success",
+};
+
+export function resolveStatusWhatsAppTemplateName(status?: string | null): string {
+  if (!status) return "vgmf_under_review";
+  return STATUS_WHATSAPP_TEMPLATE[status] ?? "vgmf_under_review";
 }
 
 export function isCriticalWhatsAppEvent(event: NotificationEventKey): boolean {

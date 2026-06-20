@@ -6,20 +6,17 @@ import {
   sendWelcomeEmail,
   sendApplicationStatusEmail,
 } from "./email";
-import { sendWhatsAppFellowshipAlert } from "./whatsapp";
-import { getIntegrationConfig } from "./integrations";
-import type { NotificationEventKey } from "./notification-templates";
+import { sendWhatsAppForEvent } from "./whatsapp";
+import {
+  resolveStatusWhatsAppTemplateName,
+  type NotificationEventKey,
+} from "./notification-templates";
 import { getAccessControl } from "./access-control";
 import { getStatusLabel } from "./utils";
 import {
   buildStatusEmailContent,
   shouldSendMainStatusEmail,
 } from "./status-email";
-import {
-  buildApplicationSubmittedWhatsAppMessage,
-  buildFellowshipAlertWhatsAppMessage,
-  buildWelcomeWhatsAppMessage,
-} from "./whatsapp-fellowship-content";
 
 async function getUserContact(userId: string) {
   return prisma.user.findUnique({
@@ -61,15 +58,9 @@ export async function dispatchNotification(
   }
 
   if (sendWhatsapp && user.phone) {
-    const config = await getIntegrationConfig();
-    const whatsappMessage = buildFellowshipAlertWhatsAppMessage({
-      name,
-      title,
-      message,
-      portalUrl: config.appUrl,
-    });
-    await sendWhatsAppFellowshipAlert(user.phone, whatsappMessage, {
-      event: "PORTAL_ALERT",
+    await sendWhatsAppForEvent("PORTAL_ALERT", user.phone, [], {
+      staticTemplate: true,
+      forceDelivery: true,
     });
   }
 }
@@ -122,19 +113,16 @@ export async function dispatchStatusUpdate(
   }
 
   if (sendWhatsapp && access.statusNotifyWhatsappEnabled && user.phone) {
-    const config = await getIntegrationConfig();
-    const whatsappMessage = buildFellowshipAlertWhatsAppMessage({
-      name,
-      title,
-      message,
-      applicationNumber: options?.applicationNumber,
-      statusLabel: options?.applicationStatus
-        ? getStatusLabel(options.applicationStatus)
-        : null,
-      portalUrl: config.appUrl,
-    });
-    await sendWhatsAppFellowshipAlert(user.phone, whatsappMessage, {
-      event: options?.whatsappEvent ?? "STATUS_UPDATE",
+    const whatsappEvent = options?.whatsappEvent ?? "STATUS_UPDATE";
+    const templateName =
+      whatsappEvent === "STATUS_UPDATE"
+        ? resolveStatusWhatsAppTemplateName(options?.applicationStatus)
+        : undefined;
+
+    await sendWhatsAppForEvent(whatsappEvent, user.phone, [], {
+      templateName,
+      staticTemplate: true,
+      forceDelivery: true,
     });
   }
 }
@@ -156,20 +144,15 @@ export async function sendWelcomeNotifications(
 ) {
   const access = await getAccessControl();
   const user = await getUserContact(userId);
-  const config = await getIntegrationConfig();
 
   if (access.welcomeEmailEnabled) {
     await sendWelcomeEmail(email, name, userUserId);
   }
 
   if (access.welcomeWhatsappEnabled && user?.phone) {
-    const whatsappMessage = buildWelcomeWhatsAppMessage({
-      name,
-      userId: userUserId,
-      portalUrl: config.appUrl,
-    });
-    await sendWhatsAppFellowshipAlert(user.phone, whatsappMessage, {
-      event: "ACCOUNT_CREATED",
+    await sendWhatsAppForEvent("ACCOUNT_CREATED", user.phone, [], {
+      staticTemplate: true,
+      forceDelivery: true,
     });
   }
 }
@@ -181,15 +164,6 @@ export async function notifyApplicationSubmitted(
 ) {
   const access = await getAccessControl();
   const user = await getUserContact(userId);
-  const config = await getIntegrationConfig();
-
-  const application = await prisma.application.findFirst({
-    where: { userId, applicationNumber: appNumber },
-    include: {
-      researchProposal: { select: { projectTitle: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
 
   const name = user?.profile?.name ?? user?.email ?? "Applicant";
   const email = applicantEmail || user?.email;
@@ -209,16 +183,9 @@ export async function notifyApplicationSubmitted(
   }
 
   if (user?.phone && access.applicationNotifyWhatsappEnabled) {
-    const whatsappMessage = buildApplicationSubmittedWhatsAppMessage({
-      name,
-      applicationNumber: appNumber,
-      userId: user.userId,
-      email,
-      projectTitle: application?.researchProposal?.projectTitle,
-      portalUrl: config.appUrl,
-    });
-    await sendWhatsAppFellowshipAlert(user.phone, whatsappMessage, {
-      event: "APPLICATION_SUBMITTED",
+    await sendWhatsAppForEvent("APPLICATION_SUBMITTED", user.phone, [], {
+      staticTemplate: true,
+      forceDelivery: true,
     });
   }
 }
