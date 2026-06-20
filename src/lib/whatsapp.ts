@@ -9,6 +9,7 @@ import {
   getNotificationTemplate,
   mergeNotificationTemplates,
   DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME,
+  DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE,
   type NotificationEventKey,
 } from "./notification-templates";
 import { normalizePhoneE164 } from "./phone";
@@ -351,6 +352,30 @@ export async function sendWhatsAppForEvent(
     bodyParameters: staticTemplate ? [] : bodyParameters,
     staticTemplate,
   });
+}
+
+/** Fellowship alerts with applicant name, application number, and full message in {{1}}. */
+export async function sendWhatsAppFellowshipAlert(
+  phone: string,
+  message: string,
+  options?: { event?: NotificationEventKey; templateName?: string }
+): Promise<WhatsAppSendResult> {
+  const body = message.trim().slice(0, 1024);
+  if (!body) {
+    return { ok: false, error: "WhatsApp message is empty." };
+  }
+
+  const event = options?.event ?? "PORTAL_ALERT";
+  const templateName = options?.templateName?.trim() || DEFAULT_FELLOWSHIP_WHATSAPP_TEMPLATE;
+
+  const templateResult = await sendWhatsAppForEvent(event, phone, [body], {
+    templateName,
+    staticTemplate: false,
+    forceDelivery: true,
+  });
+  if (templateResult.ok) return templateResult;
+
+  return sendWhatsAppMessageDetailed(phone, body);
 }
 
 export async function sendWhatsAppMessage(

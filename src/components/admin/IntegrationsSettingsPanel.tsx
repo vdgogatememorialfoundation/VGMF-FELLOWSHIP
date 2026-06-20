@@ -509,11 +509,11 @@ export function IntegrationsSettingsPanel({
           <div>
             <h2 className="font-semibold">WhatsApp Meta templates (all events)</h2>
             <p className="mt-1 text-sm text-gray-600">
-              Shared VGMF Meta catalog: <strong>vgmf_otp_auth</strong>,{" "}
-              <strong>vgmf_account_created1</strong>, <strong>vgmf_registration_success</strong>,{" "}
-              <strong>vgmf_under_review</strong>, <strong>vgmf_application_approved</strong>,{" "}
-              <strong>vgmf_application_rejected</strong>. Do not use rejected{" "}
-              <strong>vgmf_account_created</strong>.
+              Fellowship alerts use <strong>vgmf_fellowship_alert</strong> (body:{" "}
+              <code className="text-xs">{`{{1}}`}</code>) with applicant name, application number,
+              and full details — not the old seminar static templates (
+              <strong>vgmf_registration_success</strong>, <strong>vgmf_under_review</strong>, etc.).
+              OTP signup still uses <strong>vgmf_otp_auth</strong>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -529,7 +529,7 @@ export function IntegrationsSettingsPanel({
                 })
               }
             >
-              Apply VGMF Meta templates
+              Apply fellowship WhatsApp defaults
             </Button>
             <Button
               type="button"
@@ -552,9 +552,12 @@ export function IntegrationsSettingsPanel({
         </div>
 
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          <strong>Meta template status:</strong> Templates showing &quot;Active – Quality pending&quot; in
-          Meta are usable. Click <strong>Apply VGMF Meta templates</strong>, save settings, then validate.
-          Enable WhatsApp per event only after Check Meta passes for that template.
+          <strong>Meta template required:</strong> Create utility template{" "}
+          <strong>vgmf_fellowship_alert</strong> in WhatsApp Manager with body{" "}
+          <code className="text-xs">{`{{1}}`}</code> only. The portal sends fellowship-specific text
+          (name, application number, status, project title). Click{" "}
+          <strong>Apply fellowship WhatsApp defaults</strong>, save, then validate. Seminar templates
+          mention &quot;National Seminar&quot; and must not be used for fellowship alerts.
         </div>
 
         {checkMessage && (
