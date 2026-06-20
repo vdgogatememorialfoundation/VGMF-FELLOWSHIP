@@ -27,3 +27,9 @@ export function phoneLookupVariants(identifier: string): string[] {
   }
   return [...variants];
 }
+
+/** Valid Indian mobile after normalization (10 digits, starts with 6–9). */
+export function isValidIndianMobile(phone: string): boolean {
+  const digits = normalizePhoneDigits(phone);
+  return /^[6-9]\d{9}$/.test(digits);
+}

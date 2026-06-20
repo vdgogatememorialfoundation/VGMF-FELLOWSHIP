@@ -74,6 +74,10 @@ export async function createAndSendOtp(params: {
     const result = await sendWhatsAppOtp(normalizedPhone, code);
 
     if (!result.ok) {
+      await prisma.otpCode.deleteMany({
+        where: { phone: normalizedPhone, purpose, code, verified: false },
+      });
+
       const configured = await isWhatsAppConfigured();
       if (configured || process.env.NODE_ENV === "production") {
         console.error("WhatsApp OTP send failed:", result.error, "phone:", normalizedPhone);
@@ -100,6 +104,12 @@ export async function createAndSendOtp(params: {
   await invalidatePreviousOtps({ email: normalizedEmail, purpose });
   const code = await storeOtp({ email: normalizedEmail, purpose });
   const result = await sendOtpEmail(normalizedEmail, code);
+
+  if (!result.ok) {
+    await prisma.otpCode.deleteMany({
+      where: { email: normalizedEmail, purpose, code, verified: false },
+    });
+  }
 
   if (!result.ok && process.env.NODE_ENV === "production") {
     if (result.reason === "not_configured") {

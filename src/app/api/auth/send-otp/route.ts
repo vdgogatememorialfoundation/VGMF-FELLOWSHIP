@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { sendOtpSchema } from "@/lib/validations";
 import { createAndSendOtp } from "@/lib/otp";
 import {
@@ -8,7 +7,10 @@ import {
   assertApplicantLoginEnabled,
   assertLoginOtpChannel,
 } from "@/lib/access-control";
-import { phoneLookupVariants } from "@/lib/phone";
+import {
+  findActiveUserByLoginIdentifier,
+  getLoginOtpDeliveryTarget,
+} from "@/lib/user-lookup";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +24,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { channel, phone, email, purpose } = parsed.data;
+    const { channel, purpose } = parsed.data;
+    let { phone, email } = parsed.data;
 
     if (purpose === "REGISTER") {
       const signupCheck = await assertSignupEnabled();
@@ -47,18 +50,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: otpCheck.message }, { status: 403 });
       }
 
-      const normalizedEmail = email?.trim().toLowerCase();
-      const phoneVariants = phone ? phoneLookupVariants(phone) : [];
-      const existingUser = await prisma.user.findFirst({
-        where: {
-          isActive: true,
-          OR: [
-            ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
-            ...phoneVariants.map((variant) => ({ phone: variant })),
-          ],
-        },
-        select: { id: true },
-      });
+      const existingUser = await findActiveUserByLoginIdentifier({ channel, phone, email });
 
       if (!existingUser) {
         return NextResponse.json(
@@ -66,6 +58,14 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+
+      const delivery = getLoginOtpDeliveryTarget(existingUser, channel);
+      if (delivery.error) {
+        return NextResponse.json({ error: delivery.error }, { status: 400 });
+      }
+
+      phone = delivery.phone;
+      email = delivery.email;
     }
 
     const result = await createAndSendOtp({ channel, phone, email, purpose });

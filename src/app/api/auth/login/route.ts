@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import {
   verifyPassword,
   createSession,
@@ -8,8 +7,8 @@ import {
 } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
-import { phoneLookupVariants } from "@/lib/phone";
 import { assertApplicantLoginEnabled, getAccessControl } from "@/lib/access-control";
+import { findActiveUserByLoginIdentifier } from "@/lib/user-lookup";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,17 +43,12 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedIdentifier = identifier.trim();
-    const phoneVariants = phoneLookupVariants(trimmedIdentifier);
+    const isEmail = trimmedIdentifier.includes("@");
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: trimmedIdentifier.toLowerCase() },
-          ...phoneVariants.map((phone) => ({ phone })),
-        ],
-        isActive: true,
-      },
-      include: { profile: true },
+    const user = await findActiveUserByLoginIdentifier({
+      channel: isEmail ? "email" : "phone",
+      phone: isEmail ? undefined : trimmedIdentifier,
+      email: isEmail ? trimmedIdentifier : undefined,
     });
 
     if (!user) {

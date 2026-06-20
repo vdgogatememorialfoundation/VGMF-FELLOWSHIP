@@ -1,4 +1,17 @@
 import { z } from "zod";
+import { isValidIndianMobile } from "./phone";
+
+const LOGIN_USER_ID_PATTERN = /^VGMF-\d{4}-\d+$/i;
+
+function isLoginPhoneIdentifier(value: string | undefined): boolean {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) return false;
+  if (trimmed.includes("@")) {
+    return z.string().email().safeParse(trimmed).success;
+  }
+  if (LOGIN_USER_ID_PATTERN.test(trimmed)) return true;
+  return isValidIndianMobile(trimmed);
+}
 
 export const registerSchema = z
   .object({
@@ -42,10 +55,19 @@ export const sendOtpSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.channel === "phone") {
-      if (!data.phone || data.phone.replace(/\s/g, "").length < 10) {
+      const phone = data.phone?.trim() || "";
+      const valid =
+        data.purpose === "LOGIN"
+          ? isLoginPhoneIdentifier(phone)
+          : isValidIndianMobile(phone);
+
+      if (!valid) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Valid phone number required",
+          message:
+            data.purpose === "LOGIN"
+              ? "Enter your mobile number, email, or VGMF user ID"
+              : "Enter a valid 10-digit mobile number",
           path: ["phone"],
         });
       }
@@ -71,10 +93,19 @@ export const verifyOtpSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.channel === "phone") {
-      if (!data.phone || data.phone.replace(/\s/g, "").length < 10) {
+      const phone = data.phone?.trim() || "";
+      const valid =
+        data.purpose === "LOGIN"
+          ? isLoginPhoneIdentifier(phone)
+          : isValidIndianMobile(phone);
+
+      if (!valid) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Valid phone number required",
+          message:
+            data.purpose === "LOGIN"
+              ? "Enter your mobile number, email, or VGMF user ID"
+              : "Enter a valid 10-digit mobile number",
           path: ["phone"],
         });
       }
@@ -106,10 +137,10 @@ export const loginOtpSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.channel === "phone") {
-      if (!data.phone || data.phone.replace(/\s/g, "").length < 10) {
+      if (!isLoginPhoneIdentifier(data.phone)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Valid phone number required",
+          message: "Enter your mobile number, email, or VGMF user ID",
           path: ["phone"],
         });
       }

@@ -107,12 +107,18 @@ function PortalLoginFormInner({
       return;
     }
 
+    const trimmedIdentifier = identifier.trim();
+
     if (otpChannel === "phone") {
-      if (!identifier || identifier.replace(/\s/g, "").length < 10) {
-        setError("Enter a valid mobile number first");
+      const looksLikeEmail = trimmedIdentifier.includes("@");
+      const looksLikeUserId = /^VGMF-\d{4}-\d+$/i.test(trimmedIdentifier);
+      const digits = trimmedIdentifier.replace(/\D/g, "");
+
+      if (!looksLikeEmail && !looksLikeUserId && digits.length < 10) {
+        setError("Enter your mobile number, email, or VGMF user ID");
         return;
       }
-    } else if (!identifier.includes("@")) {
+    } else if (!trimmedIdentifier.includes("@")) {
       setError("Enter a valid email address first");
       return;
     }
@@ -125,10 +131,11 @@ function PortalLoginFormInner({
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           channel: otpChannel,
-          phone: otpChannel === "phone" ? identifier : undefined,
-          email: otpChannel === "email" ? identifier : undefined,
+          phone: otpChannel === "phone" ? trimmedIdentifier : undefined,
+          email: otpChannel === "email" ? trimmedIdentifier.toLowerCase() : undefined,
           purpose: "LOGIN",
         }),
       });
@@ -170,8 +177,8 @@ function PortalLoginFormInner({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           channel: otpChannel,
-          phone: otpChannel === "phone" ? identifier : undefined,
-          email: otpChannel === "email" ? identifier : undefined,
+          phone: otpChannel === "phone" ? identifier.trim() : undefined,
+          email: otpChannel === "email" ? identifier.trim().toLowerCase() : undefined,
           code: otp,
           portal,
         }),
@@ -306,8 +313,12 @@ function PortalLoginFormInner({
               )}
 
               <Input
-                label={otpChannel === "phone" ? "Mobile Number (WhatsApp)" : "Email"}
-                type={otpChannel === "phone" ? "tel" : "email"}
+                label={
+                  otpChannel === "phone"
+                    ? "Mobile, Email, or User ID"
+                    : "Email"
+                }
+                type={otpChannel === "phone" ? "text" : "email"}
                 value={identifier}
                 onChange={(e) => {
                   setIdentifier(e.target.value);
@@ -315,7 +326,11 @@ function PortalLoginFormInner({
                   setOtp("");
                   otpResendCooldown.resetCooldown();
                 }}
-                placeholder={otpChannel === "phone" ? "91XXXXXXXXXX" : "your@email.com"}
+                placeholder={
+                  otpChannel === "phone"
+                    ? "9876543210 or VGMF-2026-00001"
+                    : "your@email.com"
+                }
                 required
               />
 

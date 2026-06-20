@@ -2,6 +2,7 @@ import prisma from "./db";
 import type { UserRole } from "@prisma/client";
 import { hashPassword } from "./auth";
 import { generateUserId } from "./numeric-id";
+import { normalizePhoneDigits } from "./phone";
 import { roleToPortal, getLoginPath } from "./portal";
 
 export const STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"];
@@ -27,7 +28,7 @@ interface CreateAccountInput {
 
 export async function createUserAccount(input: CreateAccountInput) {
   const email = input.email.trim().toLowerCase();
-  const phone = input.phone?.trim() || null;
+  const phone = input.phone?.trim() ? normalizePhoneDigits(input.phone) : null;
 
   const existing = await prisma.user.findFirst({
     where: {
@@ -120,7 +121,7 @@ export async function updateUserByAdmin(
   }
 
   if (data.phone !== undefined) {
-    update.phone = data.phone.trim() || null;
+    update.phone = data.phone.trim() ? normalizePhoneDigits(data.phone) : null;
   }
 
   if (data.name) {

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import {
   createSession,
   setSessionCookie,
@@ -7,13 +6,16 @@ import {
 } from "@/lib/auth";
 import { loginOtpSchema } from "@/lib/validations";
 import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
-import { phoneLookupVariants } from "@/lib/phone";
 import {
   assertApplicantLoginEnabled,
   assertLoginOtpChannel,
   getAccessControl,
 } from "@/lib/access-control";
 import { verifyOtp } from "@/lib/otp";
+import {
+  findActiveUserByLoginIdentifier,
+  getLoginOtpDeliveryTarget,
+} from "@/lib/user-lookup";
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,37 +56,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: otpCheck.message }, { status: 403 });
     }
 
-    const otpResult = await verifyOtp({
-      channel,
-      phone,
-      email,
-      code,
-      purpose: "LOGIN",
-    });
-
-    if (!otpResult.valid) {
-      return NextResponse.json({ error: otpResult.error }, { status: 400 });
-    }
-
-    const normalizedEmail = email?.trim().toLowerCase();
-    const phoneVariants = phone ? phoneLookupVariants(phone) : [];
-
-    const user = await prisma.user.findFirst({
-      where: {
-        isActive: true,
-        OR: [
-          ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
-          ...phoneVariants.map((variant) => ({ phone: variant })),
-        ],
-      },
-      include: { profile: true },
-    });
+    const user = await findActiveUserByLoginIdentifier({ channel, phone, email });
 
     if (!user) {
       return NextResponse.json(
         { error: "No account found for this email or phone number." },
         { status: 404 }
       );
+    }
+
+    const delivery = getLoginOtpDeliveryTarget(user, channel);
+    if (delivery.error) {
+      return NextResponse.json({ error: delivery.error }, { status: 400 });
+    }
+
+    const otpResult = await verifyOtp({
+      channel,
+      phone: delivery.phone,
+      email: delivery.email,
+      code,
+      purpose: "LOGIN",
+    });
+
+    if (!otpResult.valid) {
+      return NextResponse.json({ error: otpResult.error }, { status: 400 });
     }
 
     if (portal) {
