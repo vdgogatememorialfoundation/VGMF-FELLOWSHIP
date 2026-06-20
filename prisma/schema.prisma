@@ -812,6 +812,7 @@ model SiteSettings {
   googleAnalyticsId                String? @map("google_analytics_id")
   seoIndexingEnabled               Boolean @default(true) @map("seo_indexing_enabled")
   seoStructuredDataEnabled         Boolean @default(true) @map("seo_structured_data_enabled")
+  publicSiteUrl                    String? @map("public_site_url")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")

@@ -91,6 +91,7 @@ const DEFAULT_SITE_SETTINGS = {
   googleAnalyticsId: null as string | null,
   seoIndexingEnabled: true,
   seoStructuredDataEnabled: true,
+  publicSiteUrl: null as string | null,
   updatedAt: new Date(),
 };
 
@@ -160,6 +161,7 @@ export type SiteContent = {
   googleAnalyticsId: string | null;
   seoIndexingEnabled: boolean;
   seoStructuredDataEnabled: boolean;
+  publicSiteUrl: string | null;
   updatedAt?: Date;
 };
 
@@ -238,6 +240,7 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     googleAnalyticsId: settings.googleAnalyticsId,
     seoIndexingEnabled: settings.seoIndexingEnabled ?? true,
     seoStructuredDataEnabled: settings.seoStructuredDataEnabled ?? true,
+    publicSiteUrl: settings.publicSiteUrl,
   };
 }
 

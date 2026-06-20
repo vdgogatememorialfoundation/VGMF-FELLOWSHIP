@@ -224,6 +224,7 @@ export function IntegrationsSettingsPanel({
         />
         <p className="text-xs text-gray-500">
           Used for login links, Didit callbacks, and the default WhatsApp webhook URL below.
+          For Google SEO, set the fellowship URL in the SEO & Google tab.
         </p>
       </div>
 

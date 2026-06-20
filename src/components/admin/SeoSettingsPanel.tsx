@@ -2,9 +2,10 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { buildSeoAdminStatus } from "@/lib/seo-config";
-import { PUBLIC_CMS_SLUGS } from "@/lib/seo";
+import { FELLOWSHIP_PUBLIC_SITE_URL, PUBLIC_CMS_SLUGS, resolvePublicSiteUrl } from "@/lib/seo";
 
 type SeoSettingsFields = {
+  publicSiteUrl?: string;
   seoMetaTitle?: string;
   seoMetaDescription?: string;
   seoKeywords?: string;
@@ -18,7 +19,7 @@ type SeoSettingsFields = {
 
 interface SeoSettingsPanelProps {
   settings: SeoSettingsFields;
-  appUrl: string;
+  integrationAppUrl?: string;
   loading: boolean;
   onChange: (settings: SeoSettingsFields) => void;
   onSave: () => void;
@@ -30,11 +31,19 @@ function copyText(value: string) {
 
 export function SeoSettingsPanel({
   settings,
-  appUrl,
+  integrationAppUrl,
   loading,
   onChange,
   onSave,
 }: SeoSettingsPanelProps) {
+  const resolvedAppUrl = resolvePublicSiteUrl({
+    publicSiteUrl: settings.publicSiteUrl,
+    integrationAppUrl,
+  });
+  const integrationLooksWrong = Boolean(
+    integrationAppUrl?.includes("seminar.") && !settings.publicSiteUrl?.trim()
+  );
+
   const status = buildSeoAdminStatus(
     {
       siteName: settings.siteName || "",
@@ -47,7 +56,7 @@ export function SeoSettingsPanel({
       seoIndexingEnabled: settings.seoIndexingEnabled ?? true,
       seoStructuredDataEnabled: settings.seoStructuredDataEnabled ?? true,
     },
-    appUrl
+    resolvedAppUrl
   );
 
   const indexedPages = [
@@ -114,6 +123,29 @@ export function SeoSettingsPanel({
             ))}
           </ul>
         </div>
+
+        {integrationLooksWrong && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            API Settings still points to the seminar site ({integrationAppUrl}). SEO URLs below use
+            the fellowship domain instead. Save{" "}
+            <strong>{FELLOWSHIP_PUBLIC_SITE_URL}</strong> as the public site URL, and update App URL
+            in API Settings for webhooks and Didit callbacks.
+          </div>
+        )}
+      </div>
+
+      <div className="card space-y-4">
+        <h3 className="font-semibold text-ink">Fellowship public site URL</h3>
+        <p className="text-sm text-muted">
+          Used for sitemap, robots.txt, canonical links, and Google Search Console. This is the
+          fellowship portal — not the seminar website.
+        </p>
+        <Input
+          label="Public site URL"
+          value={settings.publicSiteUrl || ""}
+          onChange={(e) => onChange({ ...settings, publicSiteUrl: e.target.value })}
+          placeholder={FELLOWSHIP_PUBLIC_SITE_URL}
+        />
       </div>
 
       <div className="card space-y-4">

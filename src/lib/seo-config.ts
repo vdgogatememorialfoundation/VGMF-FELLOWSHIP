@@ -82,9 +82,9 @@ export function buildSeoAdminStatus(
 
   const checklist = [
     {
-      label: "Public App URL configured",
-      ok: Boolean(base && !base.includes("localhost") && !base.includes("0.0.0.0")),
-      hint: "Set in API Settings → App URL",
+      label: "Fellowship public site URL configured",
+      ok: Boolean(base && !base.includes("localhost") && !base.includes("0.0.0.0") && !base.includes("seminar.")),
+      hint: "Set below — use https://fellowship.vaidyagogate.org (not the seminar site)",
     },
     {
       label: "Google Search Console verification",

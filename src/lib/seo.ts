@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { getIntegrationConfig } from "./integrations";
+import { getSiteSettings } from "./cms";
+import { normalizeAppUrl } from "./integrations";
 import { ORGANIZATION_NAME } from "./constants";
 import type { SiteContent } from "./cms";
 import type { FaqItem } from "./site-content";
 import { resolveSeoConfig } from "./seo-config";
+
+export const FELLOWSHIP_PUBLIC_SITE_URL = "https://fellowship.vaidyagogate.org";
 
 export const PUBLIC_CMS_SLUGS = [
   "about",
@@ -26,9 +29,51 @@ export const DISALLOW_ROBOTS_PREFIXES = [
   "/verification",
 ];
 
+function isBlockedPublicHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return (
+      host.includes("seminar.") ||
+      host === "0.0.0.0" ||
+      host === "127.0.0.1" ||
+      host === "localhost"
+    );
+  } catch {
+    return true;
+  }
+}
+
+export function resolvePublicSiteUrl(input?: {
+  publicSiteUrl?: string | null;
+  integrationAppUrl?: string | null;
+  envAppUrl?: string | null;
+}): string {
+  const candidates = [
+    input?.publicSiteUrl,
+    input?.envAppUrl ?? process.env.NEXT_PUBLIC_APP_URL,
+    input?.integrationAppUrl,
+    FELLOWSHIP_PUBLIC_SITE_URL,
+  ];
+
+  for (const raw of candidates) {
+    if (!raw?.trim()) continue;
+    const normalized = normalizeAppUrl(raw.trim()).replace(/\/$/, "");
+    if (isBlockedPublicHost(normalized)) continue;
+    return normalized;
+  }
+
+  return FELLOWSHIP_PUBLIC_SITE_URL;
+}
+
 export async function getPublicSiteUrl(): Promise<string> {
-  const config = await getIntegrationConfig();
-  return config.appUrl.replace(/\/$/, "");
+  const { getIntegrationConfig } = await import("./integrations");
+  const [settings, config] = await Promise.all([getSiteSettings(), getIntegrationConfig()]);
+
+  return resolvePublicSiteUrl({
+    publicSiteUrl: settings.publicSiteUrl,
+    integrationAppUrl: config.appUrl,
+    envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+  });
 }
 
 export async function buildRootMetadata(settings: SiteContent): Promise<Metadata> {

@@ -103,6 +103,7 @@ interface SiteSettingsState {
   googleAnalyticsId?: string;
   seoIndexingEnabled?: boolean;
   seoStructuredDataEnabled?: boolean;
+  publicSiteUrl?: string;
 }
 
 interface Notice {
@@ -557,7 +558,7 @@ export function WebsiteUpdates() {
       {activeTab === "seo" && (
         <SeoSettingsPanel
           settings={settings}
-          appUrl={integrations?.appUrl || ""}
+          integrationAppUrl={integrations?.appUrl}
           loading={loading}
           onChange={setSettings}
           onSave={() => saveSection("settings", settings)}

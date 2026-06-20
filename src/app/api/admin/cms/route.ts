@@ -94,6 +94,7 @@ const SITE_SETTINGS_UPDATE_KEYS = [
   "googleAnalyticsId",
   "seoIndexingEnabled",
   "seoStructuredDataEnabled",
+  "publicSiteUrl",
 ] as const;
 
 function pickSiteSettingsUpdate(data: Record<string, unknown>) {
