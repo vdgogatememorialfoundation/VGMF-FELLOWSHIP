@@ -18,6 +18,12 @@ function buildWhatsAppWebhookUrl(appUrl: string): string {
   return `${base.replace(/\/$/, "")}/api/webhooks/whatsapp`;
 }
 
+function buildDigioWebhookUrl(appUrl: string): string {
+  if (!appUrl?.trim()) return "https://your-domain/api/digio/webhook";
+  const base = appUrl.trim().startsWith("http") ? appUrl.trim() : `https://${appUrl.trim()}`;
+  return `${base.replace(/\/$/, "")}/api/digio/webhook`;
+}
+
 function appUrlFromWebhookUrl(webhookUrl: string): string {
   const trimmed = webhookUrl.trim().replace(/\/$/, "");
   if (!trimmed) return "";
@@ -27,6 +33,7 @@ function appUrlFromWebhookUrl(webhookUrl: string): string {
 
 type IntegrationsState = {
   appUrl: string;
+  appUrlCorrectedFromStored?: boolean;
   zeptomailToken: string;
   zeptomailFromEmail: string;
   zeptomailFromName: string;
@@ -39,6 +46,7 @@ type IntegrationsState = {
   whatsappApiVersion: string;
   emailOtpSubject: string;
   whatsappWebhookUrl?: string;
+  digioWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
   digioClientId: string;
   digioClientSecret: string;
@@ -172,6 +180,8 @@ export function IntegrationsSettingsPanel({
   }
 
   const webhookUrl = buildWhatsAppWebhookUrl(integrations.appUrl) || integrations.whatsappWebhookUrl || "";
+  const digioWebhookUrl =
+    integrations.digioWebhookUrl || buildDigioWebhookUrl(integrations.appUrl);
 
   async function copyWebhookUrl() {
     const url = buildWhatsAppWebhookUrl(integrations.appUrl) || webhookUrl;
@@ -232,6 +242,12 @@ export function IntegrationsSettingsPanel({
           Used for login links, Digio callbacks, and the default WhatsApp webhook URL below.
           For Google SEO, set the fellowship URL in the SEO & Google tab.
         </p>
+        {integrations.appUrlCorrectedFromStored && (
+          <p className="text-sm text-amber-800 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            Saved App URL pointed at the seminar site. The fellowship URL is shown below — click
+            Save to store it permanently.
+          </p>
+        )}
       </div>
 
       <div className="card space-y-4">
@@ -653,11 +669,7 @@ export function IntegrationsSettingsPanel({
         <p className="text-sm text-gray-600">
           When online Digio verification is disabled, applicants submit documents manually and the
           Foundation verifies offline. Register this webhook URL in the Digio dashboard:{" "}
-          <code className="text-xs">
-            {integrations.appUrl
-              ? `${integrations.appUrl.startsWith("http") ? integrations.appUrl : `https://${integrations.appUrl}`}/api/digio/webhook`
-              : "https://your-domain/api/digio/webhook"}
-          </code>
+          <code className="text-xs">{digioWebhookUrl}</code>
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input

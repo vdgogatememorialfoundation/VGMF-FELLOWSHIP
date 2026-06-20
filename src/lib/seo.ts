@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { getSiteSettings } from "./cms";
-import { normalizeAppUrl } from "./integrations";
+import {
+  normalizeAppUrl,
+  isBlockedIntegrationHost,
+  FELLOWSHIP_APP_URL as FELLOWSHIP_PUBLIC_SITE_URL,
+} from "./integrations";
 import { ORGANIZATION_NAME } from "./constants";
 import type { SiteContent } from "./cms";
 import type { FaqItem } from "./site-content";
 import { resolveSeoConfig } from "./seo-config";
 
-export const FELLOWSHIP_PUBLIC_SITE_URL = "https://fellowship.vaidyagogate.org";
+export { FELLOWSHIP_APP_URL as FELLOWSHIP_PUBLIC_SITE_URL } from "./integrations";
 
 export const PUBLIC_CMS_SLUGS = [
   "about",
@@ -30,17 +34,7 @@ export const DISALLOW_ROBOTS_PREFIXES = [
 ];
 
 function isBlockedPublicHost(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return (
-      host.includes("seminar.") ||
-      host === "0.0.0.0" ||
-      host === "127.0.0.1" ||
-      host === "localhost"
-    );
-  } catch {
-    return true;
-  }
+  return isBlockedIntegrationHost(url);
 }
 
 export function resolvePublicSiteUrl(input?: {

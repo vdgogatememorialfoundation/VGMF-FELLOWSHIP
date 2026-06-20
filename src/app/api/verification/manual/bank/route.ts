@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getFellowshipForApplicant } from "@/lib/fellowship-access";
 import prisma from "@/lib/db";
 import { isDigioBankAvailable, syncManualBankVerification } from "@/lib/manual-verification";
+import { toUploadApiUrl } from "@/lib/upload-files";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       ? {
           id: bankDoc.id,
           fileName: bankDoc.fileName,
-          filePath: bankDoc.filePath,
+          filePath: toUploadApiUrl(bankDoc.filePath) ?? bankDoc.filePath,
           status: bankDoc.status,
           rejectionReason: bankDoc.rejectionReason,
         }

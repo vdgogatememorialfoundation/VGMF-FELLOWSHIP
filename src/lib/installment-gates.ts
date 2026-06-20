@@ -5,6 +5,7 @@ import {
   type RequirementStatus,
 } from "./installment-requirements";
 import { getUndertakingPdfUrl } from "./undertaking-assets";
+import { toUploadApiUrl } from "./upload-files";
 
 type FellowshipWithDocs = {
   id: string;
@@ -66,7 +67,7 @@ export async function getInstallmentRequirementStatus(
         source: req.source,
         satisfied,
         status: satisfied ? "APPROVED" : doc?.status ?? (approvedReport ? "APPROVED" : "MISSING"),
-      filePath: doc?.filePath ?? approvedReport?.reportPath ?? null,
+      filePath: doc?.filePath ? toUploadApiUrl(doc.filePath) : approvedReport?.reportPath ? toUploadApiUrl(approvedReport.reportPath) : null,
       documentId: doc?.id ?? null,
       detail: satisfied
           ? undefined
@@ -94,7 +95,11 @@ export async function getInstallmentRequirementStatus(
         source: req.source,
         satisfied,
         status: satisfied ? "APPROVED" : doc?.status ?? (hasFile ? final?.status : "MISSING"),
-        filePath: doc?.filePath ?? (hasFile ? String(final?.[field]) : null),
+        filePath: doc?.filePath
+          ? toUploadApiUrl(doc.filePath)
+          : hasFile
+            ? toUploadApiUrl(String(final?.[field]))
+            : null,
         detail: satisfied ? undefined : "Submit final deliverables and await admin approval",
       };
     }
@@ -107,7 +112,7 @@ export async function getInstallmentRequirementStatus(
       source: req.source,
       satisfied,
       status: doc?.status ?? "MISSING",
-      filePath: doc?.filePath ?? null,
+      filePath: doc?.filePath ? toUploadApiUrl(doc.filePath) : null,
       documentId: doc?.id ?? null,
       detail:
         doc?.status === "REJECTED" || doc?.status === "RESUBMIT_REQUIRED"

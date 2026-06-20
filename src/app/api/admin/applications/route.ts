@@ -12,6 +12,7 @@ import {
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
 import { updateApplicationByAdmin } from "@/lib/admin-application-update";
+import { toUploadApiUrl } from "@/lib/upload-files";
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -140,7 +141,7 @@ export async function PATCH(request: NextRequest) {
         type: doc.type,
         status: doc.status,
         fileName: doc.fileName,
-        filePath: doc.filePath,
+        filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
         rejectionReason: doc.rejectionReason,
       }))
     );

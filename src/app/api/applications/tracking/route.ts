@@ -22,6 +22,7 @@ import { repairApplicationIfNeeded } from "@/lib/fellowship-access";
 import { getIntegrationConfig } from "@/lib/integrations";
 import { isDigioIdentityConfigured } from "@/lib/digio";
 import { shouldTrackIdentityVerification } from "@/lib/identity-verification-tracking";
+import { toUploadApiUrl } from "@/lib/upload-files";
 import {
   buildTrackingHeadline,
   buildTrackingTimeline,
@@ -215,7 +216,7 @@ export async function GET() {
           label: getDocumentLabel(doc.type),
           status: doc.status,
           fileName: doc.fileName,
-          filePath: doc.filePath,
+          filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
           rejectionReason: doc.rejectionReason,
           reviewedAt: doc.reviewedAt,
           canResubmit:

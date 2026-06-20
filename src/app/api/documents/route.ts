@@ -10,6 +10,7 @@ import {
   isManualIdentityDocumentType,
   syncManualIdentityVerification,
 } from "@/lib/manual-verification";
+import { toUploadApiUrl } from "@/lib/upload-files";
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -127,7 +128,13 @@ export async function POST(request: NextRequest) {
       await syncManualIdentityVerification(applicationId);
     }
 
-    return NextResponse.json({ success: true, document });
+    return NextResponse.json({
+      success: true,
+      document: {
+        ...document,
+        filePath: toUploadApiUrl(document.filePath) ?? document.filePath,
+      },
+    });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });

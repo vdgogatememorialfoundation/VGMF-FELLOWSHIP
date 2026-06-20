@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { getSession, generateApplicationNumber } from "@/lib/auth";
 import { applicationSchema, researchProposalSchema, budgetSchema } from "@/lib/validations";
 import { notifyApplicationSubmitted } from "@/lib/notifications";
+import { toUploadApiUrl } from "@/lib/upload-files";
 
 export async function GET() {
   const user = await getSession();
@@ -21,7 +22,15 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ applications });
+  return NextResponse.json({
+    applications: applications.map((app) => ({
+      ...app,
+      documents: app.documents.map((doc) => ({
+        ...doc,
+        filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
+      })),
+    })),
+  });
 }
 
 export async function POST(request: NextRequest) {

@@ -8,6 +8,7 @@ import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { canReplaceFellowshipDocument } from "@/lib/document-review";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { isDigioBankAvailable, syncManualBankVerification } from "@/lib/manual-verification";
+import { toUploadApiUrl } from "@/lib/upload-files";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -63,7 +64,10 @@ export async function GET(request: NextRequest) {
       : [];
 
   return NextResponse.json({
-    documents: fellowship.fellowshipDocuments,
+    documents: fellowship.fellowshipDocuments.map((doc) => ({
+      ...doc,
+      filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
+    })),
     requirements,
     digitalUndertaking: fellowship.application.digitalUndertaking,
   });
@@ -188,7 +192,13 @@ export async function POST(request: NextRequest) {
       await syncManualBankVerification(fellowshipId);
     }
 
-    return NextResponse.json({ success: true, document });
+    return NextResponse.json({
+      success: true,
+      document: {
+        ...document,
+        filePath: toUploadApiUrl(document.filePath) ?? document.filePath,
+      },
+    });
   } catch (error) {
     console.error("Fellowship document upload error:", error);
     return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });

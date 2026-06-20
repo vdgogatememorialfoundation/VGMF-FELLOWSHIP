@@ -52,6 +52,22 @@ async function getDbSettings() {
   }
 }
 
+export const FELLOWSHIP_APP_URL = "https://fellowship.vaidyagogate.org";
+
+export function isBlockedIntegrationHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return (
+      host.includes("seminar.") ||
+      host === "0.0.0.0" ||
+      host === "127.0.0.1" ||
+      host === "localhost"
+    );
+  } catch {
+    return true;
+  }
+}
+
 export function normalizeAppUrl(url: string | null | undefined): string {
   const fallback = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const raw = (url?.trim() || fallback).trim();
@@ -80,6 +96,31 @@ export function normalizeAppUrl(url: string | null | undefined): string {
   return normalized;
 }
 
+/** Public origin for webhooks, Digio callbacks, and email links — never the seminar site. */
+export function resolveIntegrationAppUrl(
+  dbUrl?: string | null,
+  envUrl?: string | null
+): string {
+  const candidates = [
+    dbUrl,
+    envUrl ?? process.env.NEXT_PUBLIC_APP_URL,
+    FELLOWSHIP_APP_URL,
+  ];
+
+  for (const raw of candidates) {
+    if (!raw?.trim()) continue;
+    const normalized = normalizeAppUrl(raw.trim()).replace(/\/$/, "");
+    if (isBlockedIntegrationHost(normalized)) continue;
+    return normalized;
+  }
+
+  return FELLOWSHIP_APP_URL;
+}
+
+export function buildDigioWebhookUrl(appUrl?: string | null): string {
+  return `${resolveIntegrationAppUrl(appUrl).replace(/\/$/, "")}/api/digio/webhook`;
+}
+
 function resolveDigioEnvironment(value: string | null | undefined): "sandbox" | "production" {
   return value?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production";
 }
@@ -102,7 +143,7 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
   ]);
 
   return {
-    appUrl: normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL),
+    appUrl: resolveIntegrationAppUrl(db?.appUrl, process.env.NEXT_PUBLIC_APP_URL),
     email: {
       token: db?.zeptomailToken || process.env.ZEPTOMAIL_TOKEN || null,
       fromEmail: db?.zeptomailFromEmail || process.env.ZEPTOMAIL_FROM_EMAIL || null,
@@ -167,8 +208,14 @@ export async function getIntegrationSettingsForAdmin() {
   const db = await getDbSettings();
   const config = await getIntegrationConfig();
 
+  const appUrl = resolveIntegrationAppUrl(db?.appUrl, process.env.NEXT_PUBLIC_APP_URL);
+  const storedAppUrl = db?.appUrl?.trim() ? normalizeAppUrl(db.appUrl) : null;
+  const appUrlCorrectedFromStored =
+    storedAppUrl != null && isBlockedIntegrationHost(storedAppUrl);
+
   return {
-    appUrl: normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL),
+    appUrl,
+    appUrlCorrectedFromStored,
     zeptomailToken: maskSecret(db?.zeptomailToken || process.env.ZEPTOMAIL_TOKEN),
     zeptomailFromEmail: db?.zeptomailFromEmail || process.env.ZEPTOMAIL_FROM_EMAIL || "",
     zeptomailFromName: config.email.fromName,
@@ -185,7 +232,8 @@ export async function getIntegrationSettingsForAdmin() {
     emailOtpSubject:
       db?.emailOtpSubject || "Verify your email — VGMF Fellowship Portal",
     notificationTemplates: mergeNotificationTemplates(db?.notificationTemplatesJson),
-    whatsappWebhookUrl: `${normalizeAppUrl(db?.appUrl || process.env.NEXT_PUBLIC_APP_URL)}/api/webhooks/whatsapp`,
+    whatsappWebhookUrl: `${appUrl}/api/webhooks/whatsapp`,
+    digioWebhookUrl: buildDigioWebhookUrl(appUrl),
     digioClientId: maskSecret(db?.digioClientId || process.env.DIGIO_CLIENT_ID),
     digioClientSecret: maskSecret(db?.digioClientSecret || process.env.DIGIO_CLIENT_SECRET),
     digioWebhookSecret: maskSecret(db?.digioWebhookSecret || process.env.DIGIO_WEBHOOK_SECRET),

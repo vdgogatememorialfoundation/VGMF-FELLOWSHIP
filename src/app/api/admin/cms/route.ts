@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import type { NoticeCategory } from "@prisma/client";
-import { getIntegrationSettingsForAdmin, normalizeAppUrl } from "@/lib/integrations";
+import { getIntegrationSettingsForAdmin, normalizeAppUrl, resolveIntegrationAppUrl, isBlockedIntegrationHost } from "@/lib/integrations";
 import { resolveSecret, isMaskedSecret, resolveOptionalSetting } from "@/lib/site-content";
 import {
   mergeNotificationTemplates,
@@ -111,7 +111,11 @@ function resolveAppUrlSetting(
 ): string | null {
   const trimmed = incoming?.trim();
   if (!trimmed) return existing;
-  return normalizeAppUrl(trimmed);
+  const normalized = normalizeAppUrl(trimmed);
+  if (isBlockedIntegrationHost(normalized)) {
+    return resolveIntegrationAppUrl(null, process.env.NEXT_PUBLIC_APP_URL);
+  }
+  return normalized;
 }
 
 async function requireAdmin() {

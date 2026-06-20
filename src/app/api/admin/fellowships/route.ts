@@ -9,6 +9,7 @@ import { generateAndStoreFellowshipAgreement } from "@/lib/agreement-service";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { BUDGET_MAX } from "@/lib/utils";
+import { toUploadApiUrl } from "@/lib/upload-files";
 
 const ADMIN_UPLOAD_TYPES: FellowshipDocType[] = [
   "ACCEPTANCE_LETTER",
@@ -71,7 +72,13 @@ export async function GET(request: NextRequest) {
   ]);
 
   return NextResponse.json({
-    fellowship,
+    fellowship: {
+      ...fellowship,
+      fellowshipDocuments: fellowship.fellowshipDocuments.map((doc) => ({
+        ...doc,
+        filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
+      })),
+    },
     requirements: { 1: inst1, 2: inst2, 3: inst3 },
   });
 }
@@ -168,7 +175,13 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return NextResponse.json({ success: true, document });
+      return NextResponse.json({
+        success: true,
+        document: {
+          ...document,
+          filePath: toUploadApiUrl(document.filePath) ?? document.filePath,
+        },
+      });
     }
 
     return NextResponse.json({ error: "Use multipart form for file upload" }, { status: 400 });

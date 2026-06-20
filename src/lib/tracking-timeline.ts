@@ -61,6 +61,52 @@ const MILESTONE_HISTORY_STATUSES: Record<string, string[]> = {
   selection: ["TRUSTEE_REVIEW", "SELECTED", "AGREEMENT_PENDING"],
 };
 
+const DOCUMENT_VERIFICATION_STATUSES: ApplicationStatus[] = [
+  "SUBMITTED",
+  "SCRUTINY",
+  "QUERY_RAISED",
+  "QUERY_RESPONDED",
+];
+
+function getDocumentsMilestoneCopy(status: ApplicationStatus): {
+  label: string;
+  description: string;
+} {
+  if (status === "QUERY_RAISED") {
+    return {
+      label: "Document Verification",
+      description: "The verification team has raised a query — please respond",
+    };
+  }
+  if (status === "QUERY_RESPONDED") {
+    return {
+      label: "Document Verification",
+      description: "Your response is being reviewed by the verification team",
+    };
+  }
+  return {
+    label: "Document Verification",
+    description: "Our team is reviewing your uploaded documents",
+  };
+}
+
+function resolveDocumentsMilestoneState(
+  mappedState: TimelineStepState,
+  status: ApplicationStatus,
+  identityVerification?: IdentityVerificationTrackingInput | null
+): TimelineStepState {
+  if (mappedState === "query") return "query";
+  if (mappedState !== "current") return mappedState;
+
+  const identityBlocking =
+    identityVerification &&
+    shouldTrackIdentityVerification(identityVerification, status) &&
+    identityVerification.status !== "APPROVED" &&
+    identityVerification.status !== "NOT_STARTED";
+
+  return identityBlocking ? "pending" : mappedState;
+}
+
 function findHistoryTimestamp(
   history: StatusHistoryEntry[],
   statuses: string[]
@@ -373,11 +419,35 @@ export function buildTrackingTimeline(input: {
         (submittedAt ? new Date(submittedAt).toISOString() : new Date(createdAt).toISOString());
     }
 
+    let state = mapMilestoneState(milestoneStates[index] ?? "pending", status);
+    let label = milestone.label;
+    let description = milestone.description;
+
+    if (milestone.key === "documents") {
+      if (DOCUMENT_VERIFICATION_STATUSES.includes(status)) {
+        const copy = getDocumentsMilestoneCopy(status);
+        label = copy.label;
+        description = copy.description;
+      }
+      state = resolveDocumentsMilestoneState(state, status, identityVerification);
+      if (
+        state === "pending" &&
+        identityVerification &&
+        shouldTrackIdentityVerification(identityVerification, status) &&
+        identityVerification.status !== "APPROVED" &&
+        identityVerification.status !== "NOT_STARTED" &&
+        DOCUMENT_VERIFICATION_STATUSES.includes(status)
+      ) {
+        description =
+          "Foundation document review runs in parallel and completes when your files are approved";
+      }
+    }
+
     steps.push({
       key: milestone.key,
-      label: milestone.label,
-      description: milestone.description,
-      state: mapMilestoneState(milestoneStates[index] ?? "pending", status),
+      label,
+      description,
+      state,
       timestamp: milestoneStates[index] === "complete" ? timestamp : null,
       phase: "application",
     });
