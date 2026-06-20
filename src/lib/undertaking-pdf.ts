@@ -2,6 +2,14 @@ import PDFDocument from "pdfkit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
+import {
+  applyPdfLetterheadLayout,
+  drawPdfFooter,
+  drawPdfHeader,
+  loadPdfLetterheadBranding,
+  PDF_PAGE_MARGIN,
+  registerPdfLetterhead,
+} from "./pdf-letterhead";
 
 function ensurePdfkitFonts() {
   const fontDir = path.join(process.cwd(), "node_modules", "pdfkit", "js", "data");
@@ -19,6 +27,9 @@ I confirm that:
 
 I understand that any false statement, ethical misconduct, or misuse of funds may lead to rejection, termination of fellowship, or recovery of disbursed amounts.`;
 
+const AUDIT_NOTE =
+  "This document was electronically generated and signed through the VGMF Fellowship Portal. The timestamp and IP address above form part of the audit record.";
+
 type GenerateUndertakingPdfParams = {
   applicationId: string;
   applicationNumber: string;
@@ -32,6 +43,7 @@ export async function generateUndertakingPdf(
   params: GenerateUndertakingPdfParams
 ): Promise<{ pdfBuffer: Buffer; pdfPath: string }> {
   ensurePdfkitFonts();
+  const branding = await loadPdfLetterheadBranding();
 
   const uploadDir = path.join(
     process.cwd(),
@@ -44,24 +56,23 @@ export async function generateUndertakingPdf(
 
   const fileName = `undertaking_${params.applicationNumber}_${Date.now()}.pdf`;
   const fullPath = path.join(uploadDir, fileName);
+  const documentSubtitle = `${branding.siteName} — Fellowship Declaration`;
 
   const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50, size: "A4" });
+    const doc = new PDFDocument({ margin: PDF_PAGE_MARGIN, size: "A4" });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(16).font("Helvetica-Bold").text("DIGITAL UNDERTAKING", { align: "center" });
-    doc.moveDown(0.5);
-    doc
-      .fontSize(11)
-      .font("Helvetica")
-      .text("Viddhakarma Research Fellowship — Vd. Gogate Memorial Foundation, Pune", {
-        align: "center",
-      });
-    doc.moveDown(1.5);
+    applyPdfLetterheadLayout(doc);
+    registerPdfLetterhead(doc, branding, {
+      documentTitle: "DIGITAL UNDERTAKING",
+      documentSubtitle,
+      auditNote: AUDIT_NOTE,
+    });
+    drawPdfHeader(doc, branding, "DIGITAL UNDERTAKING", documentSubtitle);
 
     doc.fontSize(10).font("Helvetica-Bold").text("Application Number: ", { continued: true });
     doc.font("Helvetica").text(params.applicationNumber);
@@ -85,16 +96,8 @@ export async function generateUndertakingPdf(
     } catch {
       doc.font("Helvetica").text("[Signature image attached]");
     }
-    doc.moveDown(1);
 
-    doc
-      .fontSize(9)
-      .fillColor("#444444")
-      .text(
-        "This document was electronically generated and signed through the VGMF Fellowship Portal. The timestamp and IP address above form part of the audit record.",
-        { align: "justify" }
-      );
-
+    drawPdfFooter(doc, branding, { auditNote: AUDIT_NOTE });
     doc.end();
   });
 
