@@ -171,34 +171,7 @@ async function main() {
 
   await prisma.siteSettings.upsert({
     where: { id: "default" },
-    update: {
-      siteName: "Vaidya Gogate Memorial Foundation Fellowship Portal 2026",
-      siteTagline: "Advancing Ayurvedic Research & Viddhakarma Studies",
-      contactEmail: "info@vaidyagogate.org",
-      contactPhone: "+91 9876543210",
-      headerOrgName: "Vaidya Gogate Memorial Foundation",
-      utilityBarText: "Fellowship 2026",
-      heroBadge: "Fellowship 2026 · Applications Open",
-      heroStats: DEFAULT_HERO_STATS,
-      heroSnapshot: DEFAULT_HERO_SNAPSHOT,
-      highlightsTitle: "Programme highlights",
-      highlightsSubtitle:
-        "Clinical research, mentorship, and structured funding — designed like our national seminar experience.",
-      highlights: DEFAULT_HIGHLIGHTS,
-      journeyTitle: "Your application journey",
-      journeySubtitle: "3 simple steps",
-      journeySteps: DEFAULT_JOURNEY_STEPS,
-      faqTitle: "Frequently asked questions",
-      faqSubtitle: "Registration, applications, grants, and tracking — answered.",
-      faqItems: DEFAULT_FAQ_ITEMS,
-      navLinks: DEFAULT_NAV_LINKS,
-      footerQuickLinks: DEFAULT_FOOTER_QUICK_LINKS,
-      footerLegalLinks: DEFAULT_FOOTER_LEGAL_LINKS,
-      footerAboutText: "Advancing Ayurveda since 1972",
-      footerDeveloperCredit:
-        "Developed by Capture Visual Studios · Vaidya Gogate Memorial Foundation Copyrights",
-      contactAddress: "Vaidya Gogate Memorial Foundation, India",
-    },
+    update: {},
     create: {
       id: "default",
       siteName: "Vaidya Gogate Memorial Foundation Fellowship Portal 2026",
@@ -244,7 +217,7 @@ async function main() {
   for (const page of DEFAULT_PAGES) {
     await prisma.cmsPage.upsert({
       where: { slug: page.slug },
-      update: { title: page.title, content: page.content },
+      update: {},
       create: page,
     });
   }

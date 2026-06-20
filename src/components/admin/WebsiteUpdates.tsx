@@ -551,6 +551,10 @@ export function WebsiteUpdates() {
           <Input label="Contact Email" value={settings.contactEmail || ""} onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })} />
           <Input label="Contact Phone" value={settings.contactPhone || ""} onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })} />
           <Input label="Contact Address" value={settings.contactAddress || ""} onChange={(e) => setSettings({ ...settings, contactAddress: e.target.value })} />
+          <p className="text-xs text-gray-500">
+            Click Save Branding below after editing contact details — changes are stored in the database
+            and will not reset on refresh once saved.
+          </p>
           <Button loading={loading} onClick={() => saveSection("settings", settings)}>Save Branding</Button>
         </div>
       )}

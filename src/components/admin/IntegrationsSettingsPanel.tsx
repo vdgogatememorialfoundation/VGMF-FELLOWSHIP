@@ -229,6 +229,33 @@ export function IntegrationsSettingsPanel({
       </div>
 
       <div className="card space-y-4">
+        <h2 className="font-semibold">Server keep-alive (Render free tier)</h2>
+        <p className="text-sm text-gray-600">
+          Free hosting sleeps after ~15 minutes without traffic. Ping this URL every 10–14 minutes
+          using UptimeRobot, Cron-job.org, or the Render cron job in <code className="text-xs">render.yaml</code>.
+        </p>
+        {(() => {
+          const base = integrations.appUrl?.startsWith("http")
+            ? integrations.appUrl.replace(/\/$/, "")
+            : integrations.appUrl
+              ? `https://${integrations.appUrl.replace(/\/$/, "")}`
+              : "";
+          const keepAliveUrl = base ? `${base}/api/health` : "/api/health";
+          return (
+            <div className="rounded-lg border border-[#e4ede8] bg-primary-50/30 p-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">Ping URL</p>
+              <p className="mt-1 break-all text-sm font-medium text-ink">{keepAliveUrl}</p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
+                <li>UptimeRobot: HTTP monitor every 5 minutes</li>
+                <li>Cron-job.org: GET request every 12–14 minutes (avoid exact 15 min intervals)</li>
+                <li>Render: set env <code>KEEPALIVE_URL</code> to this URL for the bundled cron job</li>
+              </ul>
+            </div>
+          );
+        })()}
+      </div>
+
+      <div className="card space-y-4">
         <h2 className="font-semibold">ZeptoMail (Email & OTP)</h2>
         <p className="text-sm text-gray-600">
           India ZeptoMail accounts use <code className="text-xs">api.zeptomail.in</code> automatically.

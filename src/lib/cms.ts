@@ -209,9 +209,9 @@ function enrichSettings(settings: Awaited<ReturnType<typeof prisma.siteSettings.
     footerDeveloperCredit:
       settings.footerDeveloperCredit || DEFAULT_SITE_SETTINGS.footerDeveloperCredit,
     footerText: settings.footerText || DEFAULT_SITE_SETTINGS.footerText,
-    contactEmail: settings.contactEmail || DEFAULT_SITE_SETTINGS.contactEmail,
-    contactPhone: settings.contactPhone || DEFAULT_SITE_SETTINGS.contactPhone,
-    contactAddress: settings.contactAddress || DEFAULT_SITE_SETTINGS.contactAddress,
+    contactEmail: settings.contactEmail ?? DEFAULT_SITE_SETTINGS.contactEmail,
+    contactPhone: settings.contactPhone ?? DEFAULT_SITE_SETTINGS.contactPhone,
+    contactAddress: settings.contactAddress ?? DEFAULT_SITE_SETTINGS.contactAddress,
     signupEnabled: settings.signupEnabled ?? true,
     loginEnabled: settings.loginEnabled ?? true,
     signupDisabledMessage: settings.signupDisabledMessage,

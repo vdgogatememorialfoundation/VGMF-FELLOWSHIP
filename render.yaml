@@ -18,6 +18,8 @@ services:
         generateValue: true
       - key: NEXT_PUBLIC_APP_URL
         sync: false
+      - key: KEEPALIVE_URL
+        sync: false
       - key: ZEPTOMAIL_TOKEN
         sync: false
       - key: ZEPTOMAIL_FROM_EMAIL
@@ -39,4 +41,16 @@ services:
       - key: GOOGLE_SITE_VERIFICATION
         sync: false
       - key: NEXT_PUBLIC_GA_MEASUREMENT_ID
+        sync: false
+
+  # Pings the web service every 14 minutes so Render free tier does not sleep.
+  # Set KEEPALIVE_URL in the Render dashboard, e.g. https://fellowship.vaidyagogate.org/api/health
+  - type: cron
+    name: fellowship-keepalive
+    runtime: node
+    schedule: "*/14 * * * *"
+    buildCommand: echo "keepalive"
+    startCommand: node -e "fetch(process.env.KEEPALIVE_URL||'http://127.0.0.1:10000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+    envVars:
+      - key: KEEPALIVE_URL
         sync: false
