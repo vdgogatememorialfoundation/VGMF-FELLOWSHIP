@@ -1,6 +1,14 @@
 import PDFDocument from "pdfkit";
 import { existsSync } from "fs";
 import path from "path";
+import {
+  applyPdfLetterheadLayout,
+  drawPdfFooter,
+  drawPdfHeader,
+  loadPdfLetterheadBranding,
+  PDF_PAGE_MARGIN,
+  registerPdfLetterhead,
+} from "./pdf-letterhead";
 
 function ensurePdfkitFonts() {
   const fontDir = path.join(process.cwd(), "node_modules", "pdfkit", "js", "data");
@@ -20,6 +28,9 @@ The Fellow agrees to:
 
 The Foundation agrees to sanction the fellowship amount in three installments (40% / 40% / 20%) subject to satisfactory progress, document verification, and trustee approval.`;
 
+const AUDIT_NOTE =
+  "This agreement was auto-generated upon fellowship selection. Signed acceptance may be submitted digitally through the VGMF Fellowship Portal.";
+
 export type GenerateAgreementPdfParams = {
   fellowshipId: string;
   applicationNumber: string;
@@ -36,24 +47,24 @@ export async function generateFellowshipAgreementPdf(
   params: GenerateAgreementPdfParams
 ): Promise<Buffer> {
   ensurePdfkitFonts();
+  const branding = await loadPdfLetterheadBranding();
+  const documentSubtitle = `${branding.siteName} — Fellowship Agreement`;
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50, size: "A4" });
+    const doc = new PDFDocument({ margin: PDF_PAGE_MARGIN, size: "A4" });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(16).font("Helvetica-Bold").text("FELLOWSHIP AGREEMENT", { align: "center" });
-    doc.moveDown(0.5);
-    doc
-      .fontSize(11)
-      .font("Helvetica")
-      .text("Viddhakarma Research Fellowship — Vd. Gogate Memorial Foundation, Pune", {
-        align: "center",
-      });
-    doc.moveDown(1.5);
+    applyPdfLetterheadLayout(doc);
+    registerPdfLetterhead(doc, branding, {
+      documentTitle: "FELLOWSHIP AGREEMENT",
+      documentSubtitle,
+      auditNote: AUDIT_NOTE,
+    });
+    drawPdfHeader(doc, branding, "FELLOWSHIP AGREEMENT", documentSubtitle);
 
     doc.fontSize(10).font("Helvetica-Bold").text("Fellowship ID: ", { continued: true });
     doc.font("Helvetica").text(params.fellowshipId);
@@ -82,20 +93,13 @@ export async function generateFellowshipAgreementPdf(
     doc.fontSize(10).font("Helvetica").text(AGREEMENT_BODY, { align: "justify", lineGap: 4 });
     doc.moveDown(2);
 
-    doc.font("Helvetica-Bold").text("For Vd. Gogate Memorial Foundation");
+    doc.font("Helvetica-Bold").text(`For ${branding.organizationName}`);
     doc.moveDown(2);
     doc.font("Helvetica-Bold").text("Fellow Acceptance:");
     doc.moveDown(2);
     doc.font("Helvetica").text("Signature: ___________________________    Date: _______________");
-    doc.moveDown(1);
-    doc
-      .fontSize(9)
-      .fillColor("#444444")
-      .text(
-        "This agreement was auto-generated upon fellowship selection. Signed acceptance may be submitted digitally through the Fellowship Portal.",
-        { align: "justify" }
-      );
 
+    drawPdfFooter(doc, branding, { auditNote: AUDIT_NOTE });
     doc.end();
   });
 }
