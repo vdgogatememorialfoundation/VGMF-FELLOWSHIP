@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       ? {
           id: bankDoc.id,
           fileName: bankDoc.fileName,
-          filePath: toUploadApiUrl(bankDoc.filePath) ?? bankDoc.filePath,
+          filePath: toUploadApiUrl(bankDoc.filePath, { fellowshipDocumentId: bankDoc.id }) ?? bankDoc.filePath,
           status: bankDoc.status,
           rejectionReason: bankDoc.rejectionReason,
         }

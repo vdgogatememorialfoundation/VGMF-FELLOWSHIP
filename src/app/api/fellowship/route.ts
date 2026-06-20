@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
 import { ensureApplicantFellowship } from "@/lib/fellowship-access";
 
 export async function GET() {
@@ -64,12 +65,17 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await reportFile.arrayBuffer());
     await writeFile(filePath, buffer);
 
+    const reportPath = `/uploads/fellowships/${fellowshipId}/${fileName}`;
+    const reportData = encodeFileData(buffer);
+    await writeUploadToDisk(reportPath, buffer);
+
     const report = await prisma.progressReport.upsert({
       where: {
         fellowshipId_quarter_year: { fellowshipId, quarter, year },
       },
       update: {
-        reportPath: `/uploads/fellowships/${fellowshipId}/${fileName}`,
+        reportPath,
+        reportData,
         status: "SUBMITTED",
         submittedAt: new Date(),
       },
@@ -77,7 +83,8 @@ export async function POST(request: NextRequest) {
         fellowshipId,
         quarter,
         year,
-        reportPath: `/uploads/fellowships/${fellowshipId}/${fileName}`,
+        reportPath,
+        reportData,
       },
     });
 

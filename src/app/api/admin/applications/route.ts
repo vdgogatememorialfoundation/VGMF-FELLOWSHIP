@@ -141,7 +141,7 @@ export async function PATCH(request: NextRequest) {
         type: doc.type,
         status: doc.status,
         fileName: doc.fileName,
-        filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
+        filePath: toUploadApiUrl(doc.filePath, { documentId: doc.id }) ?? doc.filePath,
         rejectionReason: doc.rejectionReason,
       }))
     );

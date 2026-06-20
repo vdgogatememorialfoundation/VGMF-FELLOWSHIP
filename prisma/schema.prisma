@@ -398,6 +398,7 @@ model FellowshipDocument {
   type            FellowshipDocType
   fileName        String            @map("file_name")
   filePath        String            @map("file_path")
+  fileData        String?           @map("file_data") @db.Text
   fileSize        Int               @map("file_size")
   mimeType        String            @map("mime_type")
   status          DocumentStatus    @default(PENDING)
@@ -456,6 +457,7 @@ model ApplicationDocument {
   type            DocumentType
   fileName        String         @map("file_name")
   filePath        String         @map("file_path")
+  fileData        String?        @map("file_data") @db.Text
   fileSize        Int            @map("file_size")
   mimeType        String         @map("mime_type")
   status          DocumentStatus @default(PENDING)
@@ -607,6 +609,7 @@ model ProgressReport {
   quarter         Int
   year            Int
   reportPath      String?              @map("report_path")
+  reportData      String?              @map("report_data") @db.Text
   caseRecordsPath String?              @map("case_records_path")
   photosPath      String?              @map("photos_path")
   publicationsPath String?             @map("publications_path")
@@ -647,8 +650,11 @@ model FinalSubmission {
   id                    String   @id @default(cuid())
   fellowshipId          String   @unique @map("fellowship_id")
   finalReportPath       String?  @map("final_report_path")
+  finalReportData       String?  @map("final_report_data") @db.Text
   manuscriptPath        String?  @map("manuscript_path")
+  manuscriptData        String?  @map("manuscript_data") @db.Text
   utilizationCertPath   String?  @map("utilization_cert_path")
+  utilizationCertData   String?  @map("utilization_cert_data") @db.Text
   billsVouchersPath     String?  @map("bills_vouchers_path")
   presentationPath      String?  @map("presentation_path")
   status                ProgressReportStatus @default(SUBMITTED)

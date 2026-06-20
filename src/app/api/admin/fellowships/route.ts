@@ -9,7 +9,7 @@ import { generateAndStoreFellowshipAgreement } from "@/lib/agreement-service";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { BUDGET_MAX } from "@/lib/utils";
-import { toUploadApiUrl } from "@/lib/upload-files";
+import { toUploadApiUrl, encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
 
 const ADMIN_UPLOAD_TYPES: FellowshipDocType[] = [
   "ACCEPTANCE_LETTER",
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       ...fellowship,
       fellowshipDocuments: fellowship.fellowshipDocuments.map((doc) => ({
         ...doc,
-        filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
+        filePath: toUploadApiUrl(doc.filePath, { fellowshipDocumentId: doc.id }) ?? doc.filePath,
       })),
     },
     requirements: { 1: inst1, 2: inst2, 3: inst3 },
@@ -123,8 +123,11 @@ export async function POST(request: NextRequest) {
       await mkdir(uploadDir, { recursive: true });
       const fileName = `${docType}_${Date.now()}_${file.name}`;
       const fullPath = path.join(uploadDir, fileName);
-      await writeFile(fullPath, Buffer.from(await file.arrayBuffer()));
+      const buffer = Buffer.from(await file.arrayBuffer());
+      await writeFile(fullPath, buffer);
       const relativePath = `/uploads/fellowships/${fellowshipId}/inst${installmentNo}/${fileName}`;
+      const fileData = encodeFileData(buffer);
+      await writeUploadToDisk(relativePath, buffer);
 
       const document = await prisma.fellowshipDocument.upsert({
         where: {
@@ -137,6 +140,7 @@ export async function POST(request: NextRequest) {
         update: {
           fileName: file.name,
           filePath: relativePath,
+          fileData,
           fileSize: file.size,
           mimeType: file.type,
           status: "APPROVED",
@@ -149,6 +153,7 @@ export async function POST(request: NextRequest) {
           type: docType,
           fileName: file.name,
           filePath: relativePath,
+          fileData,
           fileSize: file.size,
           mimeType: file.type,
           status: "APPROVED",
@@ -179,7 +184,9 @@ export async function POST(request: NextRequest) {
         success: true,
         document: {
           ...document,
-          filePath: toUploadApiUrl(document.filePath) ?? document.filePath,
+          filePath:
+            toUploadApiUrl(document.filePath, { fellowshipDocumentId: document.id }) ??
+            document.filePath,
         },
       });
     }

@@ -27,7 +27,7 @@ export async function GET() {
       ...app,
       documents: app.documents.map((doc) => ({
         ...doc,
-        filePath: toUploadApiUrl(doc.filePath) ?? doc.filePath,
+        filePath: toUploadApiUrl(doc.filePath, { documentId: doc.id }) ?? doc.filePath,
       })),
     })),
   });

@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
 
 async function saveFile(fellowshipId: string, prefix: string, file: File) {
   const uploadDir = path.join(process.cwd(), "public", "uploads", "fellowships", fellowshipId);
@@ -11,7 +12,12 @@ async function saveFile(fellowshipId: string, prefix: string, file: File) {
   const fullPath = path.join(uploadDir, fileName);
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(fullPath, buffer);
-  return `/uploads/fellowships/${fellowshipId}/${fileName}`;
+  const storedPath = `/uploads/fellowships/${fellowshipId}/${fileName}`;
+  await writeUploadToDisk(storedPath, buffer);
+  return {
+    path: storedPath,
+    data: encodeFileData(buffer),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -42,26 +48,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fellowship not found" }, { status: 404 });
     }
 
-    const finalReportPath = await saveFile(fellowshipId, "final_report", finalReport);
-    const manuscriptPath = manuscript ? await saveFile(fellowshipId, "manuscript", manuscript) : null;
-    const utilizationCertPath = utilizationCert
+    const finalReportFile = await saveFile(fellowshipId, "final_report", finalReport);
+    const manuscriptFile = manuscript ? await saveFile(fellowshipId, "manuscript", manuscript) : null;
+    const utilizationCertFile = utilizationCert
       ? await saveFile(fellowshipId, "utilization_cert", utilizationCert)
       : null;
 
     const submission = await prisma.finalSubmission.upsert({
       where: { fellowshipId },
       update: {
-        finalReportPath,
-        manuscriptPath,
-        utilizationCertPath,
+        finalReportPath: finalReportFile.path,
+        finalReportData: finalReportFile.data,
+        manuscriptPath: manuscriptFile?.path ?? null,
+        manuscriptData: manuscriptFile?.data ?? null,
+        utilizationCertPath: utilizationCertFile?.path ?? null,
+        utilizationCertData: utilizationCertFile?.data ?? null,
         status: "SUBMITTED",
         submittedAt: new Date(),
       },
       create: {
         fellowshipId,
-        finalReportPath,
-        manuscriptPath,
-        utilizationCertPath,
+        finalReportPath: finalReportFile.path,
+        finalReportData: finalReportFile.data,
+        manuscriptPath: manuscriptFile?.path ?? null,
+        manuscriptData: manuscriptFile?.data ?? null,
+        utilizationCertPath: utilizationCertFile?.path ?? null,
+        utilizationCertData: utilizationCertFile?.data ?? null,
       },
     });
 

@@ -10,7 +10,7 @@ import {
   isManualIdentityDocumentType,
   syncManualIdentityVerification,
 } from "@/lib/manual-verification";
-import { toUploadApiUrl } from "@/lib/upload-files";
+import { toUploadApiUrl, encodeFileData, writeUploadToDisk } from "@/lib/upload-files";
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     const relativePath = `/uploads/${applicationId}/${fileName}`;
+    const fileData = encodeFileData(buffer);
+    await writeUploadToDisk(relativePath, buffer);
 
     const document = existingDoc
       ? await prisma.applicationDocument.update({
@@ -102,6 +104,7 @@ export async function POST(request: NextRequest) {
           data: {
             fileName: file.name,
             filePath: relativePath,
+            fileData,
             fileSize: file.size,
             mimeType: file.type,
             status: "PENDING",
@@ -116,6 +119,7 @@ export async function POST(request: NextRequest) {
             type: docType as never,
             fileName: file.name,
             filePath: relativePath,
+            fileData,
             fileSize: file.size,
             mimeType: file.type,
           },
@@ -132,7 +136,9 @@ export async function POST(request: NextRequest) {
       success: true,
       document: {
         ...document,
-        filePath: toUploadApiUrl(document.filePath) ?? document.filePath,
+        filePath:
+          toUploadApiUrl(document.filePath, { documentId: document.id }) ??
+          document.filePath,
       },
     });
   } catch (error) {
