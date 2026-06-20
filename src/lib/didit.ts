@@ -63,7 +63,16 @@ function extractDiditError(payload: unknown, status: number): string {
       fieldMessages.push(`${key}: ${value}`);
     }
   }
-  if (fieldMessages.length > 0) return fieldMessages.join("; ");
+  if (fieldMessages.length > 0) {
+    if (fieldMessages.some((item) => item.toLowerCase().includes("portrait_image"))) {
+      return (
+        "This Didit workflow requires a reference selfie for face match. " +
+        "For first-time checks, use a KYC workflow (ID + Liveness) in Didit Console — not Biometric Authentication. " +
+        "For undertaking re-verification, complete applicant identity verification first so we can reuse your verified portrait."
+      );
+    }
+    return fieldMessages.join("; ");
+  }
 
   if (typeof record.message === "string" && record.message.trim()) {
     return record.message;
@@ -298,6 +307,105 @@ function sortWebhookKeys(data: unknown): unknown {
   return data;
 }
 
+type PortraitReference = {
+  base64?: string;
+  url?: string;
+};
+
+function readPortraitReference(value: unknown): PortraitReference | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return { url: trimmed };
+  }
+  if (trimmed.length > 100) {
+    return { base64: trimmed.replace(/^data:image\/[a-z+]+;base64,/, "") };
+  }
+  return null;
+}
+
+function extractPortraitReference(decision: unknown): PortraitReference | null {
+  if (!decision || typeof decision !== "object") return null;
+  const root = decision as Record<string, unknown>;
+
+  const direct = readPortraitReference(root.portrait_image);
+  if (direct) return direct;
+
+  for (const key of ["id_verifications", "liveness_checks", "face_matches"] as const) {
+    const items = Array.isArray(root[key]) ? root[key] : [];
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const record = item as Record<string, unknown>;
+      for (const field of ["portrait_image", "source_image", "target_image", "selfie"]) {
+        const ref = readPortraitReference(record[field]);
+        if (ref) return ref;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function fetchPortraitBase64FromUrl(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return null;
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length === 0 || buffer.length > 2 * 1024 * 1024) return null;
+
+    return buffer.toString("base64");
+  } catch {
+    return null;
+  }
+}
+
+async function resolvePortraitBase64FromDecision(
+  decision: unknown,
+  sessionId?: string | null
+): Promise<string | null> {
+  let effectiveDecision = decision;
+
+  if (!extractPortraitReference(effectiveDecision) && sessionId) {
+    effectiveDecision = (await fetchDiditSessionDecision(sessionId)) ?? effectiveDecision;
+  }
+
+  const reference = extractPortraitReference(effectiveDecision);
+  if (!reference) return null;
+  if (reference.base64) return reference.base64;
+  if (reference.url) return fetchPortraitBase64FromUrl(reference.url);
+  return null;
+}
+
+async function resolvePortraitImageForSession(input: {
+  purpose: DiditVerificationPurpose;
+  userId: string;
+  applicationId?: string | null;
+}): Promise<string | null> {
+  if (input.purpose !== "UNDERTAKING_IDENTITY") {
+    return null;
+  }
+
+  const enrollmentSession = await prisma.diditVerificationSession.findFirst({
+    where: {
+      userId: input.userId,
+      purpose: "APPLICANT_IDENTITY",
+      status: "APPROVED",
+      ...(input.applicationId ? { applicationId: input.applicationId } : {}),
+    },
+    orderBy: [{ completedAt: "desc" }, { updatedAt: "desc" }],
+  });
+
+  if (!enrollmentSession) {
+    return null;
+  }
+
+  return resolvePortraitBase64FromDecision(
+    enrollmentSession.decisionJson,
+    enrollmentSession.diditSessionId
+  );
+}
+
 export async function createDiditSession(input: {
   purpose: DiditVerificationPurpose;
   userId: string;
@@ -320,22 +428,41 @@ export async function createDiditSession(input: {
       `${config.appUrl}/verification/complete?next=${encodeURIComponent("/applicant/verification")}`
   );
 
+  const portraitImage = await resolvePortraitImageForSession({
+    purpose: input.purpose,
+    userId: input.userId,
+    applicationId: input.applicationId,
+  });
+
+  if (input.purpose === "UNDERTAKING_IDENTITY" && !portraitImage) {
+    throw new DiditApiError(
+      "Complete applicant identity verification first. Undertaking face match needs your verified selfie from the earlier identity check.",
+      400
+    );
+  }
+
+  const requestBody: Record<string, unknown> = {
+    workflow_id: workflowId,
+    callback,
+    callback_method: "both",
+    vendor_data: input.vendorData,
+    metadata: {
+      purpose: input.purpose,
+      portal: "vgmf-fellowship",
+    },
+  };
+
+  if (portraitImage) {
+    requestBody.portrait_image = portraitImage;
+  }
+
   const response = await fetch(`${DIDIT_API_BASE}/v3/session/`, {
     method: "POST",
     headers: {
       "x-api-key": config.apiKey,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      workflow_id: workflowId,
-      callback,
-      callback_method: "both",
-      vendor_data: input.vendorData,
-      metadata: {
-        purpose: input.purpose,
-        portal: "vgmf-fellowship",
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   const payload = (await response.json().catch(() => null)) as

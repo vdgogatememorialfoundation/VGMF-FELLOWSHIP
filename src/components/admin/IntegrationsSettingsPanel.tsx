@@ -688,6 +688,7 @@ export function IntegrationsSettingsPanel({
           onChange={(e) =>
             onIntegrationsChange({ ...integrations, diditWorkflowIdIdentity: e.target.value })
           }
+          placeholder="Use a KYC workflow (ID + Liveness), not Biometric Authentication"
         />
         <Input
           label="Workflow ID — Bank account verification"
@@ -700,8 +701,12 @@ export function IntegrationsSettingsPanel({
           onChange={(e) =>
             onIntegrationsChange({ ...integrations, diditWorkflowIdUndertaking: e.target.value })
           }
-          placeholder="Optional — uses Applicant identity workflow if blank"
+          placeholder="Optional — face-match re-check; uses approved identity portrait"
         />
+        <p className="text-xs text-gray-500">
+          portrait_image errors mean the workflow expects a stored reference selfie. Use KYC for first-time
+          applicant checks. Undertaking re-checks reuse the portrait from the approved applicant identity session.
+        </p>
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="checkbox"
