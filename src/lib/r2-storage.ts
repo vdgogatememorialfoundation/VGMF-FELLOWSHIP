@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 
 function getR2Endpoint(): string | null {
@@ -114,6 +115,28 @@ export async function getR2Object(key: string): Promise<Buffer | null> {
     }
     throw error;
   }
+}
+
+export async function findLatestR2ObjectByPrefix(
+  prefix: string
+): Promise<{ key: string; body: Buffer } | null> {
+  if (!isR2Configured()) return null;
+
+  const response = await getR2Client().send(
+    new ListObjectsV2Command({
+      Bucket: process.env.R2_BUCKET_NAME!.trim(),
+      Prefix: prefix,
+    })
+  );
+
+  const latest = [...(response.Contents ?? [])].sort(
+    (a, b) => (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0)
+  )[0];
+
+  if (!latest?.Key) return null;
+
+  const body = await getR2Object(latest.Key);
+  return body ? { key: latest.Key, body } : null;
 }
 
 export async function r2ObjectExists(key: string): Promise<boolean> {

@@ -12,7 +12,11 @@ import {
   persistUpload,
   resolveApplicationStoredFileName,
   mapApplicationDocumentForClient,
+  getApplicationDocumentFile,
 } from "@/lib/upload-files";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -129,6 +133,24 @@ export async function POST(request: NextRequest) {
       !(await isDigioIdentityAvailable())
     ) {
       await syncManualIdentityVerification(applicationId);
+    }
+
+    const verified = await getApplicationDocumentFile(document.id);
+    if (!verified) {
+      console.error("Upload verification failed", {
+        documentId: document.id,
+        applicationId,
+        docType,
+        relativePath,
+        hasFileData: Boolean(document.fileData?.trim()),
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Upload could not be verified. Please try again with a PDF or image under 5 MB.",
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

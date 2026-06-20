@@ -253,7 +253,11 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     formData.append("applicationId", id);
     formData.append("type", docType);
     formData.append("file", file);
-    const res = await fetch("/api/documents", { method: "POST", body: formData });
+    const res = await fetch("/api/documents", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {

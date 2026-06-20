@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { DocStatusBadge } from "@/components/ui/DocStatusBadge";
 import { documentBorderClass } from "@/lib/document-review";
+import { DocumentFileLink } from "@/components/admin/DocumentFileLink";
 
 type DocumentReviewControlsProps = {
   documentId: string;
@@ -50,14 +51,11 @@ export function DocumentReviewControls({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium">{label}</p>
-          <a
+          <DocumentFileLink
             href={filePath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block truncate text-xs text-primary-600 hover:underline"
-          >
-            {fileName}
-          </a>
+            fileName={fileName}
+            className="mt-1 block truncate text-left text-xs text-primary-600 hover:underline"
+          />
           {rejectionReason && (
             <p className="mt-1 text-xs text-red-700">Reason: {rejectionReason}</p>
           )}

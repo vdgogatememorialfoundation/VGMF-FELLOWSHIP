@@ -5,6 +5,7 @@ import prisma from "./db";
 import type { SessionUser } from "./auth";
 import {
   filePathToR2Key,
+  findLatestR2ObjectByPrefix,
   getR2Object,
   isR2Configured,
   putR2Object,
@@ -213,8 +214,191 @@ export async function persistUpload(
   buffer: Buffer,
   mimeType?: string | null
 ): Promise<{ fileData: string | null }> {
-  await writeStoredUpload(relativePath, buffer, mimeType);
-  return { fileData: prepareFileDataForStorage(buffer) };
+  const fileData = prepareFileDataForStorage(buffer);
+  let storageError: unknown;
+
+  try {
+    if (isR2Configured()) {
+      await putR2Object(filePathToR2Key(relativePath), buffer, mimeType);
+    } else {
+      await writeUploadToDisk(relativePath, buffer);
+    }
+  } catch (error) {
+    storageError = error;
+    console.error("Primary storage write failed:", relativePath, error);
+  }
+
+  if (storageError && !fileData) {
+    throw storageError instanceof Error ? storageError : new Error("Failed to store upload");
+  }
+
+  return { fileData };
+}
+
+function buildApplicationDocumentStorageCandidates(document: {
+  filePath: string;
+  applicationId: string;
+}): string[] {
+  const candidates: string[] = [];
+  const add = (value: string | null | undefined) => {
+    const normalized = value ? normalizeStoragePath(value) : null;
+    if (normalized && !candidates.includes(normalized)) {
+      candidates.push(normalized);
+    }
+  };
+
+  add(document.filePath);
+  const embedded = document.filePath.match(/(\/?uploads\/[^\s?#]+)/i)?.[1];
+  add(embedded ?? null);
+
+  return candidates;
+}
+
+async function repairApplicationDocumentStorage(
+  documentId: string,
+  storagePath: string,
+  buffer: Buffer,
+  mimeType?: string | null
+): Promise<void> {
+  const normalized = normalizeStoragePath(storagePath) ?? storagePath;
+  const fileData = prepareFileDataForStorage(buffer);
+
+  await prisma.applicationDocument
+    .update({
+      where: { id: documentId },
+      data: {
+        filePath: normalized,
+        ...(fileData ? { fileData } : {}),
+      },
+    })
+    .catch((error) => console.error("Document storage repair failed:", documentId, error));
+
+  void backfillR2FromBuffer(normalized, buffer, mimeType);
+}
+
+async function loadApplicationDocumentBytes(document: {
+  id: string;
+  applicationId: string;
+  type: string;
+  filePath: string;
+  fileData: string | null;
+  mimeType: string;
+}): Promise<Buffer | null> {
+  if (document.fileData?.trim()) {
+    return decodeFileData(document.fileData);
+  }
+
+  for (const storagePath of buildApplicationDocumentStorageCandidates(document)) {
+    const bytes = await readStoredUploadBytes(storagePath);
+    if (bytes) {
+      void repairApplicationDocumentStorage(
+        document.id,
+        storagePath,
+        bytes,
+        document.mimeType
+      );
+      return bytes;
+    }
+  }
+
+  if (isR2Configured()) {
+    const match = await findLatestR2ObjectByPrefix(
+      `uploads/${document.applicationId}/${document.type}_`
+    );
+    if (match) {
+      void repairApplicationDocumentStorage(
+        document.id,
+        `/${match.key}`,
+        match.body,
+        document.mimeType
+      );
+      return match.body;
+    }
+  }
+
+  return null;
+}
+
+function buildFellowshipDocumentStorageCandidates(document: {
+  filePath: string;
+  fellowshipId: string;
+  type: string;
+  installmentNo: number;
+}): string[] {
+  const candidates: string[] = [];
+  const add = (value: string | null | undefined) => {
+    const normalized = value ? normalizeStoragePath(value) : null;
+    if (normalized && !candidates.includes(normalized)) {
+      candidates.push(normalized);
+    }
+  };
+
+  add(document.filePath);
+  const embedded = document.filePath.match(/(\/?uploads\/[^\s?#]+)/i)?.[1];
+  add(embedded ?? null);
+
+  return candidates;
+}
+
+async function repairFellowshipDocumentStorage(
+  documentId: string,
+  storagePath: string,
+  buffer: Buffer,
+  mimeType?: string | null
+): Promise<void> {
+  const normalized = normalizeStoragePath(storagePath) ?? storagePath;
+  const fileData = prepareFileDataForStorage(buffer);
+
+  await prisma.fellowshipDocument
+    .update({
+      where: { id: documentId },
+      data: {
+        filePath: normalized,
+        ...(fileData ? { fileData } : {}),
+      },
+    })
+    .catch((error) => console.error("Fellowship storage repair failed:", documentId, error));
+
+  void backfillR2FromBuffer(normalized, buffer, mimeType);
+}
+
+async function loadFellowshipDocumentBytes(document: {
+  id: string;
+  fellowshipId: string;
+  type: string;
+  installmentNo: number;
+  filePath: string;
+  fileData: string | null;
+  mimeType: string;
+}): Promise<Buffer | null> {
+  if (document.fileData?.trim()) {
+    return decodeFileData(document.fileData);
+  }
+
+  for (const storagePath of buildFellowshipDocumentStorageCandidates(document)) {
+    const bytes = await readStoredUploadBytes(storagePath);
+    if (bytes) {
+      void repairFellowshipDocumentStorage(document.id, storagePath, bytes, document.mimeType);
+      return bytes;
+    }
+  }
+
+  if (isR2Configured()) {
+    const match = await findLatestR2ObjectByPrefix(
+      `uploads/fellowships/${document.fellowshipId}/inst${document.installmentNo}/${document.type}_`
+    );
+    if (match) {
+      void repairFellowshipDocumentStorage(
+        document.id,
+        `/${match.key}`,
+        match.body,
+        document.mimeType
+      );
+      return match.body;
+    }
+  }
+
+  return null;
 }
 
 function resolveDocumentStoragePath(filePath: string): string | null {
@@ -376,41 +560,25 @@ export async function getApplicationDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  const storagePath = resolveDocumentStoragePath(document.filePath);
-
-  if (storagePath) {
-    const storedBytes = await readStoredUploadBytes(storagePath);
-    if (storedBytes) {
-      return {
-        data: storedBytes,
-        fileName: document.fileName,
-        mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-        applicationUserId: document.application.userId,
-      };
-    }
+  const data = await loadApplicationDocumentBytes(document);
+  if (!data) {
+    console.error("Application document bytes missing", {
+      documentId,
+      applicationId: document.applicationId,
+      type: document.type,
+      filePath: document.filePath,
+      hasFileData: Boolean(document.fileData?.trim()),
+      r2Configured: isR2Configured(),
+    });
+    return null;
   }
 
-  if (document.fileData?.trim()) {
-    const data = decodeFileData(document.fileData);
-    if (storagePath) {
-      void backfillR2FromBuffer(storagePath, data, document.mimeType);
-    }
-    return {
-      data,
-      fileName: document.fileName,
-      mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-      applicationUserId: document.application.userId,
-    };
-  }
-
-  console.error("Application document bytes missing", {
-    documentId,
-    filePath: document.filePath,
-    storagePath,
-    r2Configured: isR2Configured(),
-  });
-
-  return null;
+  return {
+    data,
+    fileName: document.fileName,
+    mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
+    applicationUserId: document.application.userId,
+  };
 }
 
 export async function getFellowshipDocumentFile(documentId: string) {
@@ -421,41 +589,25 @@ export async function getFellowshipDocumentFile(documentId: string) {
 
   if (!document) return null;
 
-  const storagePath = resolveDocumentStoragePath(document.filePath);
-
-  if (storagePath) {
-    const storedBytes = await readStoredUploadBytes(storagePath);
-    if (storedBytes) {
-      return {
-        data: storedBytes,
-        fileName: document.fileName,
-        mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-        applicationUserId: document.fellowship.application.userId,
-      };
-    }
+  const data = await loadFellowshipDocumentBytes(document);
+  if (!data) {
+    console.error("Fellowship document bytes missing", {
+      documentId,
+      fellowshipId: document.fellowshipId,
+      type: document.type,
+      filePath: document.filePath,
+      hasFileData: Boolean(document.fileData?.trim()),
+      r2Configured: isR2Configured(),
+    });
+    return null;
   }
 
-  if (document.fileData?.trim()) {
-    const data = decodeFileData(document.fileData);
-    if (storagePath) {
-      void backfillR2FromBuffer(storagePath, data, document.mimeType);
-    }
-    return {
-      data,
-      fileName: document.fileName,
-      mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
-      applicationUserId: document.fellowship.application.userId,
-    };
-  }
-
-  console.error("Fellowship document bytes missing", {
-    documentId,
-    filePath: document.filePath,
-    storagePath,
-    r2Configured: isR2Configured(),
-  });
-
-  return null;
+  return {
+    data,
+    fileName: document.fileName,
+    mimeType: document.mimeType || mimeTypeFromFileName(document.fileName),
+    applicationUserId: document.fellowship.application.userId,
+  };
 }
 
 export async function readStoredUpload(segments: string[]) {
@@ -464,6 +616,19 @@ export async function readStoredUpload(segments: string[]) {
     record?.fileName ??
     normalizeUploadSegments(segments)[segments.length - 1] ??
     "file";
+
+  if (record?.fileData?.trim()) {
+    const data = decodeFileData(record.fileData);
+    const storagePath = normalizeStoragePath(record.filePath);
+    if (storagePath) {
+      void backfillR2FromBuffer(storagePath, data, record.mimeType);
+    }
+    return {
+      data,
+      fileName,
+      mimeType: record.mimeType || mimeTypeFromFileName(fileName),
+    };
+  }
 
   if (record?.filePath) {
     const storagePath = normalizeStoragePath(record.filePath);
@@ -477,19 +642,6 @@ export async function readStoredUpload(segments: string[]) {
         };
       }
     }
-  }
-
-  if (record?.fileData?.trim()) {
-    const data = decodeFileData(record.fileData);
-    const storagePath = normalizeStoragePath(record.filePath);
-    if (storagePath) {
-      void backfillR2FromBuffer(storagePath, data, record.mimeType);
-    }
-    return {
-      data,
-      fileName,
-      mimeType: record.mimeType || mimeTypeFromFileName(fileName),
-    };
   }
 
   const diskPath = resolveUploadDiskPath(normalizeUploadSegments(segments));
