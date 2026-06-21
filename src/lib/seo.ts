@@ -29,15 +29,15 @@ export const PUBLIC_ROBOTS_ALLOW_PATHS = [
 ];
 
 export const DISALLOW_ROBOTS_PREFIXES = [
-  "/admin",
-  "/applicant",
+  "/admin/",
+  "/applicant/",
   "/login",
-  "/staff",
-  "/reviewer",
-  "/trustee",
-  "/committee",
-  "/api",
-  "/verification",
+  "/staff/",
+  "/reviewer/",
+  "/trustee/",
+  "/committee/",
+  "/api/",
+  "/verification/",
 ];
 
 function isBlockedPublicHost(url: string): boolean {

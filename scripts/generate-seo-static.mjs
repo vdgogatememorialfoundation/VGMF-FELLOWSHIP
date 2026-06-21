@@ -20,22 +20,15 @@ const PUBLIC_CMS_SLUGS = [
 ];
 
 const DISALLOW_ROBOTS_PREFIXES = [
-  "/admin",
-  "/applicant",
+  "/admin/",
+  "/applicant/",
   "/login",
-  "/staff",
-  "/reviewer",
-  "/trustee",
-  "/committee",
-  "/api",
-  "/verification",
-];
-
-const PUBLIC_ALLOW_PATHS = [
-  "/",
-  "/register",
-  ...PUBLIC_CMS_SLUGS.map((slug) => `/${slug}`),
-  "/sitemap.xml",
+  "/staff/",
+  "/reviewer/",
+  "/trustee/",
+  "/committee/",
+  "/api/",
+  "/verification/",
 ];
 
 function escapeXml(value) {
@@ -94,12 +87,13 @@ function buildRobotsTxt(base, indexingEnabled) {
     return ["User-agent: *", "Disallow: /", "", `Sitemap: ${base}/sitemap.xml`, ""].join("\n");
   }
 
+  // Default: everything is allowed unless explicitly disallowed below.
+  // Do not use Allow + Disallow mixes; Google longest-match can confuse testers.
   return [
     "User-agent: *",
-    ...PUBLIC_ALLOW_PATHS.map((path) =>
-      path === "/" ? "Allow: /$" : `Allow: ${path}$`
+    ...DISALLOW_ROBOTS_PREFIXES.map((prefix) =>
+      prefix.endsWith("/") ? `Disallow: ${prefix}` : `Disallow: ${prefix}`
     ),
-    ...DISALLOW_ROBOTS_PREFIXES.map((prefix) => `Disallow: ${prefix}`),
     "",
     `Sitemap: ${base}/sitemap.xml`,
     "",
