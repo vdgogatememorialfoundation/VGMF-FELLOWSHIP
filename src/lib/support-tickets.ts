@@ -102,7 +102,7 @@ export function formatTicketForClient(
     id: string;
     subject: string;
     message: string;
-    status: SupportTicketStatus;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     closedAt: Date | null;
