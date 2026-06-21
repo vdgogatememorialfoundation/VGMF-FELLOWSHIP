@@ -19,6 +19,7 @@ import {
   UserCog,
   FormInput,
   ShieldCheck,
+  MessageSquare,
   Menu,
   X,
 } from "lucide-react";
@@ -36,7 +37,7 @@ interface SidebarProps {
 const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[]> = {
   applicant: [
     { href: "/applicant", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/applicant/forms", label: "Forms", icon: FileText },
+    { href: "/applicant/forms", label: "Application Form", icon: FileText },
     { href: "/applicant/undertaking", label: "Digital Undertaking", icon: FileText },
     { href: "/applicant/verification", label: "Identity Verification", icon: ShieldCheck },
     { href: "/applicant/status", label: "Application Tracking", icon: Activity },
@@ -46,7 +47,8 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   admin: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/website", label: "Website Updates", icon: Globe },
-    { href: "/admin/forms", label: "Forms", icon: FormInput },
+    { href: "/admin/forms", label: "Application Forms", icon: FormInput },
+    { href: "/admin/support", label: "Support Tickets", icon: MessageSquare },
     { href: "/admin/accounts", label: "All Accounts", icon: Users },
     { href: "/admin/applications", label: "Applications", icon: ClipboardList },
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
@@ -57,6 +59,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   staff: [
     { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
     { href: "/staff/applications", label: "Applications", icon: ClipboardList },
+    { href: "/staff/support", label: "Support Tickets", icon: MessageSquare },
     { href: "/staff/finance", label: "Finance", icon: DollarSign },
     { href: "/staff/reports", label: "Reports", icon: BarChart3 },
   ],

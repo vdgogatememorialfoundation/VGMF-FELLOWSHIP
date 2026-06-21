@@ -221,6 +221,9 @@ model User {
   notifications        Notification[]
   sessions             Session[]
   verificationSessions VerificationSession[]
+  supportTickets       SupportTicket[]             @relation("SupportTicketApplicant")
+  assignedSupportTickets SupportTicket[]           @relation("SupportTicketAssignee")
+  supportTicketReplies SupportTicketReply[]
 
   @@map("users")
 }
@@ -726,16 +729,47 @@ model Notification {
   @@map("notifications")
 }
 
-model SupportTicket {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  subject   String
-  message   String
-  status    String   @default("OPEN")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_APPLICANT
+  RESOLVED
+  CLOSED
+}
 
+model SupportTicket {
+  id           String               @id @default(cuid())
+  userId       String               @map("user_id")
+  assignedToId String?              @map("assigned_to_id")
+  subject      String
+  message      String               @db.Text
+  status       SupportTicketStatus  @default(OPEN)
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  closedAt     DateTime?            @map("closed_at")
+
+  user       User                 @relation("SupportTicketApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  assignedTo User?                @relation("SupportTicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  replies    SupportTicketReply[]
+
+  @@index([userId])
+  @@index([status])
   @@map("support_tickets")
+}
+
+model SupportTicketReply {
+  id           String   @id @default(cuid())
+  ticketId     String   @map("ticket_id")
+  authorId     String   @map("author_id")
+  body         String   @db.Text
+  isStaffReply Boolean  @default(false) @map("is_staff_reply")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("support_ticket_replies")
 }
 
 model OtpCode {

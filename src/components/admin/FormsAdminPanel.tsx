@@ -162,19 +162,20 @@ export function FormsAdminPanel({ embedded = false }: FormsAdminPanelProps) {
     <div className="space-y-6">
       {!embedded && (
         <div>
-          <h1 className="text-2xl font-bold">Forms</h1>
+          <h1 className="text-2xl font-bold">Application Forms</h1>
           <p className="text-gray-600">
-            Create and manage multiple forms — fellowship application, surveys, feedback, and more.
+            Create and manage fellowship application forms — fields, schedules, and availability for
+            applicants.
           </p>
         </div>
       )}
 
       {embedded && (
         <div>
-          <h2 className="font-semibold">Forms</h2>
+          <h2 className="font-semibold">Application Forms</h2>
           <p className="text-sm text-gray-600">
-            Create multiple forms for applicants or internal use. Open the full Form Builder to add
-            fields and set schedules.
+            Build application forms applicants fill out in the portal. Each form has its own fields
+            and open/close schedule.
           </p>
         </div>
       )}
@@ -205,7 +206,7 @@ export function FormsAdminPanel({ embedded = false }: FormsAdminPanelProps) {
             label="Form name"
             value={newForm.name}
             onChange={(e) => onNameChange(e.target.value)}
-            placeholder="e.g. Alumni Feedback Survey"
+            placeholder="e.g. VGMF Fellowship Application 2026"
           />
           <Input
             label="Slug (URL identifier)"
@@ -213,10 +214,11 @@ export function FormsAdminPanel({ embedded = false }: FormsAdminPanelProps) {
             onChange={(e) =>
               setNewForm({ ...newForm, slug: slugifyFormName(e.target.value) })
             }
-            placeholder="e.g. alumni-feedback"
+            placeholder="e.g. fellowship-application-2026"
           />
           <p className="text-xs text-gray-500">
-            Applicants access forms via slug: <code>/api/forms?slug=your-slug</code>
+            Applicants open forms from the portal using this slug. The main form is{" "}
+            <code>fellowship-application</code>.
           </p>
           <Textarea
             label="Description (optional)"

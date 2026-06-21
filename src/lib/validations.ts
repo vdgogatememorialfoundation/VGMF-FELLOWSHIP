@@ -295,8 +295,12 @@ export const adminUpdateApplicationSchema = z.object({
 });
 
 export const supportSchema = z.object({
-  subject: z.string().min(5),
-  message: z.string().min(20),
+  subject: z.string().min(5, "Subject must be at least 5 characters"),
+  message: z.string().min(20, "Message must be at least 20 characters"),
+});
+
+export const supportReplySchema = z.object({
+  body: z.string().min(3, "Reply must be at least 3 characters"),
 });
 
 export const scoreSchema = z.object({

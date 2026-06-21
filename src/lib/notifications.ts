@@ -318,6 +318,36 @@ export async function notifySupportTicketUpdate(
   );
 }
 
+export async function notifySupportStaffNewTicket(
+  ticketId: string,
+  subject: string,
+  applicantLabel: string,
+  isReply = false
+) {
+  const staff = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "STAFF"] }, isActive: true },
+    select: { id: true },
+  });
+
+  const title = isReply ? `Support ticket reply: ${subject}` : `New support ticket: ${subject}`;
+  const message = isReply
+    ? `${applicantLabel} replied on ticket "${subject}". Open Support Tickets in the admin or staff portal.`
+    : `${applicantLabel} opened a new support ticket: "${subject}".`;
+
+  await Promise.allSettled(
+    staff.map((member) =>
+      prisma.notification.create({
+        data: {
+          userId: member.id,
+          title,
+          message,
+          channel: "EMAIL",
+        },
+      })
+    )
+  );
+}
+
 export async function notifySiteNotice(
   userId: string,
   title: string,

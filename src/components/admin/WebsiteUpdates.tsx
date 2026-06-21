@@ -26,7 +26,7 @@ const TABS = [
   { id: "announcements", label: "Ticker" },
   { id: "notices", label: "Notices" },
   { id: "pages", label: "Content Pages" },
-  { id: "forms", label: "Forms" },
+  { id: "forms", label: "Application Forms" },
   { id: "integrations", label: "API Settings" },
 ] as const;
 
