@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/generate-seo-static.mjs && prisma generate && next build",
-    "start": "next start -H 0.0.0.0",
-    "start:render": "sh -c \"node scripts/render-keepalive.mjs & exec npm start -H 0.0.0.0\"",
+    "start": "node scripts/start-with-keepalive.mjs",
+    "start:next": "next start -H 0.0.0.0",
     "postinstall": "prisma generate",
     "lint": "next lint",
     "db:generate": "prisma generate",
