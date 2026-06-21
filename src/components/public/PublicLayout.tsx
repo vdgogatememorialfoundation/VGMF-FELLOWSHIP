@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail, Phone, Calendar, UserPlus, MapPin, ExternalLink } from "lucide-react";
 import { getSiteSettings, getActiveNotices, getPublicFormSchedule } from "@/lib/cms";
+import { resolveTickerText, filterNoticesForPublicDisplay } from "@/lib/public-messaging";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 import { OfficialNotices, OfficialNoticesEmpty, type PublicNotice } from "./OfficialNotices";
 import { MobileNav } from "./MobileNav";
@@ -11,10 +12,16 @@ export async function PublicHeader() {
     getSiteSettings(),
     getPublicFormSchedule(),
   ]);
-  const upcoming = applicationWindow?.schedule.phase === "upcoming";
+  const schedule = applicationWindow?.schedule;
+  const upcoming = schedule?.phase === "upcoming";
   const applyOpen =
     settings.signupEnabled &&
-    (!applicationWindow || applicationWindow.schedule.phase === "open");
+    (!applicationWindow || schedule?.phase === "open");
+  const tickerText = resolveTickerText(
+    settings.tickerEnabled,
+    settings.tickerText,
+    schedule
+  );
   const navLinks = [
     ...settings.navLinks,
     { href: "/#contact", label: "Contact" },
@@ -78,9 +85,7 @@ export async function PublicHeader() {
         </div>
       </div>
 
-      {settings.tickerEnabled && settings.tickerText && (
-        <AnnouncementTicker text={settings.tickerText} />
-      )}
+      {tickerText && <AnnouncementTicker text={tickerText} />}
 
       <header className="site-header-v2">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6">
@@ -265,8 +270,15 @@ export async function PublicFooter() {
 }
 
 export async function NoticesSection() {
-  const notices = await getActiveNotices();
-  if (notices.length === 0) return <OfficialNoticesEmpty />;
+  const [notices, applicationWindow] = await Promise.all([
+    getActiveNotices(),
+    getPublicFormSchedule(),
+  ]);
+  const visibleNotices = filterNoticesForPublicDisplay(
+    notices,
+    applicationWindow?.schedule
+  );
+  if (visibleNotices.length === 0) return <OfficialNoticesEmpty />;
 
-  return <OfficialNotices notices={notices as PublicNotice[]} />;
+  return <OfficialNotices notices={visibleNotices as PublicNotice[]} />;
 }

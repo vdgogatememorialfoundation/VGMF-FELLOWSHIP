@@ -11,6 +11,11 @@ import type { NoticeCategory } from "@/lib/notices";
 import type { NavLink, FaqItem, HeroStat, SnapshotItem, HighlightTile, JourneyStep } from "@/lib/site-content";
 import { pickPartialSiteSettings } from "@/lib/site-content";
 import type { NotificationEventTemplate } from "@/lib/notification-templates";
+import { getFormScheduleStatus, type FormScheduleStatus } from "@/lib/form-schedule";
+import {
+  getPublicMessagingStatus,
+  isApplicationsOpenMessaging,
+} from "@/lib/public-messaging";
 import { IntegrationsSettingsPanel } from "@/components/admin/IntegrationsSettingsPanel";
 import { SeoSettingsPanel } from "@/components/admin/SeoSettingsPanel";
 import { FormsAdminPanel } from "@/components/admin/FormsAdminPanel";
@@ -309,6 +314,7 @@ export function WebsiteUpdates() {
   const [pages, setPages] = useState<Record<string, { title: string; content: string; isPublished?: boolean }>>({});
   const [activePage, setActivePage] = useState("ABOUT");
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [formSchedule, setFormSchedule] = useState<FormScheduleStatus | null>(null);
   const [integrations, setIntegrations] = useState<Integrations | null>(null);
 
   const [noticeForm, setNoticeForm] = useState({
@@ -353,6 +359,22 @@ export function WebsiteUpdates() {
         });
         setPages(map);
         setNotices(d.notices || []);
+        const fellowshipForm = d.forms?.find(
+          (f: { slug: string }) => f.slug === "fellowship-application"
+        );
+        if (fellowshipForm) {
+          setFormSchedule(
+            getFormScheduleStatus({
+              name: fellowshipForm.name,
+              isActive: fellowshipForm.isActive,
+              closedMessage: fellowshipForm.closedMessage,
+              opensAt: fellowshipForm.opensAt ? new Date(fellowshipForm.opensAt) : null,
+              closesAt: fellowshipForm.closesAt ? new Date(fellowshipForm.closesAt) : null,
+            })
+          );
+        } else {
+          setFormSchedule(null);
+        }
       })
       .catch(() => {
         setError("Failed to load website settings. Refresh the page and try again.");
@@ -484,6 +506,40 @@ export function WebsiteUpdates() {
     });
     setNoticeFile(null);
     setNoticeFileKey((key) => key + 1);
+    load();
+  }
+
+  async function hideApplicationsMessaging() {
+    if (
+      !confirm(
+        "Hide all applications-open messaging from the public site? This deactivates active notices, turns off the ticker, and resets the hero badge."
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const res = await fetch("/api/admin/messaging/hide-applications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hideAllNotices: true }),
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to hide applications messaging");
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    setMessage(data.message || "Applications-open messaging hidden.");
     load();
   }
 
@@ -1085,9 +1141,103 @@ export function WebsiteUpdates() {
 
       {activeTab === "notices" && (
         <div className="space-y-6">
+          {(() => {
+            const live = getPublicMessagingStatus({
+              notices,
+              tickerEnabled: !!settings.tickerEnabled,
+              tickerText: settings.tickerText,
+              heroBadge: settings.heroBadge,
+              formPhase: formSchedule?.phase,
+            });
+            const scheduleBlocksOpenCopy = formSchedule && formSchedule.phase !== "open";
+            return (
+              <div className="card space-y-4 border-primary-100 bg-primary-50/40">
+                <h2 className="font-semibold">What visitors see on the homepage</h2>
+                <p className="text-sm text-gray-600">
+                  Notices, the ticker, and the hero badge are separate. When the application
+                  form is not open yet, &ldquo;applications open&rdquo; copy is automatically
+                  hidden on the public site even if still enabled here.
+                </p>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <span className="font-medium">Application form:</span>{" "}
+                    {formSchedule ? (
+                      <span
+                        className={
+                          formSchedule.phase === "open"
+                            ? "text-green-700"
+                            : "text-amber-700"
+                        }
+                      >
+                        {formSchedule.phase === "open"
+                          ? "Open — applicants can submit"
+                          : formSchedule.phase === "upcoming"
+                            ? "Scheduled — not open yet"
+                            : formSchedule.phase === "closed"
+                              ? "Closed"
+                              : "Disabled"}
+                      </span>
+                    ) : (
+                      "Not configured"
+                    )}
+                  </li>
+                  <li>
+                    <span className="font-medium">Notice:</span>{" "}
+                    {live.noticeLive ? (
+                      <span className="text-green-700">
+                        Live — &ldquo;{live.noticeTitle}&rdquo;
+                        {scheduleBlocksOpenCopy &&
+                        live.noticeTitle &&
+                        isApplicationsOpenMessaging(live.noticeTitle)
+                          ? " (hidden on site until form opens)"
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600">None active</span>
+                    )}
+                  </li>
+                  <li>
+                    <span className="font-medium">Ticker:</span>{" "}
+                    {live.tickerLive ? (
+                      <span className="text-green-700">
+                        On — {live.tickerText}
+                        {scheduleBlocksOpenCopy &&
+                        live.tickerText &&
+                        isApplicationsOpenMessaging(live.tickerText)
+                          ? " (hidden on site until form opens)"
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600">Off</span>
+                    )}
+                  </li>
+                  <li>
+                    <span className="font-medium">Hero badge:</span>{" "}
+                    {settings.heroBadge ? (
+                      <span className="text-green-700">
+                        {settings.heroBadge}
+                        {scheduleBlocksOpenCopy && live.heroBadgeLive
+                          ? " (shows “Opening soon” on site until form opens)"
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600">Not set</span>
+                    )}
+                  </li>
+                </ul>
+                <Button
+                  variant="secondary"
+                  loading={loading}
+                  onClick={hideApplicationsMessaging}
+                >
+                  Hide all applications-open messaging
+                </Button>
+              </div>
+            );
+          })()}
           <p className="text-sm text-gray-600">
-            Deactivated notices are removed from the public homepage immediately. This is separate
-            from the announcement ticker — disable that under the Ticker tab and click Save Ticker.
+            Deactivated notices are removed from the public homepage immediately. To turn off
+            the ticker only, use the Ticker tab and click Save Ticker.
           </p>
           <div className="card space-y-4">
             <h2 className="font-semibold">Add New Notice</h2>

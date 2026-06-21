@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSiteSettings, getActiveNotices, getCmsPage } from "@/lib/cms";
+import { getSiteSettings, getActiveNotices, getCmsPage, getPublicFormSchedule } from "@/lib/cms";
+import { filterNoticesForPublicDisplay } from "@/lib/public-messaging";
 import prisma from "@/lib/db";
 import type { CmsPageSlug } from "@prisma/client";
 
@@ -20,8 +21,15 @@ export async function GET(request: Request) {
   }
 
   if (type === "notices") {
-    const notices = await getActiveNotices();
-    return NextResponse.json({ notices }, { headers: NO_STORE_HEADERS });
+    const [notices, applicationWindow] = await Promise.all([
+      getActiveNotices(),
+      getPublicFormSchedule(),
+    ]);
+    const visibleNotices = filterNoticesForPublicDisplay(
+      notices,
+      applicationWindow?.schedule
+    );
+    return NextResponse.json({ notices: visibleNotices }, { headers: NO_STORE_HEADERS });
   }
 
   if (type === "pages") {

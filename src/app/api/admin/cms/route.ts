@@ -201,6 +201,7 @@ export async function PUT(request: NextRequest) {
       update: pickSiteSettingsUpdate(data),
       create: { id: "default", ...pickSiteSettingsUpdate(data) },
     });
+    revalidatePublicNoticeSurfaces();
     return NextResponse.json(
       { settings: formatSiteSettingsForAdmin(settings) },
       {

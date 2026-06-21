@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import type { SiteContent } from "@/lib/cms";
 import type { FormScheduleStatus } from "@/lib/form-schedule";
+import { resolveHeroBadge } from "@/lib/public-messaging";
 import { getIcon } from "@/lib/icons";
 import { FormSchedulePanel } from "@/components/forms/FormScheduleCountdown";
 
@@ -28,6 +29,7 @@ export function HomeHero({
 }) {
   const applyOpen = applicationsAreOpen(settings, applicationWindow);
   const upcoming = applicationWindow?.schedule.phase === "upcoming";
+  const heroBadge = resolveHeroBadge(settings.heroBadge, applicationWindow?.schedule);
   const formClosed =
     applicationWindow &&
     (applicationWindow.schedule.phase === "closed" ||
@@ -39,10 +41,10 @@ export function HomeHero({
       <div className="relative mx-auto max-w-7xl">
         <div className="grid items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
-            {settings.heroBadge && (
+            {heroBadge && (
               <div className="hero-badge">
                 <Sparkles className="h-4 w-4 text-gold" />
-                {settings.heroBadge}
+                {heroBadge}
               </div>
             )}
             <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.02] tracking-tight text-ink sm:text-5xl md:text-6xl lg:text-[4rem]">
