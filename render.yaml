@@ -17,7 +17,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: NEXT_PUBLIC_APP_URL
-        sync: false
+        value: https://fellowship.vaidyagogate.org
       - key: KEEPALIVE_URL
         value: https://fellowship.vaidyagogate.org/api/health
       - key: KEEPALIVE_INTERVAL_MS
