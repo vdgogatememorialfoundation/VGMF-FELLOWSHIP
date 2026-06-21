@@ -155,7 +155,6 @@ const DEFAULT_FIELDS = [
   { section: "Budget Plan", label: "Publication (₹)", fieldKey: "publication", fieldType: "NUMBER" as const, required: false, order: 34 },
   { section: "Budget Plan", label: "Other (₹)", fieldKey: "other", fieldType: "NUMBER" as const, required: false, order: 35 },
   { section: "Mandatory Documents", label: "Curriculum Vitae (CV)", fieldKey: "cv_upload", fieldType: "FILE" as const, required: true, order: 40, helpText: "Upload CV as PDF (max 5 MB)" },
-  { section: "Mandatory Documents", label: "Registration Certificate", fieldKey: "registration_certificate_upload", fieldType: "FILE" as const, required: true, order: 41, helpText: "State/Central Ayurvedic Council registration certificate" },
   { section: "Mandatory Documents", label: "Research Proposal PDF", fieldKey: "research_proposal_pdf", fieldType: "FILE" as const, required: true, order: 42 },
   { section: "Mandatory Documents", label: "Budget Proposal PDF", fieldKey: "budget_proposal_pdf", fieldType: "FILE" as const, required: true, order: 43 },
   { section: "Mandatory Documents", label: "Timeline of Study PDF", fieldKey: "timeline_pdf", fieldType: "FILE" as const, required: true, order: 44 },
@@ -253,6 +252,17 @@ async function main() {
       create: { formTemplateId: template.id, ...field },
     });
   }
+
+  await prisma.formField.updateMany({
+    where: {
+      formTemplateId: template.id,
+      fieldKey: "registration_certificate_upload",
+    },
+    data: {
+      isActive: false,
+      required: false,
+    },
+  });
 
   const existingNotice = await prisma.notice.findFirst({
     where: { title: "Fellowship Applications Open for 2026" },

@@ -3,7 +3,6 @@ import { MANDATORY_DOCUMENTS, OPTIONAL_DOCUMENTS, BUDGET_MAX } from "./utils";
 export const FILE_FIELD_DOCUMENT_TYPES: Record<string, string> = {
   ncism_registration_certificate: "NCISM_REGISTRATION",
   cv_upload: "CV",
-  registration_certificate_upload: "REGISTRATION_CERTIFICATE",
   research_proposal_pdf: "RESEARCH_PROPOSAL_PDF",
   budget_proposal_pdf: "BUDGET_PROPOSAL_PDF",
   timeline_pdf: "TIMELINE_PDF",
