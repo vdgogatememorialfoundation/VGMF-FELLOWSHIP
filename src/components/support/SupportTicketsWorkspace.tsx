@@ -212,6 +212,8 @@ export function SupportTicketsWorkspace({
   const [message, setMessage] = useState("");
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const [applicants, setApplicants] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [selectedApplicantId, setSelectedApplicantId] = useState("");
 
   const selected = tickets.find((t) => t.id === selectedId) ?? null;
 
@@ -226,6 +228,9 @@ export function SupportTicketsWorkspace({
     }
     const rows = data.tickets || [];
     setTickets(rows);
+    if (data.applicants) {
+      setApplicants(data.applicants);
+    }
     setSelectedId((current) => current ?? rows[0]?.id ?? null);
   }, []);
 
@@ -238,10 +243,16 @@ export function SupportTicketsWorkspace({
     setCreating(true);
     setError("");
     setFeedback("");
+
+    const body: Record<string, any> = { subject, message };
+    if (mode === "staff") {
+      body.userId = selectedApplicantId;
+    }
+
     const res = await fetch("/api/support", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, message }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     setCreating(false);
@@ -251,6 +262,7 @@ export function SupportTicketsWorkspace({
     }
     setSubject("");
     setMessage("");
+    setSelectedApplicantId("");
     setShowCreate(false);
     setFeedback("Support ticket created. Our team will respond here.");
     await loadTickets();
@@ -293,15 +305,31 @@ export function SupportTicketsWorkspace({
         <div className="card space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold">Tickets</h2>
-            {mode === "applicant" && (
-              <Button className="text-xs" onClick={() => setShowCreate((v) => !v)}>
-                {showCreate ? "Cancel" : "New ticket"}
-              </Button>
-            )}
+            <Button className="text-xs" onClick={() => setShowCreate((v) => !v)}>
+              {showCreate ? "Cancel" : "New ticket"}
+            </Button>
           </div>
 
-          {showCreate && mode === "applicant" && (
+          {showCreate && (
             <form onSubmit={createTicket} className="space-y-3 border-b border-gray-200 pb-4">
+              {mode === "staff" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-700">Applicant *</label>
+                  <select
+                    className="input-field py-2 w-full text-sm"
+                    value={selectedApplicantId}
+                    onChange={(e) => setSelectedApplicantId(e.target.value)}
+                    required
+                  >
+                    <option value="">Select applicant...</option>
+                    {applicants.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name ? `${a.name} (${a.email})` : a.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
               <Textarea
                 label="Message"
