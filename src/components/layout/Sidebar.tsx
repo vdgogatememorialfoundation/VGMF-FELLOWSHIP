@@ -46,7 +46,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   admin: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/website", label: "Website Updates", icon: Globe },
-    { href: "/admin/forms", label: "Form Builder", icon: FormInput },
+    { href: "/admin/forms", label: "Forms", icon: FormInput },
     { href: "/admin/accounts", label: "All Accounts", icon: Users },
     { href: "/admin/applications", label: "Applications", icon: ClipboardList },
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },

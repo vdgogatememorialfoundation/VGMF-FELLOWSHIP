@@ -1,9 +1,38 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import type { SiteContent } from "@/lib/cms";
+import type { FormScheduleStatus } from "@/lib/form-schedule";
 import { getIcon } from "@/lib/icons";
+import { FormSchedulePanel } from "@/components/forms/FormScheduleCountdown";
 
-export function HomeHero({ settings }: { settings: SiteContent }) {
+export type ApplicationWindowInfo = {
+  formName: string;
+  schedule: FormScheduleStatus;
+};
+
+function applicationsAreOpen(
+  settings: SiteContent,
+  applicationWindow?: ApplicationWindowInfo | null
+) {
+  if (!settings.signupEnabled) return false;
+  if (!applicationWindow) return true;
+  return applicationWindow.schedule.phase === "open";
+}
+
+export function HomeHero({
+  settings,
+  applicationWindow,
+}: {
+  settings: SiteContent;
+  applicationWindow?: ApplicationWindowInfo | null;
+}) {
+  const applyOpen = applicationsAreOpen(settings, applicationWindow);
+  const upcoming = applicationWindow?.schedule.phase === "upcoming";
+  const formClosed =
+    applicationWindow &&
+    (applicationWindow.schedule.phase === "closed" ||
+      applicationWindow.schedule.phase === "disabled");
+
   return (
     <section className="hero-v2 relative overflow-hidden px-5 pb-20 pt-12 sm:px-6 md:pb-28 md:pt-16">
       <div className="pointer-events-none absolute inset-0 hero-v2-glow" />
@@ -23,11 +52,38 @@ export function HomeHero({ settings }: { settings: SiteContent }) {
               {settings.heroSubtitle}
             </p>
 
+            {upcoming && applicationWindow && (
+              <FormSchedulePanel
+                schedule={applicationWindow.schedule}
+                formName={applicationWindow.formName}
+                variant="hero"
+              />
+            )}
+
+            {formClosed && applicationWindow && (
+              <div className="mt-8">
+                <FormSchedulePanel
+                  schedule={applicationWindow.schedule}
+                  formName={applicationWindow.formName}
+                />
+              </div>
+            )}
+
             <div className="mt-9 flex flex-wrap gap-3">
-              {settings.signupEnabled ? (
+              {applyOpen ? (
                 <>
                   <Link href="/register" className="btn-gold gap-2 px-8 py-4 text-base">
                     Start Application
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link href="/#programme" className="btn-secondary px-8 py-4 text-base">
+                    Explore programme
+                  </Link>
+                </>
+              ) : upcoming && settings.signupEnabled ? (
+                <>
+                  <Link href="/register" className="btn-secondary gap-2 px-8 py-4 text-base">
+                    Create account early
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link href="/#programme" className="btn-secondary px-8 py-4 text-base">
@@ -150,7 +206,16 @@ export function HomeHighlights({ settings }: { settings: SiteContent }) {
   );
 }
 
-export function HomeJourney({ settings }: { settings: SiteContent }) {
+export function HomeJourney({
+  settings,
+  applicationWindow,
+}: {
+  settings: SiteContent;
+  applicationWindow?: ApplicationWindowInfo | null;
+}) {
+  const applyOpen = applicationsAreOpen(settings, applicationWindow);
+  const upcoming = applicationWindow?.schedule.phase === "upcoming";
+
   return (
     <section id="apply" className="grid-pattern px-5 py-20 sm:px-6 md:py-28">
       <div className="mx-auto max-w-7xl">
@@ -180,11 +245,32 @@ export function HomeJourney({ settings }: { settings: SiteContent }) {
         </div>
 
         <div className="mt-12 text-center">
-          {settings.signupEnabled ? (
+          {upcoming && applicationWindow ? (
+            <div className="mx-auto max-w-lg">
+              <FormSchedulePanel
+                schedule={applicationWindow.schedule}
+                formName={applicationWindow.formName}
+              />
+              {settings.signupEnabled && (
+                <p className="mt-4 text-sm text-muted">
+                  You can{" "}
+                  <Link href="/register" className="font-semibold text-primary-600 hover:underline">
+                    create your account now
+                  </Link>{" "}
+                  — the application form unlocks when the window opens.
+                </p>
+              )}
+            </div>
+          ) : applyOpen ? (
             <Link href="/register" className="btn-primary gap-2 px-10 py-4 text-base">
               Register for Fellowship 2026
               <ArrowRight className="h-4 w-4" />
             </Link>
+          ) : applicationWindow ? (
+            <FormSchedulePanel
+              schedule={applicationWindow.schedule}
+              formName={applicationWindow.formName}
+            />
           ) : (
             <p className="text-sm font-medium text-muted">
               Registration is currently closed. See official notices for updates.
@@ -196,8 +282,21 @@ export function HomeJourney({ settings }: { settings: SiteContent }) {
   );
 }
 
-export function HomeCtaBand({ settings }: { settings: SiteContent }) {
-  if (!settings.signupEnabled) return null;
+export function HomeCtaBand({
+  settings,
+  applicationWindow,
+}: {
+  settings: SiteContent;
+  applicationWindow?: ApplicationWindowInfo | null;
+}) {
+  const applyOpen = applicationsAreOpen(settings, applicationWindow);
+  const upcoming = applicationWindow?.schedule.phase === "upcoming";
+  const formClosed =
+    applicationWindow &&
+    (applicationWindow.schedule.phase === "closed" ||
+      applicationWindow.schedule.phase === "disabled");
+
+  if (!settings.signupEnabled && !upcoming && !formClosed) return null;
 
   return (
     <section className="px-5 py-16 sm:px-6">
@@ -206,25 +305,66 @@ export function HomeCtaBand({ settings }: { settings: SiteContent }) {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">
             VGMF Research Fellowship 2026
           </p>
-          <h2 className="mt-3 font-display text-3xl font-extrabold text-white md:text-4xl">
-            Ready to advance Ayurvedic research?
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-white/85">
-            Create your applicant account, complete verification, and submit your fellowship proposal
-            through our secure portal.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/register" className="btn-gold gap-2 px-8 py-3.5">
-              Apply now
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/rulebook"
-              className="btn-secondary border-white/30 bg-white/10 text-white hover:bg-white/20"
-            >
-              Read rulebook
-            </Link>
-          </div>
+          {upcoming && applicationWindow ? (
+            <>
+              <h2 className="mt-3 font-display text-3xl font-extrabold text-white md:text-4xl">
+                Applications opening soon
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-white/85">
+                The fellowship application form will be available when the window opens. Register
+                your account now to be ready.
+              </p>
+              <div className="mt-8">
+                <FormSchedulePanel
+                  schedule={applicationWindow.schedule}
+                  formName={applicationWindow.formName}
+                  variant="hero"
+                />
+              </div>
+              {settings.signupEnabled && (
+                <div className="mt-8">
+                  <Link href="/register" className="btn-gold gap-2 px-8 py-3.5">
+                    Create account
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
+            </>
+          ) : formClosed && applicationWindow ? (
+            <>
+              <h2 className="mt-3 font-display text-3xl font-extrabold text-white md:text-4xl">
+                Application window closed
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-white/85">
+                {applicationWindow.schedule.message}
+              </p>
+              <Link href="/#notices" className="btn-secondary mt-8 border-white/30 bg-white/10 text-white hover:bg-white/20">
+                View official notices
+              </Link>
+            </>
+          ) : applyOpen ? (
+            <>
+              <h2 className="mt-3 font-display text-3xl font-extrabold text-white md:text-4xl">
+                Ready to advance Ayurvedic research?
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-white/85">
+                Create your applicant account, complete verification, and submit your fellowship
+                proposal through our secure portal.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/register" className="btn-gold gap-2 px-8 py-3.5">
+                  Apply now
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/rulebook"
+                  className="btn-secondary border-white/30 bg-white/10 text-white hover:bg-white/20"
+                >
+                  Read rulebook
+                </Link>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </section>

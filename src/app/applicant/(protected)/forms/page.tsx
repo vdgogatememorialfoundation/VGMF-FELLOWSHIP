@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { DynamicFormFields } from "@/components/forms/DynamicFormFields";
+import { FormSchedulePanel } from "@/components/forms/FormScheduleCountdown";
 import { Button } from "@/components/ui/Button";
 import { formatApplicationNumber } from "@/lib/application-number";
 import { FILE_FIELD_DOCUMENT_TYPES } from "@/lib/form-validation";
+import { formatScheduleDateTime, type FormSchedulePhase } from "@/lib/form-schedule";
 
 interface FormField {
   id: string;
@@ -20,18 +22,11 @@ interface FormField {
 }
 
 interface FormSchedule {
+  phase: FormSchedulePhase;
   open: boolean;
   message: string | null;
   opensAt: string | null;
   closesAt: string | null;
-}
-
-function formatScheduleDate(iso: string | null) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleString("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 export default function ApplicantFormsPage() {
@@ -195,7 +190,7 @@ export default function ApplicantFormsPage() {
   async function save(status: "DRAFT" | "SUBMITTED") {
     if (!template) return;
     if (formLocked) return;
-    if (!schedule?.open && status !== "DRAFT") {
+    if (!schedule?.open) {
       setError(schedule?.message || "Applications are currently closed");
       return;
     }
@@ -255,37 +250,46 @@ export default function ApplicantFormsPage() {
   }
 
   const isSubmitted = formLocked;
-  const formClosed = schedule && !schedule.open;
+  const formLive = schedule?.phase === "open";
+  const formWaiting = schedule && !formLive && !isSubmitted;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{template.name}</h1>
         <p className="mt-1 text-gray-600">
-          Complete all required fields and submit your application
+          {formLive
+            ? "Complete all required fields and submit your application"
+            : formWaiting
+              ? "The application form will appear here when the window opens"
+              : "Your fellowship application"}
         </p>
-        {schedule?.opensAt && (
+        {formLive && schedule?.opensAt && (
           <p className="mt-2 text-sm text-gray-500">
-            Application window: {formatScheduleDate(schedule.opensAt) || "—"} to{" "}
-            {formatScheduleDate(schedule.closesAt) || "open"}
+            Application window: {formatScheduleDateTime(schedule.opensAt) || "—"} to{" "}
+            {formatScheduleDateTime(schedule.closesAt) || "open"}
           </p>
         )}
       </div>
 
-      {formClosed && !isSubmitted && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-medium">Applications are currently closed</p>
-          <p className="mt-1">{schedule?.message}</p>
-          <Link href="/#notices" className="mt-2 inline-block text-primary-700 underline">
-            View official notices
-          </Link>
-        </div>
+      {formWaiting && schedule && (
+        <FormSchedulePanel
+          schedule={schedule}
+          formName={template.name}
+          onRefresh={loadForm}
+        />
+      )}
+
+      {formWaiting && schedule?.phase !== "upcoming" && (
+        <Link href="/#notices" className="inline-block text-sm font-medium text-primary-700 underline">
+          View official notices
+        </Link>
       )}
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
-      {resubmitRequired && (
+      {resubmitRequired && formLive && (
         <div className="rounded-xl border-2 border-orange-300 bg-orange-50 p-5">
           <h2 className="font-semibold text-orange-900">Query — full resubmission required</h2>
           <p className="mt-2 text-sm text-orange-800">
@@ -297,7 +301,7 @@ export default function ApplicantFormsPage() {
         </div>
       )}
 
-      {!isSubmitted && applicationId && (
+      {!isSubmitted && applicationId && formLive && (
         <div
           className={`rounded-xl border p-4 ${
             digitalUndertaking
@@ -352,29 +356,26 @@ export default function ApplicantFormsPage() {
             your dashboard.
           </p>
         </div>
-      ) : (
+      ) : formLive || resubmitRequired ? (
         <div className="card">
           <DynamicFormFields
             fields={template.fields}
             values={values}
             onChange={updateField}
             uploadedFiles={uploadedFiles}
-            onFileSelect={formClosed ? undefined : handleFileSelect}
+            onFileSelect={handleFileSelect}
             fileUploading={fileUploading}
-            readOnly={!!formClosed}
           />
-          {!formClosed && (
-            <div className="mt-6 flex gap-3">
-              <Button variant="secondary" loading={loading} onClick={() => save("DRAFT")}>
-                Save Draft
-              </Button>
-              <Button loading={loading} onClick={() => save("SUBMITTED")}>
-                Submit Application
-              </Button>
-            </div>
-          )}
+          <div className="mt-6 flex gap-3">
+            <Button variant="secondary" loading={loading} onClick={() => save("DRAFT")}>
+              Save Draft
+            </Button>
+            <Button loading={loading} onClick={() => save("SUBMITTED")}>
+              Submit Application
+            </Button>
+          </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

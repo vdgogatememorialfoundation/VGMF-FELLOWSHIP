@@ -157,7 +157,11 @@ export async function GET() {
       rows.map((notice) => formatNoticeForAdmin(notice))
     ),
     prisma.formTemplate.findMany({
-      include: { fields: { orderBy: { order: "asc" } } },
+      include: {
+        fields: { orderBy: { order: "asc" } },
+        _count: { select: { submissions: true, fields: true } },
+      },
+      orderBy: { createdAt: "asc" },
     }),
     getIntegrationSettingsForAdmin(),
   ]);
@@ -414,6 +418,27 @@ export async function DELETE(request: NextRequest) {
     await prisma.notice.delete({ where: { id } });
   } else if (type === "form-field") {
     await prisma.formField.delete({ where: { id } });
+  } else if (type === "form-template") {
+    const template = await prisma.formTemplate.findUnique({
+      where: { id },
+      include: { _count: { select: { submissions: true } } },
+    });
+    if (!template) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+    if (template.slug === "fellowship-application") {
+      return NextResponse.json(
+        { error: "The main fellowship application form cannot be deleted" },
+        { status: 400 }
+      );
+    }
+    if (template._count.submissions > 0) {
+      return NextResponse.json(
+        { error: "Cannot delete a form that has submissions. Deactivate it instead." },
+        { status: 400 }
+      );
+    }
+    await prisma.formTemplate.delete({ where: { id } });
   } else {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   }

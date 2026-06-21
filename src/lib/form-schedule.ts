@@ -6,7 +6,10 @@ export type FormScheduleTemplate = {
   name?: string;
 };
 
+export type FormSchedulePhase = "disabled" | "upcoming" | "open" | "closed";
+
 export type FormScheduleStatus = {
+  phase: FormSchedulePhase;
   open: boolean;
   message: string | null;
   opensAt: string | null;
@@ -24,6 +27,7 @@ export function getFormScheduleStatus(
 
   if (!template.isActive) {
     return {
+      phase: "disabled",
       open: false,
       message: template.closedMessage || DEFAULT_CLOSED_MESSAGE,
       opensAt,
@@ -35,6 +39,7 @@ export function getFormScheduleStatus(
 
   if (template.opensAt && now < template.opensAt) {
     return {
+      phase: "upcoming",
       open: false,
       message:
         template.closedMessage ||
@@ -46,6 +51,7 @@ export function getFormScheduleStatus(
 
   if (template.closesAt && now > template.closesAt) {
     return {
+      phase: "closed",
       open: false,
       message:
         template.closedMessage ||
@@ -55,5 +61,25 @@ export function getFormScheduleStatus(
     };
   }
 
-  return { open: true, message: null, opensAt, closesAt };
+  return { phase: "open", open: true, message: null, opensAt, closesAt };
+}
+
+/** Whether applicants should see editable form fields (not just status banners). */
+export function isFormContentLive(
+  schedule: FormScheduleStatus,
+  options?: { allowDraftWhileClosed?: boolean; hasDraft?: boolean }
+): boolean {
+  if (schedule.phase === "open") return true;
+  if (options?.allowDraftWhileClosed && options.hasDraft && schedule.phase === "closed") {
+    return false;
+  }
+  return false;
+}
+
+export function formatScheduleDateTime(iso: string | null | undefined) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }

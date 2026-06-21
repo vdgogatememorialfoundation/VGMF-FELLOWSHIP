@@ -1,13 +1,21 @@
 import Link from "next/link";
 import { Mail, Phone, Calendar, UserPlus, MapPin, ExternalLink } from "lucide-react";
-import { getSiteSettings, getActiveNotices } from "@/lib/cms";
+import { getSiteSettings, getActiveNotices, getPublicFormSchedule } from "@/lib/cms";
 import { getNoticeAttachmentUrl, hasNoticeAttachment } from "@/lib/notice-assets";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 import { OfficialNotices, OfficialNoticesEmpty, type PublicNotice } from "./OfficialNotices";
 import { MobileNav } from "./MobileNav";
+import { FormScheduleCountdown } from "@/components/forms/FormScheduleCountdown";
 
 export async function PublicHeader() {
-  const settings = await getSiteSettings();
+  const [settings, applicationWindow] = await Promise.all([
+    getSiteSettings(),
+    getPublicFormSchedule(),
+  ]);
+  const upcoming = applicationWindow?.schedule.phase === "upcoming";
+  const applyOpen =
+    settings.signupEnabled &&
+    (!applicationWindow || applicationWindow.schedule.phase === "open");
   const navLinks = [
     ...settings.navLinks,
     { href: "/#contact", label: "Contact" },
@@ -43,13 +51,29 @@ export async function PublicHeader() {
               </span>
             )}
           </div>
-          {settings.signupEnabled && (
+          {upcoming && applicationWindow?.schedule.opensAt && (
+            <FormScheduleCountdown
+              targetIso={applicationWindow.schedule.opensAt}
+              target="opens"
+              variant="compact"
+            />
+          )}
+          {settings.signupEnabled && applyOpen && (
             <Link
               href="/register"
               className="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-primary-700"
             >
               <UserPlus className="h-3.5 w-3.5" />
               Apply / Register
+            </Link>
+          )}
+          {settings.signupEnabled && upcoming && (
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary-300 bg-white px-4 py-1.5 text-xs font-bold text-primary-700 hover:bg-primary-50"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Register early
             </Link>
           )}
         </div>
@@ -92,14 +116,22 @@ export async function PublicHeader() {
                 {item.label}
               </Link>
             ))}
-            {settings.signupEnabled && (
+            {settings.signupEnabled && applyOpen && (
               <Link href="/register" className="btn-primary ml-3 text-sm">
                 Apply Now
               </Link>
             )}
+            {settings.signupEnabled && upcoming && (
+              <Link href="/register" className="btn-secondary ml-3 text-sm">
+                Register early
+              </Link>
+            )}
           </nav>
 
-          <MobileNav links={navLinks} signupEnabled={settings.signupEnabled} />
+          <MobileNav
+            links={navLinks}
+            signupEnabled={settings.signupEnabled && (applyOpen || !!upcoming)}
+          />
         </div>
       </header>
     </div>

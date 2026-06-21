@@ -10,7 +10,7 @@ import {
   HomeCtaBand,
   HomeAboutContact,
 } from "@/components/public/HomeSections";
-import { getSiteSettings } from "@/lib/cms";
+import { getSiteSettings, getPublicFormSchedule } from "@/lib/cms";
 import {
   buildFaqJsonLd,
   buildOrganizationJsonLd,
@@ -22,7 +22,10 @@ import { resolveSeoConfig } from "@/lib/seo-config";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const settings = await getSiteSettings();
+  const [settings, applicationWindow] = await Promise.all([
+    getSiteSettings(),
+    getPublicFormSchedule(),
+  ]);
   const siteUrl = await getPublicSiteUrl();
   const seo = resolveSeoConfig(settings);
 
@@ -39,17 +42,17 @@ export default async function HomePage() {
       )}
       <div className="min-h-screen mesh-bg">
         <PublicHeader />
-        <HomeHero settings={settings} />
+        <HomeHero settings={settings} applicationWindow={applicationWindow} />
         <HomeTrustStrip settings={settings} />
         <NoticesSection />
         <HomeHighlights settings={settings} />
-        <HomeJourney settings={settings} />
+        <HomeJourney settings={settings} applicationWindow={applicationWindow} />
         <FaqSection
           title={settings.faqTitle}
           subtitle={settings.faqSubtitle}
           items={settings.faqItems}
         />
-        <HomeCtaBand settings={settings} />
+        <HomeCtaBand settings={settings} applicationWindow={applicationWindow} />
         <HomeAboutContact settings={settings} />
         <PublicFooter />
       </div>

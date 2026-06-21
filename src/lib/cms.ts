@@ -344,3 +344,22 @@ export async function getFormTemplateForApplicant(slug = "fellowship-application
 
   return { template, schedule };
 }
+
+/** Public schedule for fellowship application (homepage, header, etc.). */
+export async function getPublicFormSchedule(slug = "fellowship-application") {
+  const template = await prisma.formTemplate.findFirst({
+    where: { slug },
+    select: {
+      name: true,
+      isActive: true,
+      opensAt: true,
+      closesAt: true,
+      closedMessage: true,
+    },
+  });
+  if (!template) return null;
+  return {
+    formName: template.name,
+    schedule: getFormScheduleStatus(template),
+  };
+}

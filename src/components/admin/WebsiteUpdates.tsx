@@ -13,6 +13,7 @@ import { pickPartialSiteSettings } from "@/lib/site-content";
 import type { NotificationEventTemplate } from "@/lib/notification-templates";
 import { IntegrationsSettingsPanel } from "@/components/admin/IntegrationsSettingsPanel";
 import { SeoSettingsPanel } from "@/components/admin/SeoSettingsPanel";
+import { FormsAdminPanel } from "@/components/admin/FormsAdminPanel";
 
 const TABS = [
   { id: "branding", label: "Branding" },
@@ -25,6 +26,7 @@ const TABS = [
   { id: "announcements", label: "Ticker" },
   { id: "notices", label: "Notices" },
   { id: "pages", label: "Content Pages" },
+  { id: "forms", label: "Forms" },
   { id: "integrations", label: "API Settings" },
 ] as const;
 
@@ -603,7 +605,7 @@ export function WebsiteUpdates() {
       <div>
         <h1 className="text-2xl font-bold">Website Updates</h1>
         <p className="text-gray-600">
-          Manage all public website content, notices, pages, footer, header, and API integrations
+          Manage all public website content, notices, pages, forms, footer, header, and API integrations
         </p>
       </div>
 
@@ -1124,6 +1126,8 @@ export function WebsiteUpdates() {
           </div>
         </div>
       )}
+
+      {activeTab === "forms" && <FormsAdminPanel embedded />}
 
       {activeTab === "integrations" && integrations && (
         <IntegrationsSettingsPanel
