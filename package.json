@@ -16,7 +16,9 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:update-admin": "tsx prisma/update-admin.ts",
-    "db:seed-cms": "tsx prisma/seed-cms.ts"
+    "db:seed-cms": "tsx prisma/seed-cms.ts",
+    "keepalive": "node scripts/render-keepalive.mjs",
+    "keepalive:once": "node scripts/render-keepalive.mjs --once"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1073.0",
