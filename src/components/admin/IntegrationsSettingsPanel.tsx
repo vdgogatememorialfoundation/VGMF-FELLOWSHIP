@@ -270,7 +270,7 @@ export function IntegrationsSettingsPanel({
               <p className="mt-1 break-all text-sm font-medium text-ink">{keepAliveUrl}</p>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
                 <li>Built-in: self-ping every 30s while awake (Render logs: [keepalive])</li>
-                <li>Render cron: external ping every 14 min via scripts/render-keepalive.mjs</li>
+                <li>Render cron: external ping every 10 min (health + sitemap + home)</li>
                 <li>Local runner: npm run keepalive</li>
                 <li>Disable built-in ping: SELF_KEEPALIVE_ENABLED=false</li>
               </ul>

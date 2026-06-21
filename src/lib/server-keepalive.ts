@@ -2,19 +2,29 @@ const MIN_INTERVAL_MS = 30_000;
 const DEFAULT_INTERVAL_MS = 12 * 60 * 1000;
 const MAX_INTERVAL_MS = 14 * 60 * 1000;
 
-let started = false;
+const DEFAULT_KEEPALIVE_PATHS = ["/api/health", "/sitemap.xml", "/"];
 
-function resolveKeepAliveUrl(): string {
+let started = false;
+let urlIndex = 0;
+
+function resolveKeepAliveUrls(): string[] {
+  const list = process.env.KEEPALIVE_URLS?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (list?.length) return list;
+
   const explicit = process.env.KEEPALIVE_URL?.trim();
-  if (explicit) return explicit;
+  if (explicit) return [explicit];
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
-    return `${appUrl.replace(/\/$/, "")}/api/health`;
+    const base = appUrl.replace(/\/$/, "");
+    return DEFAULT_KEEPALIVE_PATHS.map((path) => `${base}${path}`);
   }
 
   const port = process.env.PORT || "10000";
-  return `http://127.0.0.1:${port}/api/health`;
+  const localBase = `http://127.0.0.1:${port}`;
+  return DEFAULT_KEEPALIVE_PATHS.map((path) => `${localBase}${path}`);
 }
 
 function resolveIntervalMs(): number {
@@ -47,10 +57,12 @@ export function startServerKeepAlive(): void {
   if (process.env.NODE_ENV !== "production") return;
 
   started = true;
-  const url = resolveKeepAliveUrl();
+  const urls = resolveKeepAliveUrls();
   const intervalMs = resolveIntervalMs();
 
   const run = () => {
+    const url = urls[urlIndex % urls.length];
+    urlIndex += 1;
     pingKeepAlive(url).catch((error) => {
       console.error(
         `[keepalive] ${new Date().toISOString()} failed:`,
@@ -63,5 +75,5 @@ export function startServerKeepAlive(): void {
   setTimeout(run, 8_000);
   setInterval(run, intervalMs);
 
-  console.log(`[keepalive] enabled interval=${intervalMs}ms url=${url}`);
+  console.log(`[keepalive] enabled interval=${intervalMs}ms urls=${urls.join(", ")}`);
 }
