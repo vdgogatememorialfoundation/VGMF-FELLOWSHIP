@@ -228,6 +228,28 @@ export function SeoSettingsPanel({
           placeholder="G-XXXXXXXXXX"
         />
 
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Google Search Console — test these URLs only</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>
+              <code>{resolvedAppUrl}/</code> (homepage)
+            </li>
+            <li>
+              <code>{resolvedAppUrl}/register</code>
+            </li>
+            <li>
+              <code>{resolvedAppUrl}/about</code>, <code>/rulebook</code>, <code>/terms</code>
+            </li>
+          </ul>
+          <p className="mt-2">
+            Do not request indexing for <code>/applicant</code>, <code>/login</code>, or{" "}
+            <code>/admin</code> — those are blocked in robots.txt on purpose.
+          </p>
+          <p className="mt-2">
+            Add the Search Console property <code>{resolvedAppUrl}</code> (not vaidyagogate.org).
+          </p>
+        </div>
+
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -238,8 +260,8 @@ export function SeoSettingsPanel({
         </label>
         <p className="text-xs text-gray-600">
           Public pages indexed: homepage, register, about, terms, rulebook, privacy, and related CMS
-          pages. Portal routes such as <code>/applicant</code>, <code>/admin</code>, and{" "}
-          <code>/login</code> stay blocked in robots.txt by design.
+          pages. Portal routes such as <code>/applicant</code> and <code>/admin</code> stay blocked
+          in robots.txt by design.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input

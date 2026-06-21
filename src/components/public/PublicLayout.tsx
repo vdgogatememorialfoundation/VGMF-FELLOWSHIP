@@ -192,7 +192,7 @@ export async function PublicFooter() {
                   </Link>
                 ))}
               <Link
-                href="/login"
+                href="/applicant"
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline"
               >
                 Applicant login

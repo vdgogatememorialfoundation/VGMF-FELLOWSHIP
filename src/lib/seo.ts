@@ -36,7 +36,6 @@ export const DISALLOW_ROBOTS_PREFIXES = [
   "/trustee",
   "/committee",
   "/api",
-  "/login",
   "/verification",
 ];
 

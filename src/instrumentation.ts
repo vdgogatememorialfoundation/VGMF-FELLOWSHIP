@@ -8,4 +8,9 @@ export async function register() {
   deactivateDeprecatedFormFields().catch((error) => {
     console.error("[form-template] deprecated field cleanup failed:", error);
   });
+
+  const { ensureProductionSeoIndexing } = await import("./lib/seo-maintenance");
+  ensureProductionSeoIndexing().catch((error) => {
+    console.error("[seo] production indexing sync failed:", error);
+  });
 }
