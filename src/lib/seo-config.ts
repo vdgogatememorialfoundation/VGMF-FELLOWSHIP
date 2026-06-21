@@ -56,7 +56,12 @@ export function resolveSeoConfig(settings: SeoSettingsInput): SeoConfig {
     googleSiteVerification:
       settings.googleSiteVerification?.trim() || envVerification || undefined,
     googleAnalyticsId: settings.googleAnalyticsId?.trim() || envAnalytics || undefined,
-    indexingEnabled: settings.seoIndexingEnabled !== false,
+    indexingEnabled: (() => {
+      const env = process.env.SEO_INDEXING_ENABLED?.trim().toLowerCase();
+      if (env === "true") return true;
+      if (env === "false") return false;
+      return settings.seoIndexingEnabled !== false;
+    })(),
     structuredDataEnabled: settings.seoStructuredDataEnabled !== false,
   };
 }

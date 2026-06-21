@@ -1,8 +1,10 @@
 import type { MetadataRoute } from "next";
-import { getPublicSiteUrl, PUBLIC_CMS_SLUGS } from "@/lib/seo";
+import { getPublicSiteUrlSafe, PUBLIC_CMS_SLUGS } from "@/lib/seo";
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = await getPublicSiteUrl();
+  const base = await getPublicSiteUrlSafe();
   const now = new Date();
 
   return [

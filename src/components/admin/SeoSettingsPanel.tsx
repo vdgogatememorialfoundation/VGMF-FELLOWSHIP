@@ -236,6 +236,11 @@ export function SeoSettingsPanel({
           />
           Allow Google and other search engines to index the public site
         </label>
+        <p className="text-xs text-gray-600">
+          Public pages indexed: homepage, register, about, terms, rulebook, privacy, and related CMS
+          pages. Portal routes such as <code>/applicant</code>, <code>/admin</code>, and{" "}
+          <code>/login</code> stay blocked in robots.txt by design.
+        </p>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

@@ -21,6 +21,13 @@ export const PUBLIC_CMS_SLUGS = [
   "refund-policy",
 ] as const;
 
+/** Paths Google should crawl (listed explicitly before portal disallows). */
+export const PUBLIC_ROBOTS_ALLOW_PATHS = [
+  "/",
+  "/register",
+  ...PUBLIC_CMS_SLUGS.map((slug) => `/${slug}`),
+];
+
 export const DISALLOW_ROBOTS_PREFIXES = [
   "/admin",
   "/applicant",
@@ -68,6 +75,22 @@ export async function getPublicSiteUrl(): Promise<string> {
     integrationAppUrl: config.appUrl,
     envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
   });
+}
+
+/** Fallback when CMS/DB is unavailable (robots.txt, sitemap.xml). */
+export function getPublicSiteUrlFallback(): string {
+  return resolvePublicSiteUrl({
+    envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+  });
+}
+
+export async function getPublicSiteUrlSafe(): Promise<string> {
+  try {
+    return await getPublicSiteUrl();
+  } catch (error) {
+    console.error("getPublicSiteUrlSafe fallback:", error);
+    return getPublicSiteUrlFallback();
+  }
 }
 
 export async function buildRootMetadata(settings: SiteContent): Promise<Metadata> {
