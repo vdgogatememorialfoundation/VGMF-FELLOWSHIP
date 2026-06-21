@@ -307,13 +307,15 @@ export async function notifyReportDue(userId: string, quarter: number, year: num
 
 export async function notifySupportTicketUpdate(
   userId: string,
+  ticketId: string,
   subject: string,
   updateMessage: string
 ) {
+  const shortId = ticketId.slice(-8).toUpperCase();
   await dispatchNotification(
     userId,
-    `Support Ticket: ${subject}`,
-    updateMessage,
+    `Support Ticket #${shortId}: ${subject}`,
+    `${updateMessage} (Ticket ID: ${ticketId})`,
     { channel: "BOTH" }
   );
 }
@@ -329,10 +331,11 @@ export async function notifySupportStaffNewTicket(
     select: { id: true },
   });
 
-  const title = isReply ? `Support ticket reply: ${subject}` : `New support ticket: ${subject}`;
+  const shortId = ticketId.slice(-8).toUpperCase();
+  const title = isReply ? `Support ticket reply #${shortId}: ${subject}` : `New support ticket #${shortId}: ${subject}`;
   const message = isReply
-    ? `${applicantLabel} replied on ticket "${subject}". Open Support Tickets in the admin or staff portal.`
-    : `${applicantLabel} opened a new support ticket: "${subject}".`;
+    ? `${applicantLabel} replied on ticket "${subject}" (ID: ${ticketId}). Open Support Tickets in the admin or staff portal.`
+    : `${applicantLabel} opened a new support ticket: "${subject}" (ID: ${ticketId}).`;
 
   await Promise.allSettled(
     staff.map((member) =>

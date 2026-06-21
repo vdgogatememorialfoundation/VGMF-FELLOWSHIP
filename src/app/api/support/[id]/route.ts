@@ -102,6 +102,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (isStaff) {
       void notifySupportTicketUpdate(
         ticket.userId,
+        ticket.id,
         ticket.subject,
         "Our support team replied to your ticket. Open Support in your applicant portal to read the message."
       );
@@ -156,6 +157,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (status && ticket.userId) {
       void notifySupportTicketUpdate(
         ticket.userId,
+        ticket.id,
         ticket.subject,
         `Your support ticket status was updated to: ${status.replace(/_/g, " ").toLowerCase()}.`
       );
