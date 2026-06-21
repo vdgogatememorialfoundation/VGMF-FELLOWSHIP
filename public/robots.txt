@@ -1,0 +1,11 @@
+# VGMF Fellowship Portal — allow all public pages
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-InspectionTool
+Allow: /
+
+User-agent: *
+Allow: /
+
+Sitemap: https://fellowship.vaidyagogate.org/sitemap.xml

@@ -1,6 +1,6 @@
 /**
- * Writes public/sitemap.xml at build time.
- * robots.txt is served by src/app/robots.txt/route.ts (hardcoded Allow rules).
+ * Writes public/sitemap.xml and public/robots.txt at build time.
+ * Static files avoid Next.js cold-start failures when Google fetches them.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -63,13 +63,31 @@ ${body}
 `;
 }
 
+function buildRobotsTxt(base) {
+  return `# VGMF Fellowship Portal — allow all public pages
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-InspectionTool
+Allow: /
+
+User-agent: *
+Allow: /
+
+Sitemap: ${base}/sitemap.xml
+`;
+}
+
 const base = resolveBaseUrl();
 const outDir = path.join(root, "public");
 
 await mkdir(outDir, { recursive: true });
 
 const sitemapFile = path.join(outDir, "sitemap.xml");
+const robotsFile = path.join(outDir, "robots.txt");
 
 await writeFile(sitemapFile, buildSitemapXml(base), "utf8");
+await writeFile(robotsFile, buildRobotsTxt(base), "utf8");
 
 console.log(`Generated ${sitemapFile} (${2 + PUBLIC_CMS_SLUGS.length} URLs)`);
+console.log(`Generated ${robotsFile}`);
