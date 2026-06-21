@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import type { NoticeCategory } from "@prisma/client";
@@ -144,6 +145,11 @@ async function requireAdmin() {
   const user = await getSession();
   if (!user || user.role !== "ADMIN") return null;
   return user;
+}
+
+function revalidatePublicNoticeSurfaces() {
+  revalidatePath("/");
+  revalidatePath("/api/cms");
 }
 
 export async function GET() {
@@ -324,10 +330,14 @@ export async function PUT(request: NextRequest) {
       if (data.category !== undefined) updateData.category = data.category;
       if (data.linkUrl !== undefined) updateData.linkUrl = data.linkUrl;
       if (data.linkLabel !== undefined) updateData.linkLabel = data.linkLabel;
-      if (data.isActive !== undefined) updateData.isActive = data.isActive;
+      if (data.isActive !== undefined) updateData.isActive = Boolean(data.isActive);
       if (data.priority !== undefined) updateData.priority = data.priority;
       if (data.expiresAt !== undefined) {
-        updateData.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+        updateData.expiresAt = data.expiresAt ? new Date(data.expiresAt as string) : null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return NextResponse.json({ error: "No notice fields to update" }, { status: 400 });
       }
 
       const notice = await prisma.notice.update({
@@ -338,6 +348,8 @@ export async function PUT(request: NextRequest) {
       if (data.notifyApplicants && notice.isActive) {
         void broadcastNoticeToApplicants(notice.title, notice.content);
       }
+
+      revalidatePublicNoticeSurfaces();
 
       return NextResponse.json({ notice: formatNoticeForAdmin(notice) });
     }
@@ -361,6 +373,8 @@ export async function PUT(request: NextRequest) {
     if (data.notifyApplicants && notice.isActive) {
       void broadcastNoticeToApplicants(notice.title, notice.content);
     }
+
+    revalidatePublicNoticeSurfaces();
 
     return NextResponse.json({ notice: formatNoticeForAdmin(notice) });
   }
@@ -416,6 +430,7 @@ export async function DELETE(request: NextRequest) {
 
   if (type === "notice") {
     await prisma.notice.delete({ where: { id } });
+    revalidatePublicNoticeSurfaces();
   } else if (type === "form-field") {
     await prisma.formField.delete({ where: { id } });
   } else if (type === "form-template") {
@@ -497,6 +512,8 @@ export async function POST(request: NextRequest) {
       if (notifyApplicants) {
         void broadcastNoticeToApplicants(notice.title, notice.content);
       }
+
+      revalidatePublicNoticeSurfaces();
 
       return NextResponse.json({ notice: formatNoticeForAdmin(notice) });
     } catch (error) {

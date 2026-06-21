@@ -74,6 +74,39 @@ export async function getNoticeAttachment(noticeId: string) {
   };
 }
 
+export function formatNoticeForPublic<
+  T extends {
+    id: string;
+    title: string;
+    content: string;
+    category: string;
+    linkUrl?: string | null;
+    linkLabel?: string | null;
+    attachmentFileName?: string | null;
+    attachmentData?: string | null;
+    priority: number;
+    publishedAt: Date;
+    expiresAt?: Date | null;
+  },
+>(notice: T) {
+  return {
+    id: notice.id,
+    title: notice.title,
+    content: notice.content,
+    category: notice.category,
+    linkUrl: notice.linkUrl,
+    linkLabel: notice.linkLabel,
+    attachmentFileName: notice.attachmentFileName,
+    hasAttachment: hasNoticeAttachment(notice),
+    attachmentUrl: hasNoticeAttachment(notice)
+      ? getNoticeAttachmentUrl(notice.id)
+      : null,
+    priority: notice.priority,
+    publishedAt: notice.publishedAt.toISOString(),
+    expiresAt: notice.expiresAt?.toISOString() ?? null,
+  };
+}
+
 export function formatNoticeForAdmin<
   T extends {
     id: string;

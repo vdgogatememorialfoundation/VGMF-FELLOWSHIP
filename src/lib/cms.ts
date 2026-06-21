@@ -1,6 +1,7 @@
 import prisma from "./db";
 import { DEPRECATED_FORM_FIELD_KEYS } from "./form-template-maintenance";
 import type { CmsPageSlug } from "@prisma/client";
+import { formatNoticeForPublic } from "./notice-assets";
 import { getFormScheduleStatus } from "./form-schedule";
 import {
   DEFAULT_NAV_LINKS,
@@ -307,14 +308,29 @@ export async function getCmsPage(slug: CmsPageSlug) {
 export async function getActiveNotices() {
   try {
     const now = new Date();
-    return prisma.notice.findMany({
-      where: {
-        isActive: true,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      orderBy: [{ priority: "desc" }, { publishedAt: "desc" }],
-      take: 10,
-    });
+    return prisma.notice
+      .findMany({
+        where: {
+          isActive: true,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
+        orderBy: [{ priority: "desc" }, { publishedAt: "desc" }],
+        take: 10,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          category: true,
+          linkUrl: true,
+          linkLabel: true,
+          attachmentFileName: true,
+          attachmentData: true,
+          priority: true,
+          publishedAt: true,
+          expiresAt: true,
+        },
+      })
+      .then((rows) => rows.map((notice) => formatNoticeForPublic(notice)));
   } catch (error) {
     console.error("getActiveNotices fallback:", error);
     return [];

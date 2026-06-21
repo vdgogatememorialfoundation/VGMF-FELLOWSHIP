@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Mail, Phone, Calendar, UserPlus, MapPin, ExternalLink } from "lucide-react";
 import { getSiteSettings, getActiveNotices, getPublicFormSchedule } from "@/lib/cms";
-import { getNoticeAttachmentUrl, hasNoticeAttachment } from "@/lib/notice-assets";
 import { AnnouncementTicker } from "./AnnouncementTicker";
 import { OfficialNotices, OfficialNoticesEmpty, type PublicNotice } from "./OfficialNotices";
 import { MobileNav } from "./MobileNav";
@@ -269,21 +268,5 @@ export async function NoticesSection() {
   const notices = await getActiveNotices();
   if (notices.length === 0) return <OfficialNoticesEmpty />;
 
-  const payload: PublicNotice[] = notices.map((notice) => ({
-    id: notice.id,
-    title: notice.title,
-    content: notice.content,
-    category: (notice.category ?? "GENERAL") as PublicNotice["category"],
-    linkUrl: notice.linkUrl,
-    linkLabel: notice.linkLabel,
-    attachmentUrl: hasNoticeAttachment(notice)
-      ? getNoticeAttachmentUrl(notice.id)
-      : null,
-    attachmentFileName: notice.attachmentFileName,
-    priority: notice.priority,
-    publishedAt: notice.publishedAt.toISOString(),
-    expiresAt: notice.expiresAt?.toISOString() ?? null,
-  }));
-
-  return <OfficialNotices notices={payload} />;
+  return <OfficialNotices notices={notices as PublicNotice[]} />;
 }

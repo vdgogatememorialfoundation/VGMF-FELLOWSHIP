@@ -3,6 +3,12 @@ import { getSiteSettings, getActiveNotices, getCmsPage } from "@/lib/cms";
 import prisma from "@/lib/db";
 import type { CmsPageSlug } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate",
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
@@ -15,7 +21,7 @@ export async function GET(request: Request) {
 
   if (type === "notices") {
     const notices = await getActiveNotices();
-    return NextResponse.json({ notices });
+    return NextResponse.json({ notices }, { headers: NO_STORE_HEADERS });
   }
 
   if (type === "pages") {

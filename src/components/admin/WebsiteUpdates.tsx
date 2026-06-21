@@ -487,6 +487,59 @@ export function WebsiteUpdates() {
     load();
   }
 
+  async function toggleNoticeActive(notice: Notice) {
+    const nextActive = !notice.isActive;
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const res = await fetch("/api/admin/cms", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        section: "notice",
+        data: { id: notice.id, isActive: nextActive },
+      }),
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to update notice");
+      return;
+    }
+
+    setNotices((current) =>
+      current.map((item) =>
+        item.id === notice.id ? { ...item, isActive: nextActive } : item
+      )
+    );
+    setMessage(
+      nextActive
+        ? `"${notice.title}" is now live on the public site.`
+        : `"${notice.title}" is hidden from the public site.`
+    );
+  }
+
+  async function deleteNotice(id: string, title: string) {
+    if (!confirm(`Delete notice "${title}"? This cannot be undone.`)) return;
+    setError("");
+    const res = await fetch(`/api/admin/cms?type=notice&id=${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to delete notice");
+      return;
+    }
+    setMessage(`Notice "${title}" deleted.`);
+    load();
+  }
+
   async function saveSection(section: string, data: unknown) {
     setLoading(true);
     setError("");
@@ -1032,6 +1085,10 @@ export function WebsiteUpdates() {
 
       {activeTab === "notices" && (
         <div className="space-y-6">
+          <p className="text-sm text-gray-600">
+            Deactivated notices are removed from the public homepage immediately. This is separate
+            from the announcement ticker — disable that under the Ticker tab and click Save Ticker.
+          </p>
           <div className="card space-y-4">
             <h2 className="font-semibold">Add New Notice</h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1078,10 +1135,24 @@ export function WebsiteUpdates() {
             <h2 className="mb-4 font-semibold">All Notices</h2>
             <div className="space-y-3">
               {notices.map((n) => (
-                <div key={n.id} className="flex items-start justify-between rounded-lg border p-4">
+                <div
+                  key={n.id}
+                  className={`flex items-start justify-between rounded-lg border p-4 ${
+                    n.isActive ? "" : "border-dashed bg-gray-50 opacity-80"
+                  }`}
+                >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium">{n.title}</p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          n.isActive
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {n.isActive ? "Live on site" : "Hidden"}
+                      </span>
                       <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{getNoticeCategoryLabel(n.category ?? "GENERAL")}</span>
                     </div>
                     <p className="mt-1 text-sm text-gray-600 line-clamp-2">{n.content}</p>
@@ -1097,8 +1168,21 @@ export function WebsiteUpdates() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="secondary" className="text-xs" onClick={() => saveSection("notice", { id: n.id, isActive: !n.isActive })}>{n.isActive ? "Deactivate" : "Activate"}</Button>
-                    <Button variant="danger" className="text-xs" onClick={async () => { await fetch(`/api/admin/cms?type=notice&id=${n.id}`, { method: "DELETE" }); load(); }}>Delete</Button>
+                    <Button
+                      variant="secondary"
+                      className="text-xs"
+                      loading={loading}
+                      onClick={() => toggleNoticeActive(n)}
+                    >
+                      {n.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      className="text-xs"
+                      onClick={() => deleteNotice(n.id, n.title)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
               ))}
