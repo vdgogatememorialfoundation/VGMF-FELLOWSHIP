@@ -95,25 +95,55 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailSendRes
   }
 }
 
+function renderEmailHtml(title: string, bodyContent: string): string {
+  return `
+    <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; padding: 30px 15px; margin: 0; min-height: 100%;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+        <!-- Header -->
+        <tr>
+          <td style="background: linear-gradient(135deg, #1b6b52 0%, #124d3a 100%); padding: 32px 24px; text-align: center;">
+            <span style="color: rgba(255, 255, 255, 0.85); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 6px;">${ORGANIZATION_NAME}</span>
+            <h1 style="color: #ffffff; font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em;">${title}</h1>
+          </td>
+        </tr>
+        <!-- Content -->
+        <tr>
+          <td style="padding: 32px 24px; color: #334155; font-size: 15px; line-height: 1.6;">
+            ${bodyContent}
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #f1f5f9; color: #64748b; font-size: 12px; line-height: 1.5;">
+            <p style="margin: 0 0 8px 0; font-weight: 500;">${ORGANIZATION_NAME}</p>
+            <p style="margin: 0; color: #94a3b8; font-size: 11px;">${ORGANIZATION_FOOTER}</p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
 export async function sendOtpEmail(to: string, code: string): Promise<EmailSendResult> {
   const config = await getIntegrationConfig();
   const appName = config.email.fromName || "VGMF Fellowship Portal";
   const subject =
     config.email.otpSubject?.trim() || `${appName} — Your verification code`;
 
+  const bodyContent = `
+    <p>Hello,</p>
+    <p>Thank you for initiating your verification. Please use the following one-time password (OTP) to verify your email address:</p>
+    <div style="margin: 32px 0; text-align: center;">
+      <span style="display: inline-block; font-family: monospace; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #1b6b52; background-color: #f0fdf4; border: 1.5px dashed #1b6b52; padding: 12px 30px; border-radius: 8px;">${code}</span>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">This security code is temporary and will expire in <strong>10 minutes</strong>. Please do not share this code with anyone.</p>
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px;">If you did not request this verification, you can safely ignore this email.</p>
+  `;
+
   return sendEmail({
     to,
     subject,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #16a34a;">Email Verification</h2>
-        <p>Use the one-time password below to verify your email address:</p>
-        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #16a34a; margin: 24px 0;">${code}</p>
-        <p style="color: #666;">This code expires in 10 minutes. Do not share it with anyone.</p>
-        <p style="color: #666; font-size: 12px;">If you did not request this code, you can safely ignore this email.</p>
-        <p style="color: #666; font-size: 12px;">${ORGANIZATION_NAME}</p>
-      </div>
-    `,
+    html: renderEmailHtml("Email Verification", bodyContent),
     text: `Your ${appName} verification code is ${code}. It expires in 10 minutes.`,
   });
 }
@@ -126,21 +156,26 @@ export async function sendWelcomeEmail(
   const config = await getIntegrationConfig();
   const appUrl = config.appUrl;
 
+  const bodyContent = `
+    <p>Dear <strong>${name}</strong>,</p>
+    <p>Welcome! Your account has been successfully registered on the <strong>${ORGANIZATION_NAME}</strong> Fellowship Portal.</p>
+    <p>Please keep a record of your User ID for future logins:</p>
+    <div style="margin: 24px 0; padding: 20px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="margin: 0 0 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b;">Your Registered User ID</p>
+      <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1b6b52; font-family: monospace;">${userId}</p>
+    </div>
+    <p>You can now proceed to your dashboard to complete and submit your fellowship application.</p>
+    <div style="margin: 32px 0; text-align: center;">
+      <a href="${appUrl}/applicant" style="display: inline-block; background-color: #1b6b52; color: #ffffff; font-weight: 600; padding: 14px 28px; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(27, 107, 82, 0.15); transition: background-color 0.2s;">Go to Dashboard</a>
+    </div>
+    <p style="font-size: 13px; color: #64748b;">If you need assistance during the application process, please open a support ticket in your portal.</p>
+  `;
+
   return sendEmail({
     to,
     toName: name,
     subject: `Welcome to ${ORGANIZATION_NAME} Fellowship Portal`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #16a34a;">Welcome to ${ORGANIZATION_NAME}</h2>
-        <p>Dear ${name},</p>
-        <p>Your registration was successful. Your User ID is:</p>
-        <p style="font-size: 20px; font-weight: bold; color: #16a34a;">${userId}</p>
-        <p>You can now log in and complete your fellowship application.</p>
-        <p><a href="${appUrl}/applicant" style="background: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Go to Dashboard</a></p>
-        <p style="color: #666; font-size: 12px;">${ORGANIZATION_FOOTER}</p>
-      </div>
-    `,
+    html: renderEmailHtml("Welcome to the Fellowship Portal", bodyContent),
   });
 }
 
@@ -156,26 +191,26 @@ export async function sendApplicationConfirmationEmail(
       ? `${applicationNumber.slice(0, 4)} ${applicationNumber.slice(4, 8)} ${applicationNumber.slice(8)}`
       : applicationNumber;
 
+  const bodyContent = `
+    <p>Dear <strong>${name}</strong>,</p>
+    <p>Thank you for submitting your fellowship application to the <strong>${ORGANIZATION_NAME}</strong>.</p>
+    <div style="margin: 24px 0; padding: 20px; border: 2px dashed #c9a227; border-radius: 12px; background: #f8faf9; text-align: center;">
+      <p style="margin: 0 0 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280;">Your 12-Digit Application Number</p>
+      <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 0.12em; color: #1b6b52;">${applicationNumber}</p>
+      <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280;">${formattedNumber}</p>
+    </div>
+    <p>Please save this number for tracking your application status. You can also view updates anytime in your applicant dashboard.</p>
+    <div style="margin: 32px 0; text-align: center;">
+      <a href="${appUrl}/applicant/status" style="display: inline-block; background-color: #1b6b52; color: #ffffff; font-weight: 600; padding: 14px 28px; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(27, 107, 82, 0.15);">Track Application Status</a>
+    </div>
+    <p style="color: #6b7280; font-size: 13px;">We will notify you by email when your application moves to the next stage.</p>
+  `;
+
   return sendEmail({
     to,
     toName: name,
     subject: `Application Received — ${ORGANIZATION_NAME} | ${applicationNumber}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-        <h2 style="color: #1b6b52;">${ORGANIZATION_NAME} — Application Received</h2>
-        <p>Dear ${name},</p>
-        <p>Thank you for submitting your fellowship application to the <strong>${ORGANIZATION_NAME}</strong>.</p>
-        <div style="margin: 24px 0; padding: 20px; border: 2px dashed #c9a227; border-radius: 12px; background: #f8faf9; text-align: center;">
-          <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280;">Your 12-Digit Application Number</p>
-          <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 0.12em; color: #1b6b52;">${applicationNumber}</p>
-          <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280;">${formattedNumber}</p>
-        </div>
-        <p>Please save this number for tracking your application status. You can also view updates anytime in your applicant dashboard.</p>
-        <p><a href="${appUrl}/applicant/status" style="display: inline-block; background: #1b6b52; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;">Track Application Status</a></p>
-        <p style="color: #6b7280; font-size: 13px;">We will notify you by email when your application moves to the next stage.</p>
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">${ORGANIZATION_FOOTER}</p>
-      </div>
-    `,
+    html: renderEmailHtml("Application Received", bodyContent),
     text: `Dear ${name},\n\nYour VGMF fellowship application has been received.\n\nApplication Number: ${applicationNumber}\n\nUse this 12-digit number to track your application at ${appUrl}/applicant/status`,
   });
 }
@@ -190,21 +225,25 @@ export async function sendAccountCreatedEmail(
   const config = await getIntegrationConfig();
   const appUrl = config.appUrl;
 
+  const bodyContent = `
+    <p>Dear <strong>${name}</strong>,</p>
+    <p>An administrator has created a <strong>${roleLabel}</strong> account for you on the <strong>${ORGANIZATION_NAME}</strong> Fellowship Portal.</p>
+    <div style="margin: 24px 0; padding: 20px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left;">
+      <p style="margin: 0 0 10px 0;"><span style="color: #64748b; display: inline-block; width: 100px;">User ID:</span> <strong style="color: #1b6b52; font-family: monospace; font-size: 16px;">${userId}</strong></p>
+      <p style="margin: 0;"><span style="color: #64748b; display: inline-block; width: 100px;">Account Role:</span> <strong>${roleLabel}</strong></p>
+    </div>
+    <p>To access your account, please sign in at the link below using the temporary password provided by your administrator.</p>
+    <div style="margin: 32px 0; text-align: center;">
+      <a href="${appUrl}${loginPath}" style="display: inline-block; background-color: #1b6b52; color: #ffffff; font-weight: 600; padding: 14px 28px; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(27, 107, 82, 0.15);">Access Portal Login</a>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin-top: 16px;">Please change your password immediately after logging in to secure your account.</p>
+  `;
+
   return sendEmail({
     to,
     toName: name,
     subject: `Your ${roleLabel} Portal Account — VGMF Fellowship`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1b6b52;">VGMF Portal Account Created</h2>
-        <p>Dear ${name},</p>
-        <p>Your <strong>${roleLabel}</strong> account has been created for the ${ORGANIZATION_NAME} Fellowship Portal.</p>
-        <p>Your User ID: <strong style="color: #1b6b52;">${userId}</strong></p>
-        <p>Sign in at: <a href="${appUrl}${loginPath}">${appUrl}${loginPath}</a></p>
-        <p style="color: #666; font-size: 13px;">Use the email and password provided by the administrator to log in.</p>
-        <p style="color: #9ca3af; font-size: 12px;">${ORGANIZATION_FOOTER}</p>
-      </div>
-    `,
+    html: renderEmailHtml("Portal Account Created", bodyContent),
   });
 }
 
@@ -214,18 +253,17 @@ export async function sendNotificationEmail(
   title: string,
   message: string
 ): Promise<EmailSendResult> {
+  const bodyContent = `
+    <p>Dear <strong>${name}</strong>,</p>
+    <p>${message}</p>
+    <p style="margin-top: 24px; font-size: 13px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 16px;">To view more details or reply, please log in to the portal and visit your dashboard.</p>
+  `;
+
   return sendEmail({
     to,
     toName: name,
     subject: `${ORGANIZATION_NAME} Portal: ${title}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #16a34a;">${title}</h2>
-        <p>Dear ${name},</p>
-        <p>${message}</p>
-        <p style="color: #666; font-size: 12px;">${ORGANIZATION_FOOTER}</p>
-      </div>
-    `,
+    html: renderEmailHtml(title, bodyContent),
   });
 }
 
