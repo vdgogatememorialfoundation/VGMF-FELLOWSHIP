@@ -115,17 +115,22 @@ export async function POST(request: NextRequest) {
       include: { profile: true },
     });
 
-    await createNotification(
-      user.id,
-      "Welcome to VGMF Fellowship Portal",
-      `Registration successful! Your User ID is ${userId}. You can now complete your fellowship application.`,
-      "EMAIL"
-    );
-
-    await sendWelcomeNotifications(user.id, normalizedEmail, name, userId);
-
     const token = await createSession(user.id);
     await setSessionCookie(token);
+
+    void (async () => {
+      try {
+        await createNotification(
+          user.id,
+          "Welcome to VGMF Fellowship Portal",
+          `Registration successful! Your User ID is ${userId}. You can now complete your fellowship application.`,
+          "EMAIL"
+        );
+        await sendWelcomeNotifications(user.id, normalizedEmail, name, userId);
+      } catch (notificationError) {
+        console.error("Registration notifications failed:", notificationError);
+      }
+    })();
 
     return NextResponse.json({
       success: true,
