@@ -729,21 +729,13 @@ model Notification {
   @@map("notifications")
 }
 
-enum SupportTicketStatus {
-  OPEN
-  IN_PROGRESS
-  WAITING_ON_APPLICANT
-  RESOLVED
-  CLOSED
-}
-
 model SupportTicket {
   id           String               @id @default(cuid())
   userId       String               @map("user_id")
   assignedToId String?              @map("assigned_to_id")
   subject      String
   message      String               @db.Text
-  status       SupportTicketStatus  @default(OPEN)
+  status       String               @default("OPEN")
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @updatedAt @map("updated_at")
   closedAt     DateTime?            @map("closed_at")

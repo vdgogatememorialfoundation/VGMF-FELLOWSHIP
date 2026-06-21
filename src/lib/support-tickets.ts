@@ -1,4 +1,11 @@
-import type { SupportTicketStatus, UserRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
+
+export type SupportTicketStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_ON_APPLICANT"
+  | "RESOLVED"
+  | "CLOSED";
 
 export const SUPPORT_STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF"];
 

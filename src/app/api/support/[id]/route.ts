@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { SupportTicketStatus } from "@prisma/client";
+import type { SupportTicketStatus } from "@/lib/support-tickets";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { supportReplySchema } from "@/lib/validations";
