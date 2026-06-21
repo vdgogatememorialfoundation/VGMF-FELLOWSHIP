@@ -285,7 +285,7 @@ export function SupportTicketsWorkspace({
       {feedback && (
         <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{feedback}</div>
       )}
-      {error && !selected && (
+      {error && (
         <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
       )}
 
