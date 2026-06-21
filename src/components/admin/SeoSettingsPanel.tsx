@@ -245,8 +245,25 @@ export function SeoSettingsPanel({
             Do not request indexing for <code>/applicant</code>, <code>/login</code>, or{" "}
             <code>/admin</code> — those use <code>noindex</code> and are omitted from the sitemap.
           </p>
-          <p className="mt-2">
-            Add the Search Console property <code>{resolvedAppUrl}</code> (not vaidyagogate.org).
+          <p className="mt-2 font-semibold">If URL Inspection still says “blocked by robots.txt”</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>
+              Open Search Console → <strong>Settings</strong> → <strong>robots.txt</strong> report
+            </li>
+            <li>
+              Click <strong>Request a recrawl</strong> for{" "}
+              <code>{resolvedAppUrl}/robots.txt</code>
+            </li>
+            <li>Wait 5 minutes, then run <strong>Test live URL</strong> on the homepage again</li>
+          </ol>
+          <p className="mt-2 text-xs">
+            Google caches robots.txt for up to 24 hours. Our server already returns{" "}
+            <code>Allow: /</code> — the recrawl clears Google&apos;s old cached{" "}
+            <code>Disallow: /</code>.
+          </p>
+          <p className="mt-2 text-xs">
+            Search Console property must be <code>{resolvedAppUrl}</code> (URL prefix), not{" "}
+            <code>vaidyagogate.org</code>.
           </p>
         </div>
 

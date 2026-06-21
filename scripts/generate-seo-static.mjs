@@ -1,6 +1,6 @@
 /**
- * Writes public/sitemap.xml and public/robots.txt at build time.
- * Static files avoid Next.js route cold-start failures when Google fetches them.
+ * Writes public/sitemap.xml at build time.
+ * robots.txt is served by src/app/robots.txt/route.ts (hardcoded Allow rules).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -19,8 +19,6 @@ const PUBLIC_CMS_SLUGS = [
   "refund-policy",
 ];
 
-// Portal paths use X-Robots-Tag: noindex (see next.config.ts), not robots.txt disallows.
-
 function escapeXml(value) {
   return value
     .replace(/&/g, "&amp;")
@@ -33,15 +31,6 @@ function escapeXml(value) {
 function resolveBaseUrl() {
   const raw = (process.env.NEXT_PUBLIC_APP_URL || OFFICIAL_PRODUCTION_BASE).trim();
   return raw.replace(/\/$/, "");
-}
-
-function isIndexingEnabled(base) {
-  if (base === OFFICIAL_PRODUCTION_BASE) return true;
-
-  const envFlag = process.env.SEO_INDEXING_ENABLED?.trim().toLowerCase();
-  if (envFlag === "true") return true;
-  if (envFlag === "false") return false;
-  return false;
 }
 
 function buildSitemapXml(base) {
@@ -74,35 +63,13 @@ ${body}
 `;
 }
 
-function buildRobotsTxt(base, indexingEnabled) {
-  if (!indexingEnabled) {
-    return ["User-agent: *", "Disallow: /", "", `Sitemap: ${base}/sitemap.xml`, ""].join("\n");
-  }
-
-  // Fallback copy if app/robots.ts is unavailable. Explicit Allow helps Google recrawl after prior Disallow: /.
-  return [
-    "User-agent: *",
-    "Allow: /",
-    "",
-    `Sitemap: ${base}/sitemap.xml`,
-    "",
-  ].join("\n");
-}
-
 const base = resolveBaseUrl();
-const indexingEnabled = isIndexingEnabled(base);
 const outDir = path.join(root, "public");
 
 await mkdir(outDir, { recursive: true });
 
 const sitemapFile = path.join(outDir, "sitemap.xml");
-const robotsFile = path.join(outDir, "robots.txt");
 
 await writeFile(sitemapFile, buildSitemapXml(base), "utf8");
-await writeFile(robotsFile, buildRobotsTxt(base, indexingEnabled), "utf8");
 
-console.log(
-  `Generated SEO static files (base=${base}, indexing=${indexingEnabled ? "on" : "off"})`
-);
-console.log(`  ${sitemapFile} (${2 + PUBLIC_CMS_SLUGS.length} URLs)`);
-console.log(`  ${robotsFile}`);
+console.log(`Generated ${sitemapFile} (${2 + PUBLIC_CMS_SLUGS.length} URLs)`);

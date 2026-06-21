@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://fellowship.vaidyagogate.org/sitemap.xml
