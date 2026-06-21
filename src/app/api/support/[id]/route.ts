@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import type { SupportTicketStatus } from "@/lib/support-tickets";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
@@ -73,11 +74,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
 
-    const nextStatus: SupportTicketStatus = isStaff
-      ? "WAITING_ON_APPLICANT"
-      : ticket.status === "WAITING_ON_APPLICANT" || ticket.status === "OPEN"
-        ? "IN_PROGRESS"
-        : ticket.status;
+    const nextStatus = (
+      isStaff
+        ? "WAITING_ON_APPLICANT"
+        : ticket.status === "WAITING_ON_APPLICANT" || ticket.status === "OPEN"
+          ? "IN_PROGRESS"
+          : ticket.status
+    ) as SupportTicketStatus;
 
     const updated = await prisma.supportTicket.update({
       where: { id },
@@ -134,11 +137,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const assignedToId =
       body.assignedToId === null ? null : (body.assignedToId as string | undefined);
 
-    const data: {
-      status?: SupportTicketStatus;
-      assignedToId?: string | null;
-      closedAt?: Date | null;
-    } = {};
+    const data: Prisma.SupportTicketUncheckedUpdateInput = {};
 
     if (status) {
       data.status = status;
