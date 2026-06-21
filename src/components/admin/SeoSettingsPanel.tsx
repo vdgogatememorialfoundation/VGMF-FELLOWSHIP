@@ -243,7 +243,7 @@ export function SeoSettingsPanel({
           </ul>
           <p className="mt-2">
             Do not request indexing for <code>/applicant</code>, <code>/login</code>, or{" "}
-            <code>/admin</code> — those are blocked in robots.txt on purpose.
+            <code>/admin</code> — those use <code>noindex</code> and are omitted from the sitemap.
           </p>
           <p className="mt-2">
             Add the Search Console property <code>{resolvedAppUrl}</code> (not vaidyagogate.org).
@@ -260,8 +260,8 @@ export function SeoSettingsPanel({
         </label>
         <p className="text-xs text-gray-600">
           Public pages indexed: homepage, register, about, terms, rulebook, privacy, and related CMS
-          pages. Portal routes such as <code>/applicant</code> and <code>/admin</code> stay blocked
-          in robots.txt by design.
+          pages. Portal routes such as <code>/applicant</code> and <code>/admin</code> use{" "}
+          <code>noindex</code> and are not listed in the sitemap.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input

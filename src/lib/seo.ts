@@ -28,17 +28,33 @@ export const PUBLIC_ROBOTS_ALLOW_PATHS = [
   ...PUBLIC_CMS_SLUGS.map((slug) => `/${slug}`),
 ];
 
-export const DISALLOW_ROBOTS_PREFIXES = [
-  "/admin/",
-  "/applicant/",
+/** Portal/API paths that must not appear in Google results (noindex headers, not robots.txt). */
+export const PORTAL_NOINDEX_PATH_PREFIXES = [
+  "/admin",
+  "/applicant",
   "/login",
-  "/staff/",
-  "/reviewer/",
-  "/trustee/",
-  "/committee/",
-  "/api/",
-  "/verification/",
+  "/staff",
+  "/reviewer",
+  "/trustee",
+  "/committee",
+  "/api",
+  "/verification",
 ];
+
+/** @deprecated Use PORTAL_NOINDEX_PATH_PREFIXES — kept for admin UI copy. */
+export const DISALLOW_ROBOTS_PREFIXES = PORTAL_NOINDEX_PATH_PREFIXES.map((prefix) =>
+  prefix.endsWith("/") ? prefix : `${prefix}/`
+);
+
+export function buildPortalRobotsMetadata(): Metadata {
+  return {
+    robots: {
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
+    },
+  };
+}
 
 function isBlockedPublicHost(url: string): boolean {
   return isBlockedIntegrationHost(url);

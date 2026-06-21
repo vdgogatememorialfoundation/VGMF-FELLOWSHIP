@@ -19,17 +19,7 @@ const PUBLIC_CMS_SLUGS = [
   "refund-policy",
 ];
 
-const DISALLOW_ROBOTS_PREFIXES = [
-  "/admin/",
-  "/applicant/",
-  "/login",
-  "/staff/",
-  "/reviewer/",
-  "/trustee/",
-  "/committee/",
-  "/api/",
-  "/verification/",
-];
+// Portal paths use X-Robots-Tag: noindex (see next.config.ts), not robots.txt disallows.
 
 function escapeXml(value) {
   return value
@@ -87,17 +77,8 @@ function buildRobotsTxt(base, indexingEnabled) {
     return ["User-agent: *", "Disallow: /", "", `Sitemap: ${base}/sitemap.xml`, ""].join("\n");
   }
 
-  // Default: everything is allowed unless explicitly disallowed below.
-  // Do not use Allow + Disallow mixes; Google longest-match can confuse testers.
-  return [
-    "User-agent: *",
-    ...DISALLOW_ROBOTS_PREFIXES.map((prefix) =>
-      prefix.endsWith("/") ? `Disallow: ${prefix}` : `Disallow: ${prefix}`
-    ),
-    "",
-    `Sitemap: ${base}/sitemap.xml`,
-    "",
-  ].join("\n");
+  // Allow all crawlers; portal routes are excluded via noindex headers instead of Disallow.
+  return ["User-agent: *", "", `Sitemap: ${base}/sitemap.xml`, ""].join("\n");
 }
 
 const base = resolveBaseUrl();

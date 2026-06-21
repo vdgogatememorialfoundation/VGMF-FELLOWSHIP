@@ -1,12 +1,3 @@
 User-agent: *
-Disallow: /admin/
-Disallow: /applicant/
-Disallow: /login
-Disallow: /staff/
-Disallow: /reviewer/
-Disallow: /trustee/
-Disallow: /committee/
-Disallow: /api/
-Disallow: /verification/
 
 Sitemap: https://fellowship.vaidyagogate.org/sitemap.xml
