@@ -4,11 +4,10 @@ import path from "path";
 import { existsSync } from "fs";
 import {
   applyPdfLetterheadLayout,
-  drawPdfFooter,
-  drawPdfHeader,
   loadPdfLetterheadBranding,
   PDF_PAGE_MARGIN,
-  registerPdfLetterhead,
+  PDF_CONTENT_TOP,
+  stampPdfLetterheadOnAllPages,
 } from "./pdf-letterhead";
 
 function ensurePdfkitFonts() {
@@ -59,7 +58,11 @@ export async function generateUndertakingPdf(
   const documentSubtitle = `${branding.siteName} — Fellowship Declaration`;
 
   const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const doc = new PDFDocument({ margin: PDF_PAGE_MARGIN, size: "A4" });
+    const doc = new PDFDocument({
+      margin: PDF_PAGE_MARGIN,
+      size: "A4",
+      bufferPages: true,
+    });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -67,12 +70,7 @@ export async function generateUndertakingPdf(
     doc.on("error", reject);
 
     applyPdfLetterheadLayout(doc);
-    registerPdfLetterhead(doc, branding, {
-      documentTitle: "DIGITAL UNDERTAKING",
-      documentSubtitle,
-      auditNote: AUDIT_NOTE,
-    });
-    drawPdfHeader(doc, branding, "DIGITAL UNDERTAKING", documentSubtitle);
+    doc.y = PDF_CONTENT_TOP;
 
     doc.fontSize(10).font("Helvetica-Bold").text("Application Number: ", { continued: true });
     doc.font("Helvetica").text(params.applicationNumber);
@@ -97,7 +95,11 @@ export async function generateUndertakingPdf(
       doc.font("Helvetica").text("[Signature image attached]");
     }
 
-    drawPdfFooter(doc, branding, { auditNote: AUDIT_NOTE });
+    stampPdfLetterheadOnAllPages(doc, branding, {
+      documentTitle: "DIGITAL UNDERTAKING",
+      documentSubtitle,
+      auditNote: AUDIT_NOTE,
+    });
     doc.end();
   });
 

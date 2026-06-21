@@ -3,11 +3,10 @@ import { existsSync } from "fs";
 import path from "path";
 import {
   applyPdfLetterheadLayout,
-  drawPdfFooter,
-  drawPdfHeader,
   loadPdfLetterheadBranding,
   PDF_PAGE_MARGIN,
-  registerPdfLetterhead,
+  PDF_CONTENT_TOP,
+  stampPdfLetterheadOnAllPages,
 } from "./pdf-letterhead";
 
 function ensurePdfkitFonts() {
@@ -51,7 +50,11 @@ export async function generateFellowshipAgreementPdf(
   const documentSubtitle = `${branding.siteName} — Fellowship Agreement`;
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: PDF_PAGE_MARGIN, size: "A4" });
+    const doc = new PDFDocument({
+      margin: PDF_PAGE_MARGIN,
+      size: "A4",
+      bufferPages: true,
+    });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -59,12 +62,7 @@ export async function generateFellowshipAgreementPdf(
     doc.on("error", reject);
 
     applyPdfLetterheadLayout(doc);
-    registerPdfLetterhead(doc, branding, {
-      documentTitle: "FELLOWSHIP AGREEMENT",
-      documentSubtitle,
-      auditNote: AUDIT_NOTE,
-    });
-    drawPdfHeader(doc, branding, "FELLOWSHIP AGREEMENT", documentSubtitle);
+    doc.y = PDF_CONTENT_TOP;
 
     doc.fontSize(10).font("Helvetica-Bold").text("Fellowship ID: ", { continued: true });
     doc.font("Helvetica").text(params.fellowshipId);
@@ -99,7 +97,11 @@ export async function generateFellowshipAgreementPdf(
     doc.moveDown(2);
     doc.font("Helvetica").text("Signature: ___________________________    Date: _______________");
 
-    drawPdfFooter(doc, branding, { auditNote: AUDIT_NOTE });
+    stampPdfLetterheadOnAllPages(doc, branding, {
+      documentTitle: "FELLOWSHIP AGREEMENT",
+      documentSubtitle,
+      auditNote: AUDIT_NOTE,
+    });
     doc.end();
   });
 }

@@ -65,12 +65,15 @@ export function drawPdfHeader(
   doc: InstanceType<typeof PDFDocument>,
   branding: PdfLetterheadBranding,
   documentTitle: string,
-  documentSubtitle?: string
+  documentSubtitle?: string,
+  options?: { resetCursor?: boolean }
 ) {
   const pageWidth = doc.page.width;
   const left = PDF_PAGE_MARGIN;
   const right = pageWidth - PDF_PAGE_MARGIN;
   const headerTop = PDF_PAGE_MARGIN;
+  const savedY = doc.y;
+  const savedX = doc.x;
 
   doc.save();
   doc.rect(left, headerTop, right - left, 3).fill(BRAND_GREEN);
@@ -89,19 +92,27 @@ export function drawPdfHeader(
   doc.fillColor(BRAND_GREEN).font("Helvetica-Bold").fontSize(13);
   doc.text(branding.organizationName, textLeft, headerTop + 12, {
     width: right - textLeft,
+    lineBreak: false,
   });
 
   doc.fillColor(MUTED).font("Helvetica").fontSize(9);
   doc.text(branding.siteName, textLeft, headerTop + 28, {
     width: right - textLeft,
+    lineBreak: false,
   });
 
   doc.fillColor("#111111").font("Helvetica-Bold").fontSize(11);
-  doc.text(documentTitle, textLeft, headerTop + 44, { width: right - textLeft });
+  doc.text(documentTitle, textLeft, headerTop + 44, {
+    width: right - textLeft,
+    lineBreak: false,
+  });
 
   if (documentSubtitle) {
     doc.fillColor(MUTED).font("Helvetica").fontSize(9);
-    doc.text(documentSubtitle, textLeft, headerTop + 58, { width: right - textLeft });
+    doc.text(documentSubtitle, textLeft, headerTop + 58, {
+      width: right - textLeft,
+      lineBreak: false,
+    });
   }
 
   const contact = contactLine(branding);
@@ -110,24 +121,29 @@ export function drawPdfHeader(
     doc.text(contact, left, headerTop + 74, {
       width: right - left,
       align: "right",
+      lineBreak: false,
     });
   }
 
   doc.restore();
   doc.fillColor("#111111");
-  doc.y = PDF_CONTENT_TOP;
+  doc.x = savedX;
+  doc.y = options?.resetCursor === false ? savedY : PDF_CONTENT_TOP;
 }
 
 export function drawPdfFooter(
   doc: InstanceType<typeof PDFDocument>,
   branding: PdfLetterheadBranding,
-  options?: { auditNote?: string }
+  options?: { auditNote?: string; pageNumber?: number }
 ) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
   const left = PDF_PAGE_MARGIN;
   const right = pageWidth - PDF_PAGE_MARGIN;
   const footerTop = pageHeight - PDF_PAGE_MARGIN - PDF_FOOTER_HEIGHT + 8;
+  const savedY = doc.y;
+  const savedX = doc.x;
+  const pageNumber = options?.pageNumber ?? 1;
 
   doc.save();
   doc.strokeColor(BRAND_GOLD).lineWidth(0.75);
@@ -137,6 +153,7 @@ export function drawPdfFooter(
   doc.text(branding.footerLine, left, footerTop + 8, {
     width: right - left,
     align: "center",
+    lineBreak: false,
   });
 
   const contact = contactLine(branding);
@@ -144,6 +161,7 @@ export function drawPdfFooter(
     doc.fontSize(7.5).text(contact, left, footerTop + 20, {
       width: right - left,
       align: "center",
+      lineBreak: false,
     });
   }
 
@@ -151,20 +169,25 @@ export function drawPdfFooter(
     doc.fontSize(7).text(options.auditNote, left, footerTop + 32, {
       width: right - left,
       align: "center",
+      lineBreak: false,
     });
   }
 
   doc.fillColor(MUTED).fontSize(7.5);
-  doc.text(`Page ${doc.bufferedPageRange().start}`, left, footerTop + 44, {
+  doc.text(`Page ${pageNumber}`, left, footerTop + 44, {
     width: right - left,
     align: "right",
+    lineBreak: false,
   });
 
   doc.restore();
   doc.fillColor("#111111");
+  doc.x = savedX;
+  doc.y = savedY;
 }
 
-export function registerPdfLetterhead(
+/** Stamp header/footer on every page after content is written (avoids pageAdded loops). */
+export function stampPdfLetterheadOnAllPages(
   doc: InstanceType<typeof PDFDocument>,
   branding: PdfLetterheadBranding,
   options?: {
@@ -173,11 +196,21 @@ export function registerPdfLetterhead(
     auditNote?: string;
   }
 ) {
-  doc.on("pageAdded", () => {
-    applyPdfLetterheadLayout(doc);
+  const range = doc.bufferedPageRange();
+  const lastPageIndex = range.start + range.count - 1;
+
+  for (let pageIndex = range.start; pageIndex <= lastPageIndex; pageIndex++) {
+    doc.switchToPage(pageIndex);
     if (options?.documentTitle) {
-      drawPdfHeader(doc, branding, options.documentTitle, options.documentSubtitle);
+      drawPdfHeader(doc, branding, options.documentTitle, options.documentSubtitle, {
+        resetCursor: false,
+      });
     }
-    drawPdfFooter(doc, branding, { auditNote: options?.auditNote });
-  });
+    drawPdfFooter(doc, branding, {
+      auditNote: options?.auditNote,
+      pageNumber: pageIndex - range.start + 1,
+    });
+  }
+
+  doc.switchToPage(lastPageIndex);
 }

@@ -104,6 +104,15 @@ export function DigitalUndertakingForm() {
         body: formData,
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          res.status >= 500
+            ? "Server error while submitting. Please try again in a moment."
+            : "Unexpected server response. Please refresh and try again."
+        );
+      }
+
       const data = await res.json();
       setLoading(false);
 

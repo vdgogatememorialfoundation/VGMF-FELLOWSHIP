@@ -10,6 +10,8 @@ import {
   repairOrphanUndertaking,
 } from "@/lib/undertaking-assets";
 
+export const maxDuration = 60;
+
 const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
 
 function parseBoolean(value: FormDataEntryValue | boolean | null | undefined): boolean {
