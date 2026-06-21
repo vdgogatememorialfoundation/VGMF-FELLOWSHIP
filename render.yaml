@@ -18,15 +18,11 @@ services:
         generateValue: true
       - key: NEXT_PUBLIC_APP_URL
         value: https://fellowship.vaidyagogate.org
-      - key: KEEPALIVE_URL
-        value: https://fellowship.vaidyagogate.org/api/health
-      - key: KEEPALIVE_URLS
-        value: https://fellowship.vaidyagogate.org/api/health,https://fellowship.vaidyagogate.org/robots.txt,https://fellowship.vaidyagogate.org/sitemap.xml,https://fellowship.vaidyagogate.org/
-      - key: KEEPALIVE_INTERVAL_MS
-        value: "30000"
+      - key: PUBLIC_BASE_URL
+        value: https://fellowship.vaidyagogate.org
+      - key: RENDER_KEEPALIVE_INTERVAL_MS
+        value: "600000"
       - key: SEO_INDEXING_ENABLED
-        value: "true"
-      - key: SELF_KEEPALIVE_ENABLED
         value: "true"
       - key: ZEPTOMAIL_TOKEN
         sync: false
@@ -61,18 +57,17 @@ services:
       - key: R2_SECRET_ACCESS_KEY
         sync: false
 
-  # Wakes the web service before Render free-tier idle sleep (~15 min).
-  # IMPORTANT: After deploy, confirm this cron exists in Render Dashboard → Cron Jobs.
+  # Extra safety ping every 5 min (seminar site relies on self-ping only; fellowship has less traffic).
   - type: cron
     name: fellowship-keepalive
     runtime: node
     plan: free
     region: oregon
     schedule: "*/5 * * * *"
-    buildCommand: echo "keepalive cron — no build"
+    buildCommand: echo "keepalive cron"
     startCommand: node scripts/render-cron-ping.mjs
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: KEEPALIVE_URLS
-        value: https://fellowship.vaidyagogate.org/api/health,https://fellowship.vaidyagogate.org/robots.txt,https://fellowship.vaidyagogate.org/sitemap.xml,https://fellowship.vaidyagogate.org/
+      - key: PUBLIC_BASE_URL
+        value: https://fellowship.vaidyagogate.org

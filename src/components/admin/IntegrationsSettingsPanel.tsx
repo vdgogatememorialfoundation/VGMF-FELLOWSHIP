@@ -253,9 +253,9 @@ export function IntegrationsSettingsPanel({
       <div className="card space-y-4">
         <h2 className="font-semibold">Server keep-alive (Render free tier)</h2>
         <p className="text-sm text-gray-600">
-          Free Render hosting sleeps after ~15 minutes without traffic. While awake, the app pings
-          itself every 30 seconds. A separate Render cron job must ping every 5 minutes to prevent
-          sleep — otherwise visitors see the Render &quot;Application Loading&quot; screen.
+          Same keep-alive as <strong>seminar.vaidyagogate.org</strong>: pings{" "}
+          <code className="text-xs">/api/health</code> every 10 minutes while the server is
+          running. Fellowship also has a 5-minute Render cron because this site gets less traffic.
         </p>
         {(() => {
           const base = integrations.appUrl?.startsWith("http")
@@ -268,37 +268,32 @@ export function IntegrationsSettingsPanel({
             <div className="rounded-lg border border-[#e4ede8] bg-primary-50/30 p-3">
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Ping URL</p>
               <p className="mt-1 break-all text-sm font-medium text-ink">{keepAliveUrl}</p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
+                <li>
+                  Env: <code>PUBLIC_BASE_URL</code> +{" "}
+                  <code>RENDER_KEEPALIVE_INTERVAL_MS=600000</code> (10 min, like seminar)
+                </li>
+                <li>Render auto-sets <code>RENDER_EXTERNAL_URL</code> as fallback</li>
+                <li>Logs: <code>[render-keepalive] ping ok</code> in Render → Logs</li>
+                <li>Disable: <code>DISABLE_RENDER_KEEPALIVE=1</code></li>
+              </ul>
               <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
-                <p className="font-semibold">Render Dashboard check (required)</p>
+                <p className="font-semibold">If you still see “Application Loading”</p>
                 <ol className="mt-2 list-decimal space-y-1 pl-5">
                   <li>
-                    Open{" "}
-                    <a
-                      href="https://dashboard.render.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-700 underline"
-                    >
-                      dashboard.render.com
-                    </a>
+                    Render Dashboard → <strong>vgmf-fellowship-portal</strong> → Environment →
+                    confirm <code>PUBLIC_BASE_URL=https://fellowship.vaidyagogate.org</code>
                   </li>
                   <li>
-                    Confirm cron job <code>fellowship-keepalive</code> exists and status is{" "}
-                    <strong>Active</strong>
+                    Confirm cron <code>fellowship-keepalive</code> exists (every 5 min) — seminar
+                    does not need this because it has more daily visitors
                   </li>
                   <li>
-                    If missing: <strong>New + → Cron Job</strong> → same repo → schedule{" "}
-                    <code>*/5 * * * *</code> → command{" "}
-                    <code>node scripts/render-cron-ping.mjs</code>
+                    After deploy, check Logs for{" "}
+                    <code>[render-keepalive] enabled</code>
                   </li>
                 </ol>
               </div>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
-                <li>Built-in: self-ping every 30s while awake (Render logs: [keepalive])</li>
-                <li>Background: external ping every 30s via start:render script</li>
-                <li>Render cron: external ping every 5 min (health + robots + sitemap + home)</li>
-                <li>Backup: use UptimeRobot or cron-job.org on {keepAliveUrl}</li>
-              </ul>
             </div>
           );
         })()}

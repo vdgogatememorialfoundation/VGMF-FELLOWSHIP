@@ -1,7 +1,3 @@
-/**
- * Render cron job entry — pings production URLs once and exits.
- * Kept separate so cron does not depend on npm install.
- */
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
