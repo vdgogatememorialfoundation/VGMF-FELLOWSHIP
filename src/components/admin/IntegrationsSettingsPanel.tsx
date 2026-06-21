@@ -253,9 +253,9 @@ export function IntegrationsSettingsPanel({
       <div className="card space-y-4">
         <h2 className="font-semibold">Server keep-alive (Render free tier)</h2>
         <p className="text-sm text-gray-600">
-          Free hosting sleeps after ~15 minutes without traffic. The app self-pings{" "}
-          <code className="text-xs">/api/health</code> every 30 seconds while running, and a Render
-          cron job pings externally every 14 minutes.
+          Free Render hosting sleeps after ~15 minutes without traffic. While awake, the app pings
+          itself every 30 seconds. A separate Render cron job must ping every 5 minutes to prevent
+          sleep — otherwise visitors see the Render &quot;Application Loading&quot; screen.
         </p>
         {(() => {
           const base = integrations.appUrl?.startsWith("http")
@@ -268,11 +268,36 @@ export function IntegrationsSettingsPanel({
             <div className="rounded-lg border border-[#e4ede8] bg-primary-50/30 p-3">
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Ping URL</p>
               <p className="mt-1 break-all text-sm font-medium text-ink">{keepAliveUrl}</p>
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+                <p className="font-semibold">Render Dashboard check (required)</p>
+                <ol className="mt-2 list-decimal space-y-1 pl-5">
+                  <li>
+                    Open{" "}
+                    <a
+                      href="https://dashboard.render.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-700 underline"
+                    >
+                      dashboard.render.com
+                    </a>
+                  </li>
+                  <li>
+                    Confirm cron job <code>fellowship-keepalive</code> exists and status is{" "}
+                    <strong>Active</strong>
+                  </li>
+                  <li>
+                    If missing: <strong>New + → Cron Job</strong> → same repo → schedule{" "}
+                    <code>*/5 * * * *</code> → command{" "}
+                    <code>node scripts/render-cron-ping.mjs</code>
+                  </li>
+                </ol>
+              </div>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
                 <li>Built-in: self-ping every 30s while awake (Render logs: [keepalive])</li>
-                <li>Render cron: external ping every 10 min (health + sitemap + home)</li>
-                <li>Local runner: npm run keepalive</li>
-                <li>Disable built-in ping: SELF_KEEPALIVE_ENABLED=false</li>
+                <li>Background: external ping every 30s via start:render script</li>
+                <li>Render cron: external ping every 5 min (health + robots + sitemap + home)</li>
+                <li>Backup: use UptimeRobot or cron-job.org on {keepAliveUrl}</li>
               </ul>
             </div>
           );

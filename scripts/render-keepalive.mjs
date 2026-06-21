@@ -10,6 +10,7 @@
 
 const DEFAULT_URLS = [
   "https://fellowship.vaidyagogate.org/api/health",
+  "https://fellowship.vaidyagogate.org/robots.txt",
   "https://fellowship.vaidyagogate.org/sitemap.xml",
   "https://fellowship.vaidyagogate.org/",
 ];

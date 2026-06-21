@@ -5,7 +5,7 @@ services:
     plan: free
     region: oregon
     buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npx prisma db push && npm run build
-    startCommand: npm start
+    startCommand: npm run start:render
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -21,7 +21,7 @@ services:
       - key: KEEPALIVE_URL
         value: https://fellowship.vaidyagogate.org/api/health
       - key: KEEPALIVE_URLS
-        value: https://fellowship.vaidyagogate.org/api/health,https://fellowship.vaidyagogate.org/sitemap.xml,https://fellowship.vaidyagogate.org/
+        value: https://fellowship.vaidyagogate.org/api/health,https://fellowship.vaidyagogate.org/robots.txt,https://fellowship.vaidyagogate.org/sitemap.xml,https://fellowship.vaidyagogate.org/
       - key: KEEPALIVE_INTERVAL_MS
         value: "30000"
       - key: SEO_INDEXING_ENABLED
@@ -61,13 +61,18 @@ services:
       - key: R2_SECRET_ACCESS_KEY
         sync: false
 
-  # External ping every 10 minutes (wakes the web service if it slept).
+  # Wakes the web service before Render free-tier idle sleep (~15 min).
+  # IMPORTANT: After deploy, confirm this cron exists in Render Dashboard → Cron Jobs.
   - type: cron
     name: fellowship-keepalive
     runtime: node
-    schedule: "*/10 * * * *"
-    buildCommand: echo "keepalive"
-    startCommand: node scripts/render-keepalive.mjs --once
+    plan: free
+    region: oregon
+    schedule: "*/5 * * * *"
+    buildCommand: echo "keepalive cron — no build"
+    startCommand: node scripts/render-cron-ping.mjs
     envVars:
+      - key: NODE_VERSION
+        value: "20"
       - key: KEEPALIVE_URLS
-        value: https://fellowship.vaidyagogate.org/api/health,https://fellowship.vaidyagogate.org/sitemap.xml,https://fellowship.vaidyagogate.org/
+        value: https://fellowship.vaidyagogate.org/api/health,https://fellowship.vaidyagogate.org/robots.txt,https://fellowship.vaidyagogate.org/sitemap.xml,https://fellowship.vaidyagogate.org/

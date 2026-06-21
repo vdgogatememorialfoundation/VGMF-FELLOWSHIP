@@ -2,7 +2,7 @@ const MIN_INTERVAL_MS = 30_000;
 const DEFAULT_INTERVAL_MS = 12 * 60 * 1000;
 const MAX_INTERVAL_MS = 14 * 60 * 1000;
 
-const DEFAULT_KEEPALIVE_PATHS = ["/api/health", "/sitemap.xml", "/"];
+const DEFAULT_KEEPALIVE_PATHS = ["/api/health", "/robots.txt", "/sitemap.xml", "/"];
 
 let started = false;
 let urlIndex = 0;
