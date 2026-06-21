@@ -36,10 +36,12 @@ function resolveBaseUrl() {
 }
 
 function isIndexingEnabled(base) {
+  if (base === OFFICIAL_PRODUCTION_BASE) return true;
+
   const envFlag = process.env.SEO_INDEXING_ENABLED?.trim().toLowerCase();
   if (envFlag === "true") return true;
   if (envFlag === "false") return false;
-  return base === OFFICIAL_PRODUCTION_BASE;
+  return false;
 }
 
 function buildSitemapXml(base) {
@@ -77,8 +79,14 @@ function buildRobotsTxt(base, indexingEnabled) {
     return ["User-agent: *", "Disallow: /", "", `Sitemap: ${base}/sitemap.xml`, ""].join("\n");
   }
 
-  // Allow all crawlers; portal routes are excluded via noindex headers instead of Disallow.
-  return ["User-agent: *", "", `Sitemap: ${base}/sitemap.xml`, ""].join("\n");
+  // Fallback copy if app/robots.ts is unavailable. Explicit Allow helps Google recrawl after prior Disallow: /.
+  return [
+    "User-agent: *",
+    "Allow: /",
+    "",
+    `Sitemap: ${base}/sitemap.xml`,
+    "",
+  ].join("\n");
 }
 
 const base = resolveBaseUrl();
