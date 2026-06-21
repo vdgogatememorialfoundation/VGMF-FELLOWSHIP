@@ -1,4 +1,5 @@
 import prisma from "./db";
+import { DEPRECATED_FORM_FIELD_KEYS } from "./form-template-maintenance";
 import type { CmsPageSlug } from "@prisma/client";
 import { getFormScheduleStatus } from "./form-schedule";
 import {
@@ -325,7 +326,10 @@ export async function getActiveFormTemplate(slug = "fellowship-application") {
     where: { slug },
     include: {
       fields: {
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          fieldKey: { notIn: [...DEPRECATED_FORM_FIELD_KEYS] },
+        },
         orderBy: { order: "asc" },
       },
     },

@@ -109,6 +109,7 @@ export function HomeTrustStrip({ settings }: { settings: SiteContent }) {
 export function HomeHighlights({ settings }: { settings: SiteContent }) {
   return (
     <section id="programme" className="px-5 py-20 sm:px-6 md:py-28">
+      <span id="highlights" className="sr-only" aria-hidden="true" />
       <div className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
           <span className="section-badge">Programme</span>

@@ -247,7 +247,6 @@ async function main() {
         helpText: "helpText" in field ? field.helpText : undefined,
         placeholder: "placeholder" in field ? field.placeholder : undefined,
         options: "options" in field ? field.options : undefined,
-        isActive: true,
       },
       create: { formTemplateId: template.id, ...field },
     });

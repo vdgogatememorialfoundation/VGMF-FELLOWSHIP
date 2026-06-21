@@ -54,11 +54,17 @@ export default function StaffFinancePage() {
   }, [reload]);
 
   async function approveDocument(documentId: string) {
-    await fetch("/api/fellowship/documents", {
+    const res = await fetch("/api/fellowship/documents", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId, status: "APPROVED" }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(data.error || "Failed to approve document");
+      return;
+    }
+    setMessage("Document approved");
     reload();
   }
 

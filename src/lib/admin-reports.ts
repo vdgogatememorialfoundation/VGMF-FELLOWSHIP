@@ -1,10 +1,19 @@
 import prisma from "./db";
 import PDFDocument from "pdfkit";
+import { existsSync } from "fs";
+import path from "path";
 import { formatDate, formatCurrency, getStatusLabel } from "./utils";
 import type { AdminReportId } from "./admin-report-types";
 import { ADMIN_REPORTS } from "./admin-report-types";
 
 export { ADMIN_REPORTS, type AdminReportId, isAdminReportId, reportDownloadFilename } from "./admin-report-types";
+
+function ensurePdfkitFonts() {
+  const fontDir = path.join(process.cwd(), "node_modules", "pdfkit", "js", "data");
+  if (existsSync(fontDir)) {
+    process.env.PDFKIT_FONT_PATH = fontDir;
+  }
+}
 
 function escapeCsv(value: unknown): string {
   const text = value == null ? "" : String(value);
@@ -384,6 +393,7 @@ export async function buildAdminReportCsv(reportId: AdminReportId): Promise<Buff
 }
 
 export async function buildAdminReportPdf(reportId: AdminReportId): Promise<Buffer> {
+  ensurePdfkitFonts();
   const rows = await loadReportRows(reportId);
   const title = ADMIN_REPORTS.find((report) => report.id === reportId)?.title ?? "Report";
 

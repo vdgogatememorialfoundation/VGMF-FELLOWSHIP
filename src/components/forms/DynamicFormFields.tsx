@@ -25,6 +25,16 @@ const CHECKBOX_LINKS: Record<string, { href: string; label: string }> = {
   rulebook_accepted: { href: "/rulebook", label: "Viddhakarma Research Fellowship Rulebook" },
 };
 
+function parseFieldOptions(raw?: string | null): string[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function DynamicFormFields({
   fields,
   values,
@@ -82,12 +92,10 @@ export function DynamicFormFields({
             {fields
               .filter((f) => f.section === section)
               .map((field) => {
-                const opts = field.options
-                  ? (JSON.parse(field.options) as string[]).map((o) => ({
-                      value: o,
-                      label: o,
-                    }))
-                  : [];
+                const opts = parseFieldOptions(field.options).map((o) => ({
+                  value: o,
+                  label: o,
+                }));
 
                 if (field.fieldType === "CHECKBOX") {
                   const link = CHECKBOX_LINKS[field.fieldKey];

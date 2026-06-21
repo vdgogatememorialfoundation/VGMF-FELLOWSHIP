@@ -17,17 +17,24 @@ export function ReviewerDashboard() {
   });
   const [remarks, setRemarks] = useState("");
   const [isShortlisted, setIsShortlisted] = useState(false);
+  const [scoreError, setScoreError] = useState("");
 
   useEffect(() => {
     fetch("/api/committee/scores").then((r) => r.json()).then((d) => setApplications(d.applications || []));
   }, []);
 
   async function submitScore(applicationId: string) {
-    await fetch("/api/committee/scores", {
+    setScoreError("");
+    const res = await fetch("/api/committee/scores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ applicationId, ...scores, remarks, isShortlisted }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setScoreError(data.error || "Failed to save score");
+      return;
+    }
     setSelected(null);
     fetch("/api/committee/scores").then((r) => r.json()).then((d) => setApplications(d.applications || []));
   }
@@ -101,6 +108,9 @@ export function ReviewerDashboard() {
             />
           ))}
           <p className="font-medium">Total: {totalScore}/100</p>
+          {scoreError && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{scoreError}</div>
+          )}
           <Textarea label="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
           <label className="flex items-center gap-2 text-sm">
             <input

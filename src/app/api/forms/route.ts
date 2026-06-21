@@ -34,16 +34,17 @@ async function requireDigitalUndertaking(applicationId: string | null): Promise<
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const slug = searchParams.get("slug") || "fellowship-application";
-  const user = await getSession();
+  try {
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug") || "fellowship-application";
+    const user = await getSession();
 
-  const result = await getFormTemplateForApplicant(slug);
-  if (!result) {
-    return NextResponse.json({ error: "Form not found" }, { status: 404 });
-  }
+    const result = await getFormTemplateForApplicant(slug);
+    if (!result) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
 
-  const { template, schedule } = result;
+    const { template, schedule } = result;
 
   let submission = null;
   let applicationId: string | null = null;
@@ -135,6 +136,13 @@ export async function GET(request: NextRequest) {
     digitalUndertaking,
     applicationQuery,
   });
+  } catch (error) {
+    console.error("Forms GET error:", error);
+    return NextResponse.json(
+      { error: "Application form is temporarily unavailable. Please try again." },
+      { status: 503 }
+    );
+  }
 }
 
 async function mergeUploadedFileFlags(

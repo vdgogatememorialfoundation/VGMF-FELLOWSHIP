@@ -2,6 +2,8 @@ import prisma from "./db";
 
 const DEPRECATED_FORM_FIELD_KEYS = ["registration_certificate_upload"] as const;
 
+export { DEPRECATED_FORM_FIELD_KEYS };
+
 /** Hide legacy duplicate upload fields without requiring a manual DB edit. */
 export async function deactivateDeprecatedFormFields(): Promise<void> {
   await prisma.formField.updateMany({

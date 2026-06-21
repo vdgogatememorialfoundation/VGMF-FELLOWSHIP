@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSiteSettings } from "@/lib/cms";
-import { DISALLOW_ROBOTS_PREFIXES, getPublicSiteUrlSafe } from "@/lib/seo";
-import { resolveSeoConfig } from "@/lib/seo-config";
+import { DISALLOW_ROBOTS_PREFIXES, resolvePublicSiteUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +22,16 @@ function buildRobotsBody(indexingEnabled: boolean, base: string): string {
 }
 
 export async function GET() {
-  const [base, settings] = await Promise.all([getPublicSiteUrlSafe(), getSiteSettings()]);
-  const seo = resolveSeoConfig(settings);
-  const indexingEnabled = seo.indexingEnabled || isProductionIndexingForced();
+  const base = resolvePublicSiteUrl({
+    envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+  }).replace(/\/$/, "");
+  const indexingEnabled = isProductionIndexingForced();
   const body = buildRobotsBody(indexingEnabled, base);
 
   return new NextResponse(body, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Cache-Control": "public, max-age=3600",
     },
   });
 }

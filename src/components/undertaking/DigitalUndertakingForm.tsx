@@ -39,20 +39,28 @@ export function DigitalUndertakingForm() {
   const [pageLoading, setPageLoading] = useState(true);
 
   const reload = useCallback(() => {
+    setPageLoading(true);
+    setError("");
     Promise.all([
       fetch("/api/undertaking").then((r) => r.json()),
       fetch("/api/cms?slug=UNDERTAKING").then((r) => r.json()),
-    ]).then(([undertakingData, cmsData]) => {
-      setApplication(undertakingData.application);
-      setUndertaking(undertakingData.undertaking);
-      if (undertakingData.application?.name) {
-        setFullName(undertakingData.application.name);
-      }
-      if (cmsData.page?.content) {
-        setCmsContent(cmsData.page.content);
-      }
-      setPageLoading(false);
-    });
+    ])
+      .then(([undertakingData, cmsData]) => {
+        setApplication(undertakingData.application);
+        setUndertaking(undertakingData.undertaking);
+        if (undertakingData.application?.name) {
+          setFullName(undertakingData.application.name);
+        }
+        if (cmsData.page?.content) {
+          setCmsContent(cmsData.page.content);
+        }
+      })
+      .catch(() => {
+        setError("Could not load undertaking page. Please refresh and try again.");
+      })
+      .finally(() => {
+        setPageLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -130,6 +138,17 @@ export function DigitalUndertakingForm() {
 
   if (pageLoading) {
     return <p className="py-12 text-center text-gray-500">Loading undertaking...</p>;
+  }
+
+  if (error && !application && !undertaking) {
+    return (
+      <div className="card py-12 text-center">
+        <p className="text-red-700">{error}</p>
+        <Button className="mt-4" onClick={reload}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   if (!application) {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   FELLOWSHIP_PUBLIC_SITE_URL,
   PUBLIC_CMS_SLUGS,
-  getPublicSiteUrlSafe,
+  resolvePublicSiteUrl,
 } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -52,27 +52,31 @@ ${body}
 `;
 }
 
-async function resolveSitemapBaseUrl(): Promise<string> {
-  try {
-    const base = (await getPublicSiteUrlSafe()).replace(/\/$/, "");
-    if (base && !base.includes("localhost") && !base.includes("127.0.0.1")) {
-      return base;
-    }
-  } catch (error) {
-    console.error("sitemap base url fallback:", error);
-  }
-
-  return FELLOWSHIP_PUBLIC_SITE_URL.replace(/\/$/, "");
+function resolveSitemapBaseUrl(): string {
+  return resolvePublicSiteUrl({
+    envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+  }).replace(/\/$/, "");
 }
 
 export async function GET() {
-  const base = await resolveSitemapBaseUrl();
-  const xml = buildSitemapXml(base);
+  try {
+    const base = resolveSitemapBaseUrl();
+    const xml = buildSitemapXml(base);
 
-  return new NextResponse(xml, {
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-    },
-  });
+    return new NextResponse(xml, {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
+  } catch (error) {
+    console.error("sitemap.xml error:", error);
+    const base = FELLOWSHIP_PUBLIC_SITE_URL.replace(/\/$/, "");
+    return new NextResponse(buildSitemapXml(base), {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
 }

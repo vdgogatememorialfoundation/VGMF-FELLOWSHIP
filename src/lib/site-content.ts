@@ -15,7 +15,7 @@ export type FaqItem = { q: string; a: string };
 
 export const DEFAULT_NAV_LINKS: NavLink[] = [
   { href: "/", label: "Home" },
-  { href: "/#highlights", label: "Highlights" },
+  { href: "/#programme", label: "Highlights" },
   { href: "/#notices", label: "Notices" },
   { href: "/#apply", label: "Apply" },
   { href: "/#faq", label: "FAQ" },
@@ -23,11 +23,11 @@ export const DEFAULT_NAV_LINKS: NavLink[] = [
 ];
 
 export const DEFAULT_FOOTER_QUICK_LINKS: NavLink[] = [
-  { href: "/#highlights", label: "Programme highlights" },
+  { href: "/#programme", label: "Programme highlights" },
   { href: "/#notices", label: "Official notices" },
   { href: "/register", label: "Start application" },
   { href: "/about", label: "About foundation" },
-  { href: "/applicant/status", label: "Track application" },
+  { href: "/applicant", label: "Applicant login & tracking" },
 ];
 
 export const DEFAULT_FOOTER_LEGAL_LINKS: NavLink[] = [
