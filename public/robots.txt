@@ -1,7 +1,16 @@
 User-agent: *
-Allow: /
+Allow: /$
+Allow: /register$
+Allow: /about$
+Allow: /terms$
+Allow: /undertaking$
+Allow: /rulebook$
+Allow: /privacy$
+Allow: /refund-policy$
+Allow: /sitemap.xml$
 Disallow: /admin
 Disallow: /applicant
+Disallow: /login
 Disallow: /staff
 Disallow: /reviewer
 Disallow: /trustee

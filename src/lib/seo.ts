@@ -31,6 +31,7 @@ export const PUBLIC_ROBOTS_ALLOW_PATHS = [
 export const DISALLOW_ROBOTS_PREFIXES = [
   "/admin",
   "/applicant",
+  "/login",
   "/staff",
   "/reviewer",
   "/trustee",

@@ -22,12 +22,20 @@ const PUBLIC_CMS_SLUGS = [
 const DISALLOW_ROBOTS_PREFIXES = [
   "/admin",
   "/applicant",
+  "/login",
   "/staff",
   "/reviewer",
   "/trustee",
   "/committee",
   "/api",
   "/verification",
+];
+
+const PUBLIC_ALLOW_PATHS = [
+  "/",
+  "/register",
+  ...PUBLIC_CMS_SLUGS.map((slug) => `/${slug}`),
+  "/sitemap.xml",
 ];
 
 function escapeXml(value) {
@@ -88,7 +96,9 @@ function buildRobotsTxt(base, indexingEnabled) {
 
   return [
     "User-agent: *",
-    "Allow: /",
+    ...PUBLIC_ALLOW_PATHS.map((path) =>
+      path === "/" ? "Allow: /$" : `Allow: ${path}$`
+    ),
     ...DISALLOW_ROBOTS_PREFIXES.map((prefix) => `Disallow: ${prefix}`),
     "",
     `Sitemap: ${base}/sitemap.xml`,

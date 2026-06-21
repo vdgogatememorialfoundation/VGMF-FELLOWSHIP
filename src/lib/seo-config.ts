@@ -1,5 +1,6 @@
 import type { SiteContent } from "./cms";
 import { ORGANIZATION_NAME } from "./constants";
+import { isSeoIndexingEnabled } from "./seo-indexing";
 
 export type SeoSettingsInput = Pick<
   SiteContent,
@@ -57,8 +58,8 @@ export function resolveSeoConfig(settings: SeoSettingsInput): SeoConfig {
       settings.googleSiteVerification?.trim() || envVerification || undefined,
     googleAnalyticsId: settings.googleAnalyticsId?.trim() || envAnalytics || undefined,
     indexingEnabled: (() => {
+      if (isSeoIndexingEnabled()) return true;
       const env = process.env.SEO_INDEXING_ENABLED?.trim().toLowerCase();
-      if (env === "true") return true;
       if (env === "false") return false;
       return settings.seoIndexingEnabled !== false;
     })(),
