@@ -70,6 +70,14 @@ export default function AdminApplicationsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
           <p className="mt-1 text-gray-600">Manage and review fellowship applications</p>
         </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/applications/new"
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            + New Application
+          </Link>
+        </div>
         <Select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
