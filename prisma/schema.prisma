@@ -271,6 +271,16 @@ model Application {
   applicationType       String            @default("INDIVIDUAL") @map("application_type")
   groupMemberDetails    String?           @map("group_member_details") @db.Text
 
+  // New fields for Team / Official details
+  teamName              String?           @map("team_name")
+  teamMemberCount       Int?              @map("team_member_count")
+  officialContactPerson String?           @map("official_contact_person")
+  alternateMobile       String?           @map("alternate_mobile")
+  officialPostalAddress  String?           @map("official_postal_address")
+  ageProof              String?           @map("age_proof") @db.Text
+  identityProof         String?           @map("identity_proof") @db.Text
+  otherSupportingDocument String?          @map("other_supporting_document") @db.Text
+
   // Personal Details
   name                  String
   dob                   DateTime
