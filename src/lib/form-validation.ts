@@ -39,6 +39,12 @@ export function validateFormSubmission(
       continue;
     }
 
+    // Group-only fields: skip entirely when applicant is Individual
+    const GROUP_ONLY_KEYS = ["group_member_details", "team_name", "team_member_count"];
+    if (GROUP_ONLY_KEYS.includes(field.fieldKey) && data.application_type !== "Group") {
+      continue;
+    }
+
     if (field.fieldKey === "group_member_details" && data.application_type === "Group") {
       if (value == null || String(value).trim() === "") {
         return "Please provide details of all other group members";

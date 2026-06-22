@@ -92,7 +92,9 @@ export function DynamicFormFields({
             {fields
               .filter((f) => f.section === section)
               .map((field) => {
-                if (field.fieldKey === "group_member_details" && values.application_type !== "Group") {
+                // Hide team/group-specific fields when applicant selects Individual
+                const GROUP_ONLY_FIELDS = ["group_member_details", "team_name", "team_member_count"];
+                if (GROUP_ONLY_FIELDS.includes(field.fieldKey) && values.application_type !== "Group") {
                   return null;
                 }
 
