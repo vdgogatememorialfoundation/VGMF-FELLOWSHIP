@@ -2,7 +2,7 @@ import prisma from "./db";
 import type { OtpPurpose } from "@prisma/client";
 import { sendWhatsAppOtp } from "./whatsapp";
 import { sendOtpEmail } from "./email";
-import { isWhatsAppConfigured } from "./integrations";
+import { isWhatsAppConfigured, isEmailConfigured } from "./integrations";
 import { normalizePhoneDigits } from "./phone";
 
 const OTP_EXPIRY_MINUTES = 10;
@@ -71,16 +71,36 @@ export async function createAndSendOtp(params: {
     const normalizedPhone = normalizePhone(params.phone);
     await invalidatePreviousOtps({ phone: normalizedPhone, purpose });
     const code = await storeOtp({ phone: normalizedPhone, purpose });
+
+    // Check if WhatsApp is configured
+    const whatsAppConfigured = await isWhatsAppConfigured();
+    if (!whatsAppConfigured && process.env.NODE_ENV === "production") {
+      // In production, WhatsApp must be configured
+      console.error(
+        "WhatsApp OTP cannot be sent - integration not configured for phone:",
+        normalizedPhone
+      );
+      return {
+        success: false,
+        error:
+          "Failed to send OTP via WhatsApp. Check Admin → API Settings → Meta WhatsApp and OTP template vgmf_otp_auth.",
+      };
+    }
+
+    // Attempt to send via WhatsApp
     const result = await sendWhatsAppOtp(normalizedPhone, code);
 
     if (!result.ok) {
-      await prisma.otpCode.deleteMany({
-        where: { phone: normalizedPhone, purpose, code, verified: false },
-      });
+      // Log the error but keep the OTP code in the database for retry
+      console.error(
+        "WhatsApp OTP send failed:",
+        result.error,
+        "phone:",
+        normalizedPhone
+      );
 
-      const configured = await isWhatsAppConfigured();
-      if (configured || process.env.NODE_ENV === "production") {
-        console.error("WhatsApp OTP send failed:", result.error, "phone:", normalizedPhone);
+      if (process.env.NODE_ENV === "production") {
+        // In production, report the error
         return {
           success: false,
           error:
@@ -88,9 +108,16 @@ export async function createAndSendOtp(params: {
             "Failed to send OTP via WhatsApp. Check Admin → API Settings → Meta WhatsApp and OTP template vgmf_otp_auth.",
         };
       }
+
+      // In development, log OTP to console but still return success for testing
       logDevOtp(normalizedPhone, code);
     } else if (result.messageId) {
-      console.log("WhatsApp OTP accepted by Meta:", result.messageId, "phone:", normalizedPhone);
+      console.log(
+        "WhatsApp OTP accepted by Meta:",
+        result.messageId,
+        "phone:",
+        normalizedPhone
+      );
     }
 
     return { success: true };
@@ -103,32 +130,54 @@ export async function createAndSendOtp(params: {
   const normalizedEmail = normalizeEmail(params.email);
   await invalidatePreviousOtps({ email: normalizedEmail, purpose });
   const code = await storeOtp({ email: normalizedEmail, purpose });
-  const result = await sendOtpEmail(normalizedEmail, code);
 
-  if (!result.ok) {
-    await prisma.otpCode.deleteMany({
-      where: { email: normalizedEmail, purpose, code, verified: false },
-    });
-  }
-
-  if (!result.ok && process.env.NODE_ENV === "production") {
-    if (result.reason === "not_configured") {
-      return {
-        success: false,
-        error:
-          "Email OTP is not available right now. The administrator must configure ZeptoMail in Admin → Website Updates → API Settings.",
-      };
-    }
-
+  // Check if email is configured
+  const emailConfigured = await isEmailConfigured();
+  if (!emailConfigured && process.env.NODE_ENV === "production") {
+    // In production, email must be configured
+    console.error(
+      "Email OTP cannot be sent - integration not configured for email:",
+      normalizedEmail
+    );
     return {
       success: false,
-      error: result.detail
-        ? `Failed to send OTP via email: ${result.detail}`
-        : "Failed to send OTP via email. Please try again in a few minutes.",
+      error:
+        "Email OTP is not available right now. The administrator must configure ZeptoMail in Admin → Website Updates → API Settings.",
     };
   }
 
+  // Attempt to send email
+  const result = await sendOtpEmail(normalizedEmail, code);
+
   if (!result.ok) {
+    // Log the error but keep the OTP code in the database for retry
+    console.error(
+      "Email OTP send failed:",
+      result.reason,
+      result.detail,
+      "email:",
+      normalizedEmail
+    );
+
+    if (process.env.NODE_ENV === "production") {
+      // In production, report the error
+      if (result.reason === "not_configured") {
+        return {
+          success: false,
+          error:
+            "Email OTP is not available right now. The administrator must configure ZeptoMail in Admin → Website Updates → API Settings.",
+        };
+      }
+
+      return {
+        success: false,
+        error: result.detail
+          ? `Failed to send OTP via email: ${result.detail}`
+          : "Failed to send OTP via email. Please try again in a few minutes.",
+      };
+    }
+
+    // In development, log OTP to console for testing
     logDevOtp(normalizedEmail, code);
   }
 
