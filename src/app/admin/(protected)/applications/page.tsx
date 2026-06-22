@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Select } from "@/components/ui/Select";
@@ -22,18 +22,18 @@ export default function AdminApplicationsPage() {
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadApplications();
-  }, [filter]);
-
-  async function loadApplications() {
+  const loadApplications = useCallback(async () => {
     setLoading(true);
     const url = filter ? `/api/admin/applications?status=${filter}` : "/api/admin/applications";
     const res = await fetch(url);
     const data = await res.json();
     setApplications(data.applications || []);
     setLoading(false);
-  }
+  }, [filter]);
+
+  useEffect(() => {
+    loadApplications();
+  }, [filter, loadApplications]);
 
   async function updateStatus(applicationId: string, status: string) {
     const res = await fetch("/api/admin/applications", {

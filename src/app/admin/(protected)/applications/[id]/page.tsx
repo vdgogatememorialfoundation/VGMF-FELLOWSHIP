@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -141,7 +141,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     }>
   >([]);
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const res = await fetch(`/api/admin/applications?id=${id}`);
     const data = await res.json();
     setPageLoading(false);
@@ -155,13 +155,13 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     setVerificationSessions(data.verificationSessions ?? []);
     setAdminNotes(data.application.adminNotes ?? "");
     setRejectionReason(data.application.rejectionReason ?? "");
-  }
+  }, [id]);
 
   useEffect(() => {
     reload();
     const timer = setInterval(reload, 15000);
     return () => clearInterval(timer);
-  }, [id]);
+  }, [id, reload]);
 
   async function updateStatus(status: string) {
     setLoading(true);

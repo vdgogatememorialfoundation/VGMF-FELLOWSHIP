@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
@@ -49,7 +49,7 @@ export default function AdminApplicantDetailPage({
   const [saving, setSaving] = useState(false);
   const [accountForm, setAccountForm] = useState({ name: "", email: "", phone: "" });
 
-  function loadApplicant() {
+  const loadApplicant = useCallback(() => {
     setLoading(true);
     fetch(`/api/admin/applicants?id=${encodeURIComponent(id)}`)
       .then(async (res) => {
@@ -68,11 +68,11 @@ export default function AdminApplicantDetailPage({
       })
       .catch(() => setError("Unable to load applicant"))
       .finally(() => setLoading(false));
-  }
+  }, [id]);
 
   useEffect(() => {
     loadApplicant();
-  }, [id]);
+  }, [id, loadApplicant]);
 
   async function saveAccount() {
     setSaving(true);

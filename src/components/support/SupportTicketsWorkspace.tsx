@@ -244,7 +244,7 @@ export function SupportTicketsWorkspace({
     setError("");
     setFeedback("");
 
-    const body: Record<string, any> = { subject, message };
+    const body: { subject: string; message: string; userId?: string } = { subject, message };
     if (mode === "staff") {
       body.userId = selectedApplicantId;
     }
