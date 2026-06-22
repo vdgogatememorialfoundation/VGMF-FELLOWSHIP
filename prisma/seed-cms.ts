@@ -120,6 +120,8 @@ Application fees, if applicable, are non-refundable.`,
 ];
 
 const DEFAULT_FIELDS = [
+  { section: "Personal Details", label: "Application Type", fieldKey: "application_type", fieldType: "RADIO" as const, required: true, order: 0, options: '["Individual","Group"]' },
+  { section: "Personal Details", label: "Group Member Details", fieldKey: "group_member_details", fieldType: "TEXTAREA" as const, required: false, order: 0, helpText: "If Group, list Names, Colleges, and Registration Numbers of all other group members." },
   { section: "Personal Details", label: "Full Name", fieldKey: "name", fieldType: "TEXT" as const, required: true, order: 1 },
   { section: "Personal Details", label: "Date of Birth", fieldKey: "dob", fieldType: "DATE" as const, required: true, order: 2 },
   { section: "Personal Details", label: "Gender", fieldKey: "gender", fieldType: "SELECT" as const, required: true, order: 3, options: '["Male","Female","Other"]' },
@@ -136,7 +138,7 @@ const DEFAULT_FIELDS = [
   { section: "Professional Details", label: "Institution/Clinic Name", fieldKey: "institution_name", fieldType: "TEXT" as const, required: true, order: 14 },
   { section: "Professional Details", label: "Registration Council", fieldKey: "registration_council", fieldType: "SELECT" as const, required: true, order: 15, options: '["NCISM"]' },
   { section: "Professional Details", label: "NCISM Registration Number", fieldKey: "registration_number", fieldType: "TEXT" as const, required: true, order: 16, helpText: "Your NCISM registration number as on the certificate" },
-  { section: "Professional Details", label: "NCISM Registration Certificate", fieldKey: "ncism_registration_certificate", fieldType: "FILE" as const, required: true, order: 17, helpText: "Upload NCISM registration certificate (PDF or image, max 5 MB) to verify you are a registered doctor" },
+  { section: "Professional Details", label: "NCISM Registration Certificate", fieldKey: "ncism_registration_certificate", fieldType: "FILE" as const, required: true, order: 17, helpText: "Upload NCISM registration certificate (PDF or image, max 5 MB). For Group applications, combine all members' certificates into a single PDF." },
   { section: "Professional Details", label: "Years of Clinical Practice", fieldKey: "years_of_practice", fieldType: "NUMBER" as const, required: true, order: 18 },
   { section: "Professional Details", label: "Viddhakarma Clinical Experience", fieldKey: "viddhakarma_experience", fieldType: "TEXTAREA" as const, required: true, order: 19, helpText: "Describe your clinical experience in Viddhakarma procedures" },
   { section: "Professional Details", label: "Publications Summary", fieldKey: "publications_summary", fieldType: "TEXTAREA" as const, required: false, order: 20 },
@@ -154,7 +156,7 @@ const DEFAULT_FIELDS = [
   { section: "Budget Plan", label: "Documentation (₹)", fieldKey: "documentation", fieldType: "NUMBER" as const, required: false, order: 33 },
   { section: "Budget Plan", label: "Publication (₹)", fieldKey: "publication", fieldType: "NUMBER" as const, required: false, order: 34 },
   { section: "Budget Plan", label: "Other (₹)", fieldKey: "other", fieldType: "NUMBER" as const, required: false, order: 35 },
-  { section: "Mandatory Documents", label: "Curriculum Vitae (CV)", fieldKey: "cv_upload", fieldType: "FILE" as const, required: true, order: 40, helpText: "Upload CV as PDF (max 5 MB)" },
+  { section: "Mandatory Documents", label: "Curriculum Vitae (CV)", fieldKey: "cv_upload", fieldType: "FILE" as const, required: true, order: 40, helpText: "Upload CV as PDF (max 5 MB). For Group applications, combine all members' CVs into a single PDF." },
   { section: "Mandatory Documents", label: "Research Proposal PDF", fieldKey: "research_proposal_pdf", fieldType: "FILE" as const, required: true, order: 42 },
   { section: "Mandatory Documents", label: "Budget Proposal PDF", fieldKey: "budget_proposal_pdf", fieldType: "FILE" as const, required: true, order: 43 },
   { section: "Mandatory Documents", label: "Timeline of Study PDF", fieldKey: "timeline_pdf", fieldType: "FILE" as const, required: true, order: 44 },

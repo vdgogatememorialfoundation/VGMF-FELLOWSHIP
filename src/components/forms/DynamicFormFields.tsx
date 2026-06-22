@@ -92,6 +92,10 @@ export function DynamicFormFields({
             {fields
               .filter((f) => f.section === section)
               .map((field) => {
+                if (field.fieldKey === "group_member_details" && values.application_type !== "Group") {
+                  return null;
+                }
+
                 const opts = parseFieldOptions(field.options).map((o) => ({
                   value: o,
                   label: o,

@@ -41,6 +41,8 @@ function mapResearchArea(value: string): ResearchArea {
 
 function buildApplicationFields(data: FormData, status: ApplicationStatus) {
   return {
+    applicationType: formStr(data, "application_type", "Individual") === "Group" ? "GROUP" : "INDIVIDUAL",
+    groupMemberDetails: formStr(data, "application_type", "Individual") === "Group" ? formStr(data, "group_member_details") || null : null,
     name: formStr(data, "name", "Applicant"),
     dob: new Date(formStr(data, "dob", "2000-01-01")),
     gender: mapGender(formStr(data, "gender", "Other")),

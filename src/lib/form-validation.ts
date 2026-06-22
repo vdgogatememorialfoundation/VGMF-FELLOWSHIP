@@ -39,6 +39,13 @@ export function validateFormSubmission(
       continue;
     }
 
+    if (field.fieldKey === "group_member_details" && data.application_type === "Group") {
+      if (value == null || String(value).trim() === "") {
+        return "Please provide details of all other group members";
+      }
+      continue;
+    }
+
     if (!field.required) continue;
 
     if (value == null || String(value).trim() === "") {
