@@ -68,10 +68,13 @@ export const MANDATORY_DOCUMENTS = [
   { type: "RESEARCH_PROPOSAL_PDF", label: "Research Proposal PDF" },
   { type: "BUDGET_PROPOSAL_PDF", label: "Budget Proposal PDF" },
   { type: "TIMELINE_PDF", label: "Timeline PDF" },
+  { type: "AGE_PROOF", label: "Proof of Age" },
+  { type: "IDENTITY_PROOF", label: "Identity Proof" },
 ] as const;
 
 export const OPTIONAL_DOCUMENTS = [
   { type: "ETHICAL_CLEARANCE", label: "Ethical Clearance" },
   { type: "PUBLICATIONS", label: "Publications" },
   { type: "RECOMMENDATION_LETTER", label: "Recommendation Letter" },
+  { type: "OTHER_SUPPORTING", label: "Other Supporting Document" },
 ] as const;

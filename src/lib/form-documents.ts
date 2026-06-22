@@ -7,6 +7,9 @@ export const FILE_FIELD_DOCUMENT_TYPES: Record<string, string> = {
   budget_proposal_pdf: "BUDGET_PROPOSAL_PDF",
   timeline_pdf: "TIMELINE_PDF",
   ethical_clearance: "ETHICAL_CLEARANCE",
+  age_proof: "AGE_PROOF",
+  identity_proof: "IDENTITY_PROOF",
+  other_supporting_document: "OTHER_SUPPORTING",
 };
 
 export const MANDATORY_DOC_TYPES = MANDATORY_DOCUMENTS.map((d) => d.type) as string[];
