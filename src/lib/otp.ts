@@ -91,7 +91,6 @@ export async function createAndSendOtp(params: {
     const result = await sendWhatsAppOtp(normalizedPhone, code);
 
     if (!result.ok) {
-      // Log the error but keep the OTP code in the database for retry
       console.error(
         "WhatsApp OTP send failed:",
         result.error,
@@ -100,7 +99,6 @@ export async function createAndSendOtp(params: {
       );
 
       if (process.env.NODE_ENV === "production") {
-        // In production, report the error
         return {
           success: false,
           error:
@@ -109,7 +107,6 @@ export async function createAndSendOtp(params: {
         };
       }
 
-      // In development, log OTP to console but still return success for testing
       logDevOtp(normalizedPhone, code);
     } else if (result.messageId) {
       console.log(

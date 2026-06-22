@@ -8,6 +8,8 @@ import {
 import {
   getNotificationTemplate,
   mergeNotificationTemplates,
+  resolveOtpWhatsAppTemplateLanguage,
+  resolveOtpWhatsAppTemplateName,
   DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME,
   type NotificationEventKey,
 } from "./notification-templates";
@@ -255,43 +257,57 @@ async function sendWhatsAppAuthOtp(input: {
 }
 
 export async function sendWhatsAppOtp(phone: string, otpCode: string): Promise<WhatsAppSendResult> {
-  const templateName = DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME;
+  const config = await getIntegrationConfig();
+  const settings = await prisma.integrationSettings
+    .findUnique({ where: { id: "default" }, select: { notificationTemplatesJson: true } })
+    .catch(() => null);
+  const templates = mergeNotificationTemplates(settings?.notificationTemplatesJson);
+  const otpEvent = templates.find((item) => item.event === "OTP_VERIFICATION");
+
+  const templateName = resolveOtpWhatsAppTemplateName([
+    otpEvent?.whatsappTemplateName,
+    config.whatsapp.otpTemplateName,
+    DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME,
+  ]);
+
   const to = normalizePhone(phone);
   if (!to) {
     return { ok: false, error: "Invalid phone number." };
   }
 
-  const lookup = await lookupWhatsAppTemplateRows(templateName);
-  if (!lookup.templates.length) {
+  if (!config.whatsapp.token || !config.whatsapp.phoneNumberId) {
     return {
       ok: false,
-      error:
-        lookup.error ||
-        `Meta template "${templateName}" was not found. Approve it in WhatsApp Manager.`,
+      error: "WhatsApp is not configured (token or Phone Number ID missing).",
     };
   }
 
-  if (!lookup.isAuthentication) {
-    return {
-      ok: false,
-      error: `Template "${templateName}" is not an AUTHENTICATION template on Meta. OTP cannot be sent with utility templates.`,
-    };
+  const lookup = await lookupWhatsAppTemplateRows(templateName);
+  if (lookup.error && !lookup.templates.length) {
+    console.warn("WhatsApp OTP template lookup:", lookup.error, lookup.hint || "");
   }
 
   const langCandidates = uniqueLanguages(
-    ...(lookup.approvedLanguages.length ? lookup.approvedLanguages : ["en"]),
+    ...(lookup.approvedLanguages.length ? lookup.approvedLanguages : []),
+    resolveOtpWhatsAppTemplateLanguage([
+      otpEvent?.whatsappTemplateLanguage,
+      config.whatsapp.otpTemplateLanguage,
+    ]),
     "en",
     "en_US"
   );
 
-  let lastError = "Failed to send WhatsApp OTP.";
+  const useAuthenticationPayload =
+    lookup.isAuthentication || templateName === DEFAULT_WHATSAPP_OTP_TEMPLATE_NAME;
+
+  let lastError = lookup.error || "Failed to send WhatsApp OTP.";
   for (const language of langCandidates) {
     const result = await sendWhatsAppAuthOtp({
       phone: to,
       templateName,
       language,
       otpCode,
-      isAuthentication: true,
+      isAuthentication: useAuthenticationPayload,
     });
     if (result.ok) {
       console.info(
