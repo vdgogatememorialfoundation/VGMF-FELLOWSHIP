@@ -35,6 +35,7 @@
     "prisma": "^6.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "setu-client": "^1.0.0",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",

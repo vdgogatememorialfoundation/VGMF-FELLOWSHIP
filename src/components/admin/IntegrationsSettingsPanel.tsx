@@ -18,18 +18,6 @@ function buildWhatsAppWebhookUrl(appUrl: string): string {
   return `${base.replace(/\/$/, "")}/api/webhooks/whatsapp`;
 }
 
-function buildIdnormWebhookUrl(appUrl: string): string {
-  if (!appUrl?.trim()) return "https://your-domain/api/webhooks/idnorm";
-  const base = appUrl.trim().startsWith("http") ? appUrl.trim() : `https://${appUrl.trim()}`;
-  return `${base.replace(/\/$/, "")}/api/webhooks/idnorm`;
-}
-
-function buildAccurascanWebhookUrl(appUrl: string): string {
-  if (!appUrl?.trim()) return "https://your-domain/api/webhooks/accurascan";
-  const base = appUrl.trim().startsWith("http") ? appUrl.trim() : `https://${appUrl.trim()}`;
-  return `${base.replace(/\/$/, "")}/api/webhooks/accurascan`;
-}
-
 function appUrlFromWebhookUrl(webhookUrl: string): string {
   const trimmed = webhookUrl.trim().replace(/\/$/, "");
   if (!trimmed) return "";
@@ -54,23 +42,19 @@ type IntegrationsState = {
   whatsappWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
   
-  // IDNorm
-  idnormEnabled: boolean;
-  idnormApiKey: string;
-  idnormEnvironment: string;
-  
-  // Accurascan
-  accurascanEnabled: boolean;
-  accurascanApiKey: string;
-  accurascanEnvironment: string;
+  // Setu
+  setuEnabled: boolean;
+  setuClientId: string;
+  setuClientSecret: string;
+  setuProductInstanceId: string;
+  setuEnvironment: string;
   
   activeVerificationProvider: string;
   
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
-    idnormConfigured: boolean;
-    accurascanConfigured: boolean;
+    setuConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
     verificationSource: string;
@@ -225,13 +209,12 @@ export function IntegrationsSettingsPanel({
           </p>
         </div>
         <div
-          className={`rounded-lg border p-4 ${integrations.status.idnormConfigured || integrations.status.accurascanConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
+          className={`rounded-lg border p-4 ${integrations.status.setuConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
         >
-          <p className="font-semibold">Identity Verification</p>
+          <p className="font-semibold">Identity & Bank Verification</p>
           <p className="text-sm text-gray-600">
             Active Provider: {integrations.activeVerificationProvider} · 
-            IDNorm: {integrations.status.idnormConfigured ? "Configured" : "Missing keys"} · 
-            Accurascan: {integrations.status.accurascanConfigured ? "Configured" : "Missing keys"}
+            SetuHQ: {integrations.status.setuConfigured ? "Configured" : "Missing keys"}
           </p>
         </div>
       </div>
@@ -701,78 +684,56 @@ export function IntegrationsSettingsPanel({
           value={integrations.activeVerificationProvider}
           onChange={(e) => onIntegrationsChange({ ...integrations, activeVerificationProvider: e.target.value })}
           options={[
-            { value: "IDNORM", label: "IDNorm" },
-            { value: "ACCURASCAN", label: "Accurascan" },
+            { value: "SETU", label: "SetuHQ" },
           ]}
         />
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-semibold">IDNorm Configuration</h2>
+        <h2 className="font-semibold">SetuHQ Configuration</h2>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={integrations.idnormEnabled}
-            onChange={(e) => onIntegrationsChange({ ...integrations, idnormEnabled: e.target.checked })}
+            checked={integrations.setuEnabled}
+            onChange={(e) => onIntegrationsChange({ ...integrations, setuEnabled: e.target.checked })}
           />
-          Enable IDNorm
+          Enable Setu (eKYC + Bank Account Verification)
         </label>
-        {integrations.status.idnormConfigured && (
-          <p className="text-sm text-green-700">IDNorm API key is saved. Leave empty to keep it.</p>
+        {integrations.status.setuConfigured && (
+          <p className="text-sm text-green-700">Setu credentials are saved. Leave empty to keep them.</p>
         )}
         <Select
           label="Environment"
-          value={integrations.idnormEnvironment}
-          onChange={(e) => onIntegrationsChange({ ...integrations, idnormEnvironment: e.target.value })}
+          value={integrations.setuEnvironment}
+          onChange={(e) => onIntegrationsChange({ ...integrations, setuEnvironment: e.target.value })}
           options={[
             { value: "production", label: "Production" },
             { value: "sandbox", label: "Sandbox" },
           ]}
         />
         <Input
-          label="API Key"
+          label="Client ID"
           type="password"
-          value={integrations.idnormApiKey}
-          placeholder={integrations.status.idnormConfigured ? "Leave empty to keep saved key" : "Paste IDNorm API Key"}
-          onChange={(e) => onIntegrationsChange({ ...integrations, idnormApiKey: e.target.value })}
-        />
-        <p className="text-xs text-gray-500">
-          Register this webhook URL in the IDNorm dashboard: <code>{buildIdnormWebhookUrl(integrations.appUrl)}</code>
-        </p>
-      </div>
-
-      <div className="card space-y-4">
-        <h2 className="font-semibold">Accurascan Configuration</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={integrations.accurascanEnabled}
-            onChange={(e) => onIntegrationsChange({ ...integrations, accurascanEnabled: e.target.checked })}
-          />
-          Enable Accurascan
-        </label>
-        {integrations.status.accurascanConfigured && (
-          <p className="text-sm text-green-700">Accurascan keys are saved. Leave empty to keep them.</p>
-        )}
-        <Select
-          label="Environment"
-          value={integrations.accurascanEnvironment}
-          onChange={(e) => onIntegrationsChange({ ...integrations, accurascanEnvironment: e.target.value })}
-          options={[
-            { value: "production", label: "Production" },
-            { value: "sandbox", label: "Sandbox" },
-          ]}
+          value={integrations.setuClientId}
+          placeholder={integrations.status.setuConfigured ? "Leave empty to keep saved Client ID" : "Paste Setu Client ID"}
+          onChange={(e) => onIntegrationsChange({ ...integrations, setuClientId: e.target.value })}
         />
         <Input
-          label="API Key"
+          label="Client Secret"
           type="password"
-          value={integrations.accurascanApiKey}
-          placeholder={integrations.status.accurascanConfigured ? "Leave empty to keep saved key" : "Paste Accurascan API Key"}
-          onChange={(e) => onIntegrationsChange({ ...integrations, accurascanApiKey: e.target.value })}
+          value={integrations.setuClientSecret || ""}
+          placeholder={integrations.status.setuConfigured ? "Leave empty to keep saved Secret" : "Paste Setu Client Secret"}
+          onChange={(e) => onIntegrationsChange({ ...integrations, setuClientSecret: e.target.value })}
         />
-
+        <Input
+          label="Product Instance ID"
+          type="password"
+          value={integrations.setuProductInstanceId || ""}
+          placeholder="Paste Setu Product Instance ID"
+          onChange={(e) => onIntegrationsChange({ ...integrations, setuProductInstanceId: e.target.value })}
+        />
         <p className="text-xs text-gray-500">
-          Register this webhook URL in the Accurascan dashboard: <code>{buildAccurascanWebhookUrl(integrations.appUrl)}</code>
+          Register this webhook URL in the Setu dashboard: <code>{integrations.appUrl}/api/webhooks/setu</code>
         </p>
       </div>
 

@@ -15,7 +15,8 @@ export async function isIdentityOnlineAvailable(): Promise<boolean> {
 }
 
 export async function isBankOnlineAvailable(): Promise<boolean> {
-  return false; // Replaced Digio bank logic
+  const { isSetConfigured } = await import("./setu");
+  return isSetConfigured();
 }
 
 export function getManualIdentityDocumentLabel(type: string): string {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { OnlineIdentityVerificationPanel } from "@/components/verification/OnlineIdentityVerificationPanel";
 import { ManualIdentityVerificationPanel } from "@/components/verification/ManualIdentityVerificationPanel";
+import { OnlineBankVerificationPanel } from "@/components/verification/OnlineBankVerificationPanel";
 import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 import { formatApplicationNumber } from "@/lib/application-number";
 
@@ -71,7 +72,7 @@ export default function ApplicantVerificationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Identity Verification</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Identity & Bank Verification</h1>
         <p className="mt-1 font-mono text-sm text-gray-600">
           Application {formatApplicationNumber(application.applicationNumber)}
         </p>
@@ -123,6 +124,17 @@ export default function ApplicantVerificationPage() {
               verifiedAt={application.identityVerifiedAt}
             />
           )}
+        </div>
+      )}
+
+      {showPanel && verificationMode === "online" && (
+        <div className="pt-6 border-t border-gray-200">
+          <OnlineBankVerificationPanel
+            applicationId={application.id}
+            onSuccess={() => {
+              // Optionally handle success callback, page refresh, etc.
+            }}
+          />
         </div>
       )}
 

@@ -1,6 +1,5 @@
 import prisma from "./db";
-import { isIdnormConfigured, getIdnormConfig } from "./idnorm";
-import { isAccurascanConfigured, getAccurascanConfig } from "./accurascan";
+import { isSetConfigured, getSetConfig } from "./setu";
 import { maskSecret } from "./site-content";
 import {
   mergeNotificationTemplates,
@@ -30,15 +29,11 @@ export interface IntegrationConfig {
   appUrl: string;
   email: EmailIntegrationConfig;
   whatsapp: WhatsAppIntegrationConfig;
-  idnorm: {
+  setu: {
     enabled: boolean;
-    apiKey: string | null;
-    environment: "sandbox" | "production";
-  };
-  accurascan: {
-    enabled: boolean;
-    apiKey: string | null;
-    apiSecret: string | null;
+    clientId: string | null;
+    clientSecret: string | null;
+    productInstanceId: string | null;
     environment: "sandbox" | "production";
   };
   activeVerificationProvider: string;
@@ -158,18 +153,14 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
         db?.whatsappApiVersion || process.env.WHATSAPP_API_VERSION || "v22.0",
       defaultTemplateLanguage: otpTemplateLanguage,
     },
-    idnorm: {
-      enabled: db?.idnormEnabled ?? false,
-      apiKey: db?.idnormApiKey || process.env.IDNORM_API_KEY || null,
-      environment: db?.idnormEnvironment === "sandbox" ? "sandbox" : "production",
+    setu: {
+      enabled: db?.setuEnabled ?? false,
+      clientId: db?.setuClientId || process.env.SETU_CLIENT_ID || null,
+      clientSecret: db?.setuClientSecret || process.env.SETU_CLIENT_SECRET || null,
+      productInstanceId: db?.setuProductInstanceId || process.env.SETU_PRODUCT_INSTANCE_ID || null,
+      environment: db?.setuEnvironment === "sandbox" ? "sandbox" : "production",
     },
-    accurascan: {
-      enabled: db?.accurascanEnabled ?? false,
-      apiKey: db?.accurascanApiKey || process.env.ACCURASCAN_API_KEY || null,
-      apiSecret: null,
-      environment: db?.accurascanEnvironment === "sandbox" ? "sandbox" : "production",
-    },
-    activeVerificationProvider: db?.activeVerificationProvider || "IDNORM",
+    activeVerificationProvider: db?.activeVerificationProvider || "SETU",
   };
 }
 
@@ -185,11 +176,8 @@ export async function isWhatsAppConfigured(): Promise<boolean> {
 
 export async function isIdentityVerificationConfigured(): Promise<boolean> {
   const config = await getIntegrationConfig();
-  if (config.activeVerificationProvider === "IDNORM") {
-    return await isIdnormConfigured();
-  }
-  if (config.activeVerificationProvider === "ACCURASCAN") {
-    return await isAccurascanConfigured();
+  if (config.activeVerificationProvider === "SETU") {
+    return await isSetConfigured();
   }
   return false;
 }
@@ -223,24 +211,19 @@ export async function getIntegrationSettingsForAdmin() {
       db?.emailOtpSubject || "Verify your email — VGMF Fellowship Portal",
     notificationTemplates: mergeNotificationTemplates(db?.notificationTemplatesJson),
     whatsappWebhookUrl: `${appUrl}/api/webhooks/whatsapp`,
-    
-    // IDNorm
-    idnormEnabled: config.idnorm.enabled,
-    idnormApiKey: maskSecret(db?.idnormApiKey || process.env.IDNORM_API_KEY),
-    idnormEnvironment: config.idnorm.environment,
-    
-    // Accurascan
-    accurascanEnabled: config.accurascan.enabled,
-    accurascanApiKey: maskSecret(db?.accurascanApiKey || process.env.ACCURASCAN_API_KEY),
-    accurascanEnvironment: config.accurascan.environment,
+    // Setu
+    setuEnabled: config.setu.enabled,
+    setuClientId: maskSecret(db?.setuClientId || process.env.SETU_CLIENT_ID),
+    setuClientSecret: maskSecret(db?.setuClientSecret || process.env.SETU_CLIENT_SECRET),
+    setuProductInstanceId: maskSecret(db?.setuProductInstanceId || process.env.SETU_PRODUCT_INSTANCE_ID),
+    setuEnvironment: config.setu.environment,
     
     activeVerificationProvider: config.activeVerificationProvider,
     
     status: {
       emailConfigured: !!(config.email.token && config.email.fromEmail),
       whatsappConfigured: !!(config.whatsapp.token && config.whatsapp.phoneNumberId),
-      idnormConfigured: await isIdnormConfigured(),
-      accurascanConfigured: await isAccurascanConfigured(),
+      setuConfigured: !!(config.setu.enabled && config.setu.clientId && config.setu.clientSecret),
       emailSource: db?.zeptomailToken ? "database" : process.env.ZEPTOMAIL_TOKEN ? "environment" : "none",
       whatsappSource: db?.whatsappToken ? "database" : process.env.WHATSAPP_TOKEN ? "environment" : "none",
     },

@@ -887,14 +887,12 @@ model IntegrationSettings {
   whatsappWebhookVerifyToken  String?  @map("whatsapp_webhook_verify_token")
   emailOtpSubject             String?  @map("email_otp_subject")
   notificationTemplatesJson   Json?    @map("notification_templates_json")
-  activeVerificationProvider  String?  @default("IDNORM") @map("active_verification_provider")
-  idnormEnabled               Boolean  @default(true) @map("idnorm_enabled")
-  idnormApiKey                String?  @map("idnorm_api_key")
-  idnormEnvironment           String?  @default("production") @map("idnorm_environment")
-  accurascanEnabled           Boolean  @default(false) @map("accurascan_enabled")
-  accurascanApiKey            String?  @map("accurascan_api_key")
-
-  accurascanEnvironment       String?  @default("production") @map("accurascan_environment")
+  activeVerificationProvider  String?  @default("SETU") @map("active_verification_provider")
+  setuEnabled                 Boolean  @default(false) @map("setu_enabled")
+  setuClientId                String?  @map("setu_client_id")
+  setuClientSecret            String?  @map("setu_client_secret")
+  setuProductInstanceId       String?  @map("setu_product_instance_id")
+  setuEnvironment             String?  @default("sandbox") @map("setu_environment")
   updatedAt                   DateTime @updatedAt @map("updated_at")
 
   @@map("integration_settings")
@@ -903,7 +901,7 @@ model IntegrationSettings {
 model VerificationSession {
   id                 String               @id @default(cuid())
   providerRequestId  String               @unique @map("provider_request_id")
-  provider           String               @default("IDNORM") @map("provider")
+  provider           String               @default("SETU") @map("provider")
   accessToken        String?              @map("session_token") @db.Text
   customerIdentifier String?              @map("verification_url") @db.Text
   purpose            VerificationPurpose

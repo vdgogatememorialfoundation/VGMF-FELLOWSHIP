@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getIntegrationConfig } from "@/lib/integrations";
-import { createAccurascanSession } from "@/lib/accurascan";
-import { createIdnormSession } from "@/lib/idnorm";
+import { createSetuOKYCSession } from "@/lib/setu";
 import { VerificationPurpose } from "@prisma/client";
 
 export async function POST(req: Request) {
@@ -32,26 +31,21 @@ export async function POST(req: Request) {
 
     const integrations = await getIntegrationConfig();
 
-    let session;
-    const input = {
-      purpose: purpose as VerificationPurpose,
-      userId: user.id,
-      applicationId: applicationId || null,
-      fellowshipId: application?.fellowship?.id || null,
-      customerIdentifier: user.email,
-      customerName: user.name || "Applicant",
-      referenceId: applicationId || user.id,
-    };
-
-    if (integrations.activeVerificationProvider === "ACCURASCAN") {
-      session = await createAccurascanSession(input);
-    } else {
-      session = await createIdnormSession(input);
+    if (integrations.activeVerificationProvider !== "SETU") {
+      return NextResponse.json({ error: "Verification provider not configured" }, { status: 400 });
     }
+
+    const session = await createSetuOKYCSession(
+      user.id,
+      purpose as VerificationPurpose,
+      applicationId || user.id,
+      applicationId || undefined,
+      application?.fellowship?.id || undefined
+    );
 
     return NextResponse.json({ 
       verificationUrl: session.verificationUrl,
-      recordId: session.recordId 
+      recordId: session.verificationId 
     });
   } catch (error: unknown) {
     console.error("Online verification session error:", error);
