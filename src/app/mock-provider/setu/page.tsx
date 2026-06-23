@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
-export default function MockSetuPage() {
+function MockSetuContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -76,10 +76,18 @@ export default function MockSetuPage() {
             loading={loading}
             onClick={() => router.push("/applicant/verification")}
           >
-            Cancel & Return
+            Cancel &amp; Return
           </Button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MockSetuPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p>Loading...</p></div>}>
+      <MockSetuContent />
+    </Suspense>
   );
 }
