@@ -57,7 +57,7 @@ type IntegrationsState = {
     setuConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
-    verificationSource: string;
+    verificationSource?: string;
   };
 };
 
