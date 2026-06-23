@@ -226,24 +226,22 @@ interface Integrations {
   emailOtpSubject: string;
   whatsappWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
-  digioClientId: string;
-  digioClientSecret: string;
-  digioWebhookSecret: string;
-  digioTemplateIdentity: string;
-  digioTemplateBank: string;
-  digioTemplateUndertaking: string;
-  digioEnvironment: string;
-  digioRequireIdentityForScrutiny: boolean;
-  digioEnabled: boolean;
+  idnormApiKey: string;
+  idnormEnvironment: string;
+  idnormEnabled: boolean;
+  accurascanApiKey: string;
+  accurascanApiSecret: string;
+  accurascanEnvironment: string;
+  accurascanEnabled: boolean;
+  activeVerificationProvider: string;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
-    digioConfigured: boolean;
-    digioBankConfigured?: boolean;
-    digioIdentityConfigured?: boolean;
+    idnormConfigured: boolean;
+    accurascanConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
-    digioSource: string;
+    verificationSource: string;
   };
 }
 
@@ -344,9 +342,9 @@ export function WebsiteUpdates() {
             ...d.integrations,
             zeptomailToken: "",
             whatsappToken: "",
-            digioClientId: "",
-            digioClientSecret: "",
-            digioWebhookSecret: "",
+            idnormApiKey: "",
+            accurascanApiKey: "",
+            accurascanApiSecret: "",
           });
         }
 
@@ -433,9 +431,9 @@ export function WebsiteUpdates() {
           zeptomailToken: integrations.zeptomailToken.trim() || undefined,
           whatsappToken: integrations.whatsappToken.trim() || undefined,
           whatsappWebhookVerifyToken: integrations.whatsappWebhookVerifyToken.trim() || undefined,
-          digioClientId: integrations.digioClientId.trim() || undefined,
-          digioClientSecret: integrations.digioClientSecret.trim() || undefined,
-          digioWebhookSecret: integrations.digioWebhookSecret.trim() || undefined,
+          idnormApiKey: integrations.idnormApiKey.trim() || undefined,
+          accurascanApiKey: integrations.accurascanApiKey.trim() || undefined,
+          accurascanApiSecret: integrations.accurascanApiSecret.trim() || undefined,
         },
       }),
       cache: "no-store",

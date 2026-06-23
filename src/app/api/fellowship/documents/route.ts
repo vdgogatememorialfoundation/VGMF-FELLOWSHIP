@@ -5,7 +5,7 @@ import type { FellowshipDocType } from "@prisma/client";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { canReplaceFellowshipDocument } from "@/lib/document-review";
 import { notifyDocumentReviewed } from "@/lib/notifications";
-import { isDigioBankAvailable, syncManualBankVerification } from "@/lib/manual-verification";
+import { isBankOnlineAvailable, syncManualBankVerification } from "@/lib/manual-verification";
 import { toUploadApiUrl, persistUpload, mapFellowshipDocumentForClient } from "@/lib/upload-files";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (docType === "BANK_VERIFICATION" && !(await isDigioBankAvailable())) {
+    if (docType === "BANK_VERIFICATION" && !(await isBankOnlineAvailable())) {
       await syncManualBankVerification(fellowshipId);
     }
 
@@ -258,7 +258,7 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
-    if (document.type === "BANK_VERIFICATION" && !(await isDigioBankAvailable())) {
+    if (document.type === "BANK_VERIFICATION" && !(await isBankOnlineAvailable())) {
       await syncManualBankVerification(document.fellowshipId);
     }
 

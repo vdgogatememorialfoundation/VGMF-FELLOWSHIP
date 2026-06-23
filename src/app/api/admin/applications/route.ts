@@ -4,11 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
-import {
-  getDigioConfig,
-  refreshVerificationSessionDecision,
-  isDigioIdentityConfigured,
-} from "@/lib/digio";
+import { getIntegrationConfig, isIdentityVerificationConfigured } from "@/lib/integrations";
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
 import { updateApplicationByAdmin } from "@/lib/admin-application-update";
@@ -54,15 +50,8 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    await Promise.all(
-      verificationSessions
-        .filter(
-          (session) =>
-            !session.decisionJson &&
-            ["APPROVED", "IN_REVIEW", "DECLINED"].includes(session.status)
-        )
-        .map((session) => refreshVerificationSessionDecision(session.providerRequestId))
-    );
+    // TODO: implement refresh logic for identity sessions
+    // For now we just return the sessions as they are in the database.
 
     verificationSessions = await prisma.verificationSession.findMany({
       where: {
@@ -71,17 +60,16 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const digioConfig = await getDigioConfig();
+    const integrationConfig = await getIntegrationConfig();
     return NextResponse.json({
       application: {
         ...application,
         documents: application.documents.map(mapApplicationDocumentForClient),
       },
       verificationSessions,
-      digio: {
-        identityConfigured: await isDigioIdentityConfigured(),
-        requireIdentityForScrutiny: digioConfig.requireIdentityForScrutiny,
-        webhookUrl: `${digioConfig.appUrl}/api/digio/webhook`,
+      verification: {
+        identityConfigured: await isIdentityVerificationConfigured(),
+        requireIdentityForScrutiny: true, // we decided to enforce it when enabled
       },
     });
   }
@@ -121,15 +109,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (status === "SCRUTINY_APPROVED") {
-      const digioConfig = await getDigioConfig();
+      const isIdentityConfigured = await isIdentityVerificationConfigured();
       if (
-        digioConfig.requireIdentityForScrutiny &&
+        isIdentityConfigured &&
         existing.identityVerificationStatus !== "APPROVED"
       ) {
         return NextResponse.json(
           {
             error:
-              "Applicant must complete Digio identity verification before document verification can be approved",
+              "Applicant must complete online identity verification before document verification can be approved",
           },
           { status: 400 }
         );

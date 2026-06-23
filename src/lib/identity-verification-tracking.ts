@@ -58,9 +58,9 @@ export function buildIdentityVerificationTimelineStep(input: {
   if (input.status === "APPROVED") {
     description = "Your online identity verification is complete.";
   } else if (input.status === "IN_REVIEW") {
-    description = "Digio is reviewing your verification. No action needed right now.";
+    description = "Identity verification is being reviewed. No action needed right now.";
   } else if (input.status === "IN_PROGRESS") {
-    description = "Finish the Digio session if you closed it before completing all checks.";
+    description = "Finish the identity verification session if you closed it before completing all checks.";
   } else if (input.status === "DECLINED") {
     description = "Verification was declined. Start a new session from Identity Verification.";
   } else if (input.status === "ABANDONED" || input.status === "EXPIRED") {
@@ -88,7 +88,7 @@ const DETAIL_STEPS = [
   {
     key: "identity-start",
     label: "Start verification",
-    description: "Open the secure Digio session from this page.",
+    description: "Open the secure identity verification session from this page.",
   },
   {
     key: "identity-id",

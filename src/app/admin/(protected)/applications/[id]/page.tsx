@@ -13,7 +13,7 @@ import { ReviewAssignmentPanel } from "@/components/admin/ReviewAssignmentPanel"
 import { ApplicationQueryPanel } from "@/components/reviews/ApplicationQueryPanel";
 import { AdminFellowshipPanel } from "@/components/admin/AdminFellowshipPanel";
 import { AdminApplicationEditor } from "@/components/admin/AdminApplicationEditor";
-import { AdminDigioVerificationPanel } from "@/components/admin/AdminDigioVerificationPanel";
+import { AdminIdentityVerificationPanel } from "@/components/admin/AdminIdentityVerificationPanel";
 import { DocumentReviewControls } from "@/components/admin/DocumentReviewControls";
 import { ManualIdentityReviewPanel } from "@/components/admin/ManualIdentityReviewPanel";
 import {
@@ -124,15 +124,15 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [digioMeta, setDigioMeta] = useState<{
+  const [verificationMeta, setVerificationMeta] = useState<{
     requireIdentityForScrutiny: boolean;
     identityConfigured: boolean;
-    webhookUrl: string;
   } | null>(null);
   const [verificationSessions, setVerificationSessions] = useState<
     Array<{
       id: string;
       providerRequestId: string;
+      provider: string;
       purpose: "APPLICANT_IDENTITY" | "BANK_ACCOUNT" | "UNDERTAKING_IDENTITY";
       status: string;
       completedAt: string | null;
@@ -151,7 +151,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       return;
     }
     setApp(data.application);
-    setDigioMeta(data.digio ?? null);
+    setVerificationMeta(data.verification ?? null);
     setVerificationSessions(data.verificationSessions ?? []);
     setAdminNotes(data.application.adminNotes ?? "");
     setRejectionReason(data.application.rejectionReason ?? "");
@@ -284,8 +284,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   }
 
   const scrutinyCheck = canApproveScrutiny(app.status as never, app.documents, {
-    requireDigioIdentity:
-      !!digioMeta?.requireIdentityForScrutiny && !!digioMeta?.identityConfigured,
+    requireIdentityVerification:
+      !!verificationMeta?.requireIdentityForScrutiny && !!verificationMeta?.identityConfigured,
     identityVerificationStatus: app.identityVerificationStatus,
   });
   const nextActions = getNextActions(app.status as never);
@@ -380,16 +380,16 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           {!scrutinyCheck.ok && (
             <p className="mt-2 text-sm text-amber-700">{scrutinyCheck.reason}</p>
           )}
-          {digioMeta?.identityConfigured && (
+          {verificationMeta?.identityConfigured && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4">
-              <p className="text-sm font-medium text-gray-900">Digio identity verification</p>
+              <p className="text-sm font-medium text-gray-900">Identity verification</p>
               <p className="mt-1 text-sm text-gray-600">
                 Status:{" "}
                 <strong>{(app.identityVerificationStatus ?? "NOT_STARTED").replace(/_/g, " ")}</strong>
                 {app.identityVerifiedAt &&
                   ` · Verified ${new Date(app.identityVerifiedAt).toLocaleString("en-IN")}`}
               </p>
-              {digioMeta.requireIdentityForScrutiny && (
+              {verificationMeta.requireIdentityForScrutiny && (
                 <p className="mt-2 text-xs text-amber-800">
                   Required before marking documents verified (enabled in API Settings).
                 </p>
@@ -399,10 +399,10 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {digioMeta?.identityConfigured && (
+      {verificationMeta?.identityConfigured && (
         <div className="card space-y-4">
-          <h2 className="font-semibold">Digio Verification Details</h2>
-          <AdminDigioVerificationPanel
+          <h2 className="font-semibold">Verification Details</h2>
+          <AdminIdentityVerificationPanel
             sessions={verificationSessions}
             identityStatus={app.identityVerificationStatus}
             identityVerifiedAt={app.identityVerifiedAt}
@@ -410,7 +410,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {!digioMeta?.identityConfigured && (
+      {!verificationMeta?.identityConfigured && (
         <div className="card space-y-4">
           <h2 className="font-semibold">Manual Identity Verification</h2>
           <ManualIdentityReviewPanel applicationId={id} onUpdated={reload} />

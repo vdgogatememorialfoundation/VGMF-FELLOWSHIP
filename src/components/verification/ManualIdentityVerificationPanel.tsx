@@ -117,7 +117,7 @@ export function ManualIdentityVerificationPanel({
           <h3 className="font-semibold text-gray-900">Manual identity verification</h3>
           <p className="mt-1 text-sm text-gray-600">
             Upload a clear government ID and a recent photo. The Foundation team will verify these
-            documents manually while online Digio verification is disabled.
+            documents manually while online verification is disabled.
           </p>
         </div>
         <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getFellowshipForApplicant } from "@/lib/fellowship-access";
 import prisma from "@/lib/db";
-import { isDigioBankAvailable, syncManualBankVerification } from "@/lib/manual-verification";
+import { isBankOnlineAvailable, syncManualBankVerification } from "@/lib/manual-verification";
 import { toUploadApiUrl } from "@/lib/upload-files";
 
 export async function GET(request: NextRequest) {
@@ -49,13 +49,13 @@ export async function GET(request: NextRequest) {
           orderBy: { uploadedAt: "desc" },
         });
 
-  const digioAvailable = await isDigioBankAvailable();
+  const onlineAvailable = await isBankOnlineAvailable();
 
   return NextResponse.json({
-    mode: digioAvailable ? "digio" : "manual",
-    digioAvailable,
+    mode: onlineAvailable ? "online" : "manual",
+    onlineAvailable,
     status: fellowship.bankVerificationStatus,
-    verifiedAt: fellowship.bankVerifiedAt ?? fellowship.bankDigioVerifiedAt,
+    verifiedAt: fellowship.bankVerifiedAt,
     bankDetails: {
       accountHolder: fellowship.bankAccountHolder,
       bankName: fellowship.bankName,
@@ -94,11 +94,19 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "fellowshipId and action required" }, { status: 400 });
     }
 
-    if ((action === "decline" || action === "request_resubmit") && !notes?.trim()) {
-      return NextResponse.json(
-        { error: "Notes are required for decline or resubmission" },
-        { status: 400 }
-      );
+    if ((action === "decline" || action === "request_resubmit")) {
+      if (await isBankOnlineAvailable()) {
+        return NextResponse.json(
+          { error: "Online bank verification is active." },
+          { status: 400 }
+        );
+      }
+      if (!notes?.trim()) {
+        return NextResponse.json(
+          { error: "Notes are required for decline or resubmission" },
+          { status: 400 }
+        );
+      }
     }
 
     const fellowship = await prisma.fellowship.findUnique({

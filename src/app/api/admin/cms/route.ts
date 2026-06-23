@@ -249,22 +249,14 @@ export async function PUT(request: NextRequest) {
         ),
         emailOtpSubject: data.emailOtpSubject?.trim() || null,
         notificationTemplatesJson: serializeNotificationTemplates(notificationTemplates),
-        digioClientId: resolveSecret(data.digioClientId, existing?.digioClientId ?? null),
-        digioClientSecret: resolveSecret(
-          data.digioClientSecret,
-          existing?.digioClientSecret ?? null
-        ),
-        digioWebhookSecret: resolveSecret(
-          data.digioWebhookSecret,
-          existing?.digioWebhookSecret ?? null
-        ),
-        digioTemplateIdentity: data.digioTemplateIdentity?.trim() || null,
-        digioTemplateBank: data.digioTemplateBank?.trim() || null,
-        digioTemplateUndertaking: data.digioTemplateUndertaking?.trim() || null,
-        digioEnvironment:
-          data.digioEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
-        digioRequireIdentityForScrutiny: Boolean(data.digioRequireIdentityForScrutiny),
-        digioEnabled: data.digioEnabled !== false,
+        idnormEnabled: data.idnormEnabled !== false,
+        idnormApiKey: resolveSecret(data.idnormApiKey, existing?.idnormApiKey ?? null),
+        idnormEnvironment: data.idnormEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
+        accurascanEnabled: data.accurascanEnabled === true,
+        accurascanApiKey: resolveSecret(data.accurascanApiKey, existing?.accurascanApiKey ?? null),
+        accurascanApiSecret: resolveSecret(data.accurascanApiSecret, existing?.accurascanApiSecret ?? null),
+        accurascanEnvironment: data.accurascanEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
+        activeVerificationProvider: data.activeVerificationProvider?.trim() || "IDNORM",
       },
       create: {
         id: "default",
@@ -284,20 +276,14 @@ export async function PUT(request: NextRequest) {
         ),
         emailOtpSubject: data.emailOtpSubject?.trim() || null,
         notificationTemplatesJson: serializeNotificationTemplates(notificationTemplates),
-        digioClientId: isMaskedSecret(data.digioClientId) ? null : data.digioClientId?.trim() || null,
-        digioClientSecret: isMaskedSecret(data.digioClientSecret)
-          ? null
-          : data.digioClientSecret?.trim() || null,
-        digioWebhookSecret: isMaskedSecret(data.digioWebhookSecret)
-          ? null
-          : data.digioWebhookSecret?.trim() || null,
-        digioTemplateIdentity: data.digioTemplateIdentity?.trim() || null,
-        digioTemplateBank: data.digioTemplateBank?.trim() || null,
-        digioTemplateUndertaking: data.digioTemplateUndertaking?.trim() || null,
-        digioEnvironment:
-          data.digioEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
-        digioRequireIdentityForScrutiny: Boolean(data.digioRequireIdentityForScrutiny),
-        digioEnabled: data.digioEnabled !== false,
+        idnormEnabled: data.idnormEnabled !== false,
+        idnormApiKey: isMaskedSecret(data.idnormApiKey) ? null : data.idnormApiKey?.trim() || null,
+        idnormEnvironment: data.idnormEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
+        accurascanEnabled: data.accurascanEnabled === true,
+        accurascanApiKey: isMaskedSecret(data.accurascanApiKey) ? null : data.accurascanApiKey?.trim() || null,
+        accurascanApiSecret: isMaskedSecret(data.accurascanApiSecret) ? null : data.accurascanApiSecret?.trim() || null,
+        accurascanEnvironment: data.accurascanEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
+        activeVerificationProvider: data.activeVerificationProvider?.trim() || "IDNORM",
       },
     });
 

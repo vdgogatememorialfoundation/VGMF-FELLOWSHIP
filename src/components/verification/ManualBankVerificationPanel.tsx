@@ -100,7 +100,7 @@ export function ManualBankVerificationPanel({
           <h3 className="font-semibold text-gray-900">Manual bank verification</h3>
           <p className="mt-1 text-sm text-gray-600">
             Upload a cancelled cheque or bank passbook page showing your account details. The
-            Foundation will verify manually while online Digio bank verification is disabled.
+            Foundation will verify manually while online bank verification is disabled.
           </p>
         </div>
         <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700">

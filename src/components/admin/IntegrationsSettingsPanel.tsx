@@ -18,10 +18,16 @@ function buildWhatsAppWebhookUrl(appUrl: string): string {
   return `${base.replace(/\/$/, "")}/api/webhooks/whatsapp`;
 }
 
-function buildDigioWebhookUrl(appUrl: string): string {
-  if (!appUrl?.trim()) return "https://your-domain/api/digio/webhook";
+function buildIdnormWebhookUrl(appUrl: string): string {
+  if (!appUrl?.trim()) return "https://your-domain/api/webhooks/idnorm";
   const base = appUrl.trim().startsWith("http") ? appUrl.trim() : `https://${appUrl.trim()}`;
-  return `${base.replace(/\/$/, "")}/api/digio/webhook`;
+  return `${base.replace(/\/$/, "")}/api/webhooks/idnorm`;
+}
+
+function buildAccurascanWebhookUrl(appUrl: string): string {
+  if (!appUrl?.trim()) return "https://your-domain/api/webhooks/accurascan";
+  const base = appUrl.trim().startsWith("http") ? appUrl.trim() : `https://${appUrl.trim()}`;
+  return `${base.replace(/\/$/, "")}/api/webhooks/accurascan`;
 }
 
 function appUrlFromWebhookUrl(webhookUrl: string): string {
@@ -46,26 +52,29 @@ type IntegrationsState = {
   whatsappApiVersion: string;
   emailOtpSubject: string;
   whatsappWebhookUrl?: string;
-  digioWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
-  digioClientId: string;
-  digioClientSecret: string;
-  digioWebhookSecret: string;
-  digioTemplateIdentity: string;
-  digioTemplateBank: string;
-  digioTemplateUndertaking: string;
-  digioEnvironment: string;
-  digioRequireIdentityForScrutiny: boolean;
-  digioEnabled: boolean;
+  
+  // IDNorm
+  idnormEnabled: boolean;
+  idnormApiKey: string;
+  idnormEnvironment: string;
+  
+  // Accurascan
+  accurascanEnabled: boolean;
+  accurascanApiKey: string;
+  accurascanApiSecret: string;
+  accurascanEnvironment: string;
+  
+  activeVerificationProvider: string;
+  
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
-    digioConfigured: boolean;
-  digioBankConfigured?: boolean;
-  digioIdentityConfigured?: boolean;
+    idnormConfigured: boolean;
+    accurascanConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
-    digioSource: string;
+    verificationSource: string;
   };
 };
 
@@ -180,8 +189,6 @@ export function IntegrationsSettingsPanel({
   }
 
   const webhookUrl = buildWhatsAppWebhookUrl(integrations.appUrl) || integrations.whatsappWebhookUrl || "";
-  const digioWebhookUrl =
-    integrations.digioWebhookUrl || buildDigioWebhookUrl(integrations.appUrl);
 
   async function copyWebhookUrl() {
     const url = buildWhatsAppWebhookUrl(integrations.appUrl) || webhookUrl;
@@ -219,13 +226,13 @@ export function IntegrationsSettingsPanel({
           </p>
         </div>
         <div
-          className={`rounded-lg border p-4 ${integrations.status.digioConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
+          className={`rounded-lg border p-4 ${integrations.status.idnormConfigured || integrations.status.accurascanConfigured ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
         >
-          <p className="font-semibold">Digio Verification</p>
+          <p className="font-semibold">Identity Verification</p>
           <p className="text-sm text-gray-600">
-            Identity KYC: {integrations.status.digioIdentityConfigured ? "Active" : "Off"} · Bank
-            penny drop: {integrations.status.digioBankConfigured ? "Active" : "Off"} · Source:{" "}
-            {integrations.status.digioSource}
+            Active Provider: {integrations.activeVerificationProvider} · 
+            IDNorm: {integrations.status.idnormConfigured ? "Configured" : "Missing keys"} · 
+            Accurascan: {integrations.status.accurascanConfigured ? "Configured" : "Missing keys"}
           </p>
         </div>
       </div>
@@ -685,152 +692,95 @@ export function IntegrationsSettingsPanel({
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-semibold">Digio DigiKYC & Bank Verification</h2>
+        <h2 className="font-semibold">Identity Verification</h2>
         <p className="text-sm text-gray-600">
-          When online Digio verification is disabled, applicants submit documents manually and the
-          Foundation verifies offline. Register this webhook URL in the Digio dashboard:{" "}
-          <code className="text-xs">{digioWebhookUrl}</code>
+          Configure identity verification providers. Only the &quot;Active Provider&quot; will be used during the applicant verification flow.
         </p>
+
+        <Select
+          label="Active Provider"
+          value={integrations.activeVerificationProvider}
+          onChange={(e) => onIntegrationsChange({ ...integrations, activeVerificationProvider: e.target.value })}
+          options={[
+            { value: "IDNORM", label: "IDNorm" },
+            { value: "ACCURASCAN", label: "Accurascan" },
+          ]}
+        />
+      </div>
+
+      <div className="card space-y-4">
+        <h2 className="font-semibold">IDNorm Configuration</h2>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={integrations.digioEnabled !== false}
-            onChange={(e) =>
-              onIntegrationsChange({ ...integrations, digioEnabled: e.target.checked })
-            }
+            checked={integrations.idnormEnabled}
+            onChange={(e) => onIntegrationsChange({ ...integrations, idnormEnabled: e.target.checked })}
           />
-          Enable online Digio verification for applicants
+          Enable IDNorm
         </label>
-        {integrations.status.digioConfigured && integrations.digioEnabled !== false && (
-          <p className="text-sm text-green-700">
-            Digio credentials are saved. Leave secret fields empty to keep them.
-          </p>
+        {integrations.status.idnormConfigured && (
+          <p className="text-sm text-green-700">IDNorm API key is saved. Leave empty to keep it.</p>
         )}
         <Select
-          label="Digio environment"
-          value={integrations.digioEnvironment || "production"}
-          onChange={(e) =>
-            onIntegrationsChange({ ...integrations, digioEnvironment: e.target.value })
-          }
+          label="Environment"
+          value={integrations.idnormEnvironment}
+          onChange={(e) => onIntegrationsChange({ ...integrations, idnormEnvironment: e.target.value })}
           options={[
-            { value: "production", label: "Production (api.digio.in)" },
-            { value: "sandbox", label: "Sandbox (ext.digio.in)" },
+            { value: "production", label: "Production" },
+            { value: "sandbox", label: "Sandbox" },
           ]}
         />
         <Input
-          label="Digio Client ID"
+          label="API Key"
           type="password"
-          value={integrations.digioClientId}
-          placeholder={
-            integrations.status.digioConfigured ? "Leave empty to keep saved ID" : "Paste DIGIO_CLIENT_ID"
-          }
-          onChange={(e) => onIntegrationsChange({ ...integrations, digioClientId: e.target.value })}
-        />
-        <Input
-          label="Digio Client Secret"
-          type="password"
-          value={integrations.digioClientSecret}
-          placeholder={
-            integrations.status.digioConfigured
-              ? "Leave empty to keep saved secret"
-              : "Paste DIGIO_CLIENT_SECRET"
-          }
-          onChange={(e) =>
-            onIntegrationsChange({ ...integrations, digioClientSecret: e.target.value })
-          }
-        />
-        <Input
-          label="Digio Webhook Secret"
-          type="password"
-          value={integrations.digioWebhookSecret}
-          placeholder={
-            integrations.status.digioConfigured
-              ? "Leave empty to keep saved secret"
-              : "Paste DIGIO_WEBHOOK_SECRET"
-          }
-          onChange={(e) =>
-            onIntegrationsChange({ ...integrations, digioWebhookSecret: e.target.value })
-          }
-        />
-        <Input
-          label="Template — Applicant identity (optional override)"
-          value={integrations.digioTemplateIdentity}
-          onChange={(e) =>
-            onIntegrationsChange({ ...integrations, digioTemplateIdentity: e.target.value })
-          }
-          placeholder="Optional — uses standard Digio KYC when empty"
-        />
-        <Input
-          label="Template — Bank account (optional DigiStudio flow)"
-          value={integrations.digioTemplateBank}
-          onChange={(e) =>
-            onIntegrationsChange({ ...integrations, digioTemplateBank: e.target.value })
-          }
-          placeholder="Bank verification uses penny drop API with client credentials"
-        />
-        <Input
-          label="Template — Undertaking identity"
-          value={integrations.digioTemplateUndertaking}
-          onChange={(e) =>
-            onIntegrationsChange({ ...integrations, digioTemplateUndertaking: e.target.value })
-          }
-          placeholder="Optional — face-match / re-KYC template"
+          value={integrations.idnormApiKey}
+          placeholder={integrations.status.idnormConfigured ? "Leave empty to keep saved key" : "Paste IDNorm API Key"}
+          onChange={(e) => onIntegrationsChange({ ...integrations, idnormApiKey: e.target.value })}
         />
         <p className="text-xs text-gray-500">
-          Client ID and secret enable standard Digio identity KYC (Web SDK v11) and bank penny-drop
-          verification. When Digio is disabled, applicants upload ID documents and bank proof for
-          manual review. Docs:{" "}
-          <a
-            className="text-primary-700 underline"
-            href="https://documentation.digio.in/sdk/web/web/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Web SDK
-          </a>
-          ,{" "}
-          <a
-            className="text-primary-700 underline"
-            href="https://documentation.digio.in/digikyc/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            DigiKYC
-          </a>
-          ,{" "}
-          <a
-            className="text-primary-700 underline"
-            href="https://documentation.digio.in/digikyc/bank_account_verification/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Bank verification
-          </a>
-          ,{" "}
-          <a
-            className="text-primary-700 underline"
-            href="https://documentation.digio.in/webhooks/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Webhooks
-          </a>
-          .
+          Register this webhook URL in the IDNorm dashboard: <code>{buildIdnormWebhookUrl(integrations.appUrl)}</code>
         </p>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+      </div>
+
+      <div className="card space-y-4">
+        <h2 className="font-semibold">Accurascan Configuration</h2>
+        <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={integrations.digioRequireIdentityForScrutiny}
-            onChange={(e) =>
-              onIntegrationsChange({
-                ...integrations,
-                digioRequireIdentityForScrutiny: e.target.checked,
-              })
-            }
+            checked={integrations.accurascanEnabled}
+            onChange={(e) => onIntegrationsChange({ ...integrations, accurascanEnabled: e.target.checked })}
           />
-          Require Digio online identity verification before admin document scrutiny approval
-          {!integrations.status.digioIdentityConfigured ? " (add Digio client credentials first)" : ""}
+          Enable Accurascan
         </label>
+        {integrations.status.accurascanConfigured && (
+          <p className="text-sm text-green-700">Accurascan keys are saved. Leave empty to keep them.</p>
+        )}
+        <Select
+          label="Environment"
+          value={integrations.accurascanEnvironment}
+          onChange={(e) => onIntegrationsChange({ ...integrations, accurascanEnvironment: e.target.value })}
+          options={[
+            { value: "production", label: "Production" },
+            { value: "sandbox", label: "Sandbox" },
+          ]}
+        />
+        <Input
+          label="API Key"
+          type="password"
+          value={integrations.accurascanApiKey}
+          placeholder={integrations.status.accurascanConfigured ? "Leave empty to keep saved key" : "Paste Accurascan API Key"}
+          onChange={(e) => onIntegrationsChange({ ...integrations, accurascanApiKey: e.target.value })}
+        />
+        <Input
+          label="API Secret"
+          type="password"
+          value={integrations.accurascanApiSecret}
+          placeholder={integrations.status.accurascanConfigured ? "Leave empty to keep saved secret" : "Paste Accurascan API Secret"}
+          onChange={(e) => onIntegrationsChange({ ...integrations, accurascanApiSecret: e.target.value })}
+        />
+        <p className="text-xs text-gray-500">
+          Register this webhook URL in the Accurascan dashboard: <code>{buildAccurascanWebhookUrl(integrations.appUrl)}</code>
+        </p>
       </div>
 
       <p className="text-xs text-gray-500">

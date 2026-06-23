@@ -19,8 +19,7 @@ import {
 } from "@/lib/fellowship-tracking";
 import { getInstallmentRequirementStatus } from "@/lib/installment-gates";
 import { repairApplicationIfNeeded } from "@/lib/fellowship-access";
-import { getIntegrationConfig } from "@/lib/integrations";
-import { isDigioIdentityConfigured } from "@/lib/digio";
+import { getIntegrationConfig, isIdentityVerificationConfigured } from "@/lib/integrations";
 import { shouldTrackIdentityVerification } from "@/lib/identity-verification-tracking";
 import { mapApplicationDocumentForClient } from "@/lib/upload-files";
 import {
@@ -66,8 +65,8 @@ export async function GET() {
   });
 
   const integrationConfig = await getIntegrationConfig();
-  const digioIdentityEnabled = await isDigioIdentityConfigured();
-  const manualIdentityEnabled = !digioIdentityEnabled;
+  const identityVerificationConfigured = await isIdentityVerificationConfigured();
+  const manualIdentityEnabled = false; // Now we only want to allow online verification as per user request
 
   const payload = await Promise.all(
     applications.map(async (app) => {
@@ -78,15 +77,15 @@ export async function GET() {
       const fellowshipStage = fellowship?.currentStage ?? null;
       const identitySession = app.verificationSessions[0] ?? null;
       const identityVerification =
-        digioIdentityEnabled || manualIdentityEnabled
+        identityVerificationConfigured
           ? {
               enabled: true,
-              required: integrationConfig.digio.requireIdentityForScrutiny,
+              required: true,
               status: app.identityVerificationStatus,
               verifiedAt: app.identityVerifiedAt,
               sessionUpdatedAt: identitySession?.updatedAt ?? null,
               sessionStartedAt: identitySession?.createdAt ?? null,
-              manual: manualIdentityEnabled,
+              manual: false,
             }
           : null;
       const milestoneStates = getMilestoneStates(effectiveStatus, fellowshipStage);

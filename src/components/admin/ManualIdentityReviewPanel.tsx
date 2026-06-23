@@ -98,7 +98,7 @@ export function ManualIdentityReviewPanel({
         <h3 className="font-semibold text-gray-900">Manual identity verification</h3>
         <p className="mt-1 text-sm text-gray-600">
           Review uploaded government ID and photo. Approve, reject, or request resubmission when
-          Digio online verification is disabled.
+          documents manually while online verification is disabled.
         </p>
         <p className="mt-2 text-sm text-gray-800">
           Status: <strong>{status.replace(/_/g, " ")}</strong>

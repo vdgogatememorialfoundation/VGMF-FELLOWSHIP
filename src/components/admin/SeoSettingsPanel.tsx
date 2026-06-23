@@ -129,7 +129,7 @@ export function SeoSettingsPanel({
             API Settings still points to the seminar site ({integrationAppUrl}). SEO URLs below use
             the fellowship domain instead. Save{" "}
             <strong>{FELLOWSHIP_PUBLIC_SITE_URL}</strong> as the public site URL, and update App URL
-            in API Settings for webhooks and Digio callbacks.
+            in API Settings for webhooks and callbacks.
           </div>
         )}
       </div>

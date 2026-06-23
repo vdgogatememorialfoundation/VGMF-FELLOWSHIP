@@ -1,6 +1,6 @@
 import type { DocumentStatus, VerificationStatus } from "@prisma/client";
 import prisma from "./db";
-import { isDigioBankConfigured, isDigioIdentityConfigured } from "./digio";
+import { isIdentityVerificationConfigured } from "./integrations";
 
 export const MANUAL_IDENTITY_DOCUMENT_TYPES = ["GOVERNMENT_ID", "IDENTITY_SELFIE"] as const;
 
@@ -10,12 +10,12 @@ export function isManualIdentityDocumentType(type: string): type is ManualIdenti
   return (MANUAL_IDENTITY_DOCUMENT_TYPES as readonly string[]).includes(type);
 }
 
-export async function isDigioIdentityAvailable(): Promise<boolean> {
-  return isDigioIdentityConfigured();
+export async function isIdentityOnlineAvailable(): Promise<boolean> {
+  return isIdentityVerificationConfigured();
 }
 
-export async function isDigioBankAvailable(): Promise<boolean> {
-  return isDigioBankConfigured();
+export async function isBankOnlineAvailable(): Promise<boolean> {
+  return false; // Replaced Digio bank logic
 }
 
 export function getManualIdentityDocumentLabel(type: string): string {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import {
-  isDigioIdentityAvailable,
+  isIdentityOnlineAvailable,
   MANUAL_IDENTITY_DOCUMENT_TYPES,
   getManualIdentityDocumentLabel,
   syncManualIdentityVerification,
@@ -43,11 +43,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 
-  const digioAvailable = await isDigioIdentityAvailable();
+  const onlineAvailable = await isIdentityOnlineAvailable();
 
   return NextResponse.json({
-    mode: digioAvailable ? "digio" : "manual",
-    digioAvailable,
+    mode: onlineAvailable ? "online" : "manual",
+    onlineAvailable,
     status: application.identityVerificationStatus,
     verifiedAt: application.identityVerifiedAt,
     verificationNotes: application.verificationNotes,
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       };
     }),
     canSubmit:
-      !digioAvailable &&
+      !onlineAvailable &&
       MANUAL_IDENTITY_DOCUMENT_TYPES.every((type) =>
         application.documents.some((doc) => doc.type === type)
       ) &&
@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (await isDigioIdentityAvailable()) {
+  if (await isIdentityOnlineAvailable()) {
     return NextResponse.json(
-      { error: "Online Digio verification is active. Use the Digio panel instead." },
+      { error: "Online verification is active. Use the online panel instead." },
       { status: 400 }
     );
   }

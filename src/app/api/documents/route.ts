@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notifyDocumentReviewed } from "@/lib/notifications";
 import { canReplaceApplicationDocument } from "@/lib/document-review";
 import {
-  isDigioIdentityAvailable,
+  isIdentityOnlineAvailable,
   isManualIdentityDocumentType,
   syncManualIdentityVerification,
 } from "@/lib/manual-verification";
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     if (
       isManualIdentityDocumentType(docType) &&
-      !(await isDigioIdentityAvailable())
+      !(await isIdentityOnlineAvailable())
     ) {
       await syncManualIdentityVerification(applicationId);
     }
@@ -214,7 +214,7 @@ export async function PATCH(request: NextRequest) {
 
     if (
       isManualIdentityDocumentType(document.type) &&
-      !(await isDigioIdentityAvailable())
+      !(await isIdentityOnlineAvailable())
     ) {
       await syncManualIdentityVerification(document.applicationId);
     }

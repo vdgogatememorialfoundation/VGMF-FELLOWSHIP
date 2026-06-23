@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { ensureApplicantFellowship, getFellowshipForApplicant } from "@/lib/fellowship-access";
-import { isDigioBankAvailable } from "@/lib/manual-verification";
+import { isBankOnlineAvailable } from "@/lib/manual-verification";
 
 function maskAccountNumber(value: string) {
   if (value.length <= 4) return value;
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         bankBranch: branch?.trim() || null,
         bankSubmittedAt: new Date(),
         bankVerifiedAt: null,
-        bankVerificationStatus: (await isDigioBankAvailable()) ? "NOT_STARTED" : "IN_PROGRESS",
+        bankVerificationStatus: (await isBankOnlineAvailable()) ? "NOT_STARTED" : "IN_PROGRESS",
         currentStage:
           fellowship.currentStage === "AGREEMENT_PENDING"
             ? "BANK_VERIFICATION"
