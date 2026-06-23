@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ManualIdentityVerificationPanel } from "@/components/verification/ManualIdentityVerificationPanel";
+import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 import { formatApplicationNumber } from "@/lib/application-number";
 
 type ApplicationSummary = {
