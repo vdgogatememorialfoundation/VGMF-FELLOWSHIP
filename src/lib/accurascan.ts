@@ -57,7 +57,7 @@ export async function createAccurascanSession(input: {
   // TODO: Replace with actual Accurascan API call
   // For now, mock the response
   const mockSessionId = `accurascan_${Date.now()}`;
-  const mockVerificationUrl = `https://verify.accurascan.com/session/${mockSessionId}`;
+  const mockVerificationUrl = `${config.appUrl}/mock-provider/accurascan?session=${mockSessionId}`;
 
   const record = await prisma.verificationSession.create({
     data: {

@@ -53,7 +53,7 @@ export async function createIdnormSession(input: {
   // TODO: Replace with actual IDNorm API call
   // For now, mock the response
   const mockSessionId = `idnorm_${Date.now()}`;
-  const mockVerificationUrl = `https://verify.idnorm.com/session/${mockSessionId}`;
+  const mockVerificationUrl = `${config.appUrl}/mock-provider/idnorm?session=${mockSessionId}`;
 
   const record = await prisma.verificationSession.create({
     data: {
