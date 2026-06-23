@@ -6,7 +6,7 @@ import { isBankOnlineAvailable } from "@/lib/manual-verification";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession(req);
+    const session = await getSession();
     if (!session?.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
