@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const verificationResult = await verifySetuBankAccount(accountNumber, ifsc);
 
     // Save result to the database
-    const verificationSession = await prisma.verificationSession.create({
+    await prisma.verificationSession.create({
       data: {
         userId: session.userId,
         provider: "SETU",
@@ -39,10 +39,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(verificationResult);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Bank Verification Error:", error);
+    const status = error && typeof error === "object" && "status" in error ? (error as {status: number}).status : 500;
     return NextResponse.json({ 
-      error: error.message || "Failed to verify bank account" 
-    }, { status: error.status || 500 });
+      error: error instanceof Error ? error.message : "Failed to verify bank account" 
+    }, { status });
   }
 }

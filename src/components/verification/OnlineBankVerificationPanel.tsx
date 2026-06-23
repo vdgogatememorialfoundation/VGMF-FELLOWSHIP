@@ -14,7 +14,7 @@ export function OnlineBankVerificationPanel({ applicationId, onSuccess }: Props)
   const [ifsc, setIfsc] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successData, setSuccessData] = useState<any>(null);
+  const [successData, setSuccessData] = useState<{nameAtBank?: string; message?: string} | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +35,8 @@ export function OnlineBankVerificationPanel({ applicationId, onSuccess }: Props)
         setSuccessData(data);
         onSuccess("APPROVED");
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
