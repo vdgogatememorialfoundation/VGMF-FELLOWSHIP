@@ -226,21 +226,19 @@ interface Integrations {
   emailOtpSubject: string;
   whatsappWebhookUrl?: string;
   notificationTemplates: NotificationEventTemplate[];
-  idnormApiKey: string;
-  idnormEnvironment: string;
-  idnormEnabled: boolean;
-  accurascanApiKey: string;
-  accurascanEnvironment: string;
-  accurascanEnabled: boolean;
+  setuEnabled: boolean;
+  setuClientId: string;
+  setuClientSecret: string;
+  setuProductInstanceId: string;
+  setuEnvironment: string;
   activeVerificationProvider: string;
   status: {
     emailConfigured: boolean;
     whatsappConfigured: boolean;
-    idnormConfigured: boolean;
-    accurascanConfigured: boolean;
+    setuConfigured: boolean;
     emailSource: string;
     whatsappSource: string;
-    verificationSource: string;
+    verificationSource?: string;
   };
 }
 
@@ -341,8 +339,9 @@ export function WebsiteUpdates() {
             ...d.integrations,
             zeptomailToken: "",
             whatsappToken: "",
-            idnormApiKey: "",
-            accurascanApiKey: "",
+            setuClientId: "",
+            setuClientSecret: "",
+            setuProductInstanceId: "",
           });
         }
 
