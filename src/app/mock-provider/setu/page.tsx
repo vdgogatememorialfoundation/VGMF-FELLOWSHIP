@@ -72,7 +72,7 @@ export default function MockSetuPage() {
           
           <Button
             className="w-full"
-            variant="tertiary"
+            variant="secondary"
             loading={loading}
             onClick={() => router.push("/applicant/verification")}
           >

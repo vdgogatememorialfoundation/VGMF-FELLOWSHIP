@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { OnlineIdentityVerificationPanel } from "@/components/verification/OnlineIdentityVerificationPanel";
 import { ManualIdentityVerificationPanel } from "@/components/verification/ManualIdentityVerificationPanel";
-import { OnlineBankVerificationPanel } from "@/components/verification/OnlineBankVerificationPanel";
-import { IdentityVerificationTracker } from "@/components/verification/IdentityVerificationTracker";
 import { formatApplicationNumber } from "@/lib/application-number";
 
 type ApplicationSummary = {
@@ -84,29 +81,14 @@ export default function ApplicantVerificationPage() {
       </div>
 
       {showPanel ? (
-        verificationMode === "online" ? (
-          <OnlineIdentityVerificationPanel
-            purpose="APPLICANT_IDENTITY"
-            applicationId={application.id}
-            title="Applicant identity verification"
-            description="Verify your name and photo against your uploaded application details securely online."
-            verifiedAt={application.identityVerifiedAt}
-            onStatusChange={(status) =>
-              setApplication((prev) =>
-                prev ? { ...prev, identityVerificationStatus: status } : prev
-              )
-            }
-          />
-        ) : (
-          <ManualIdentityVerificationPanel
-            applicationId={application.id}
-            onStatusChange={(status) =>
-              setApplication((prev) =>
-                prev ? { ...prev, identityVerificationStatus: status } : prev
-              )
-            }
-          />
-        )
+        <ManualIdentityVerificationPanel
+          applicationId={application.id}
+          onStatusChange={(status) =>
+            setApplication((prev) =>
+              prev ? { ...prev, identityVerificationStatus: status } : prev
+            )
+          }
+        />
       ) : (
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
@@ -124,17 +106,6 @@ export default function ApplicantVerificationPage() {
               verifiedAt={application.identityVerifiedAt}
             />
           )}
-        </div>
-      )}
-
-      {showPanel && verificationMode === "online" && (
-        <div className="pt-6 border-t border-gray-200">
-          <OnlineBankVerificationPanel
-            applicationId={application.id}
-            onSuccess={() => {
-              // Optionally handle success callback, page refresh, etc.
-            }}
-          />
         </div>
       )}
 
