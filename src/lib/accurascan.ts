@@ -48,7 +48,7 @@ export async function createAccurascanSession(input: {
   referenceId: string;
 }): Promise<{ recordId: string; verificationUrl: string }> {
   const config = await getAccurascanConfig();
-  if (!config.apiKey || !config.apiSecret) {
+  if (!config.apiKey) {
     throw new AccurascanApiError("Accurascan is not configured", 503);
   }
 

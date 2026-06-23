@@ -28,17 +28,25 @@ export function OnlineIdentityVerificationPanel({
     setError("");
 
     try {
-      // In a real implementation, this would call the backend to initiate a session
-      // and redirect to the provider's SDK or hosted page.
-      // For now, simulate success:
-      setTimeout(() => {
-        setLoading(false);
-        onStatusChange("APPROVED");
-        alert("Verification completed successfully (Simulated)");
-      }, 2000);
-    } catch (err) {
+      const res = await fetch("/api/verification/online/identity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purpose, applicationId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to start verification.");
+      }
+
+      if (data.verificationUrl) {
+        window.location.href = data.verificationUrl;
+      } else {
+        throw new Error("No verification URL returned.");
+      }
+    } catch (err: unknown) {
       setLoading(false);
-      setError("Failed to start verification.");
+      setError(err instanceof Error ? err.message : "Failed to start verification.");
     }
   };
 
