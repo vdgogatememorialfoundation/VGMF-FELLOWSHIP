@@ -244,6 +244,7 @@ export async function getIntegrationSettingsForAdmin() {
       accurascanConfigured: await isAccurascanConfigured(),
       emailSource: db?.zeptomailToken ? "database" : process.env.ZEPTOMAIL_TOKEN ? "environment" : "none",
       whatsappSource: db?.whatsappToken ? "database" : process.env.WHATSAPP_TOKEN ? "environment" : "none",
+      verificationSource: config.activeVerificationProvider ? "database" : "none",
     },
   };
 }
