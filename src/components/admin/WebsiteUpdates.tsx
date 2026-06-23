@@ -230,7 +230,6 @@ interface Integrations {
   idnormEnvironment: string;
   idnormEnabled: boolean;
   accurascanApiKey: string;
-  accurascanApiSecret: string;
   accurascanEnvironment: string;
   accurascanEnabled: boolean;
   activeVerificationProvider: string;
@@ -344,7 +343,6 @@ export function WebsiteUpdates() {
             whatsappToken: "",
             idnormApiKey: "",
             accurascanApiKey: "",
-            accurascanApiSecret: "",
           });
         }
 
@@ -433,7 +431,6 @@ export function WebsiteUpdates() {
           whatsappWebhookVerifyToken: integrations.whatsappWebhookVerifyToken.trim() || undefined,
           idnormApiKey: integrations.idnormApiKey.trim() || undefined,
           accurascanApiKey: integrations.accurascanApiKey.trim() || undefined,
-          accurascanApiSecret: integrations.accurascanApiSecret.trim() || undefined,
         },
       }),
       cache: "no-store",

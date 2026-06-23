@@ -254,7 +254,7 @@ export async function PUT(request: NextRequest) {
         idnormEnvironment: data.idnormEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
         accurascanEnabled: data.accurascanEnabled === true,
         accurascanApiKey: resolveSecret(data.accurascanApiKey, existing?.accurascanApiKey ?? null),
-        accurascanApiSecret: resolveSecret(data.accurascanApiSecret, existing?.accurascanApiSecret ?? null),
+
         accurascanEnvironment: data.accurascanEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
         activeVerificationProvider: data.activeVerificationProvider?.trim() || "IDNORM",
       },
@@ -281,7 +281,7 @@ export async function PUT(request: NextRequest) {
         idnormEnvironment: data.idnormEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
         accurascanEnabled: data.accurascanEnabled === true,
         accurascanApiKey: isMaskedSecret(data.accurascanApiKey) ? null : data.accurascanApiKey?.trim() || null,
-        accurascanApiSecret: isMaskedSecret(data.accurascanApiSecret) ? null : data.accurascanApiSecret?.trim() || null,
+
         accurascanEnvironment: data.accurascanEnvironment?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production",
         activeVerificationProvider: data.activeVerificationProvider?.trim() || "IDNORM",
       },

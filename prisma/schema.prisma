@@ -893,7 +893,7 @@ model IntegrationSettings {
   idnormEnvironment           String?  @default("production") @map("idnorm_environment")
   accurascanEnabled           Boolean  @default(false) @map("accurascan_enabled")
   accurascanApiKey            String?  @map("accurascan_api_key")
-  accurascanApiSecret         String?  @map("accurascan_api_secret")
+
   accurascanEnvironment       String?  @default("production") @map("accurascan_environment")
   updatedAt                   DateTime @updatedAt @map("updated_at")
 

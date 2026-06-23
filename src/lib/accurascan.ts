@@ -27,7 +27,7 @@ export async function getAccurascanConfig(): Promise<AccurascanConfig> {
   return {
     enabled: db?.accurascanEnabled ?? false,
     apiKey: db?.accurascanApiKey || null,
-    apiSecret: db?.accurascanApiSecret || null,
+    apiSecret: null,
     environment: db?.accurascanEnvironment === "sandbox" ? "sandbox" : "production",
     appUrl: integration.appUrl.replace(/\/$/, ""),
   };

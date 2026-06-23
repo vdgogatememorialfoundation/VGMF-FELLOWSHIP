@@ -62,7 +62,6 @@ type IntegrationsState = {
   // Accurascan
   accurascanEnabled: boolean;
   accurascanApiKey: string;
-  accurascanApiSecret: string;
   accurascanEnvironment: string;
   
   activeVerificationProvider: string;
@@ -771,13 +770,7 @@ export function IntegrationsSettingsPanel({
           placeholder={integrations.status.accurascanConfigured ? "Leave empty to keep saved key" : "Paste Accurascan API Key"}
           onChange={(e) => onIntegrationsChange({ ...integrations, accurascanApiKey: e.target.value })}
         />
-        <Input
-          label="API Secret"
-          type="password"
-          value={integrations.accurascanApiSecret}
-          placeholder={integrations.status.accurascanConfigured ? "Leave empty to keep saved secret" : "Paste Accurascan API Secret"}
-          onChange={(e) => onIntegrationsChange({ ...integrations, accurascanApiSecret: e.target.value })}
-        />
+
         <p className="text-xs text-gray-500">
           Register this webhook URL in the Accurascan dashboard: <code>{buildAccurascanWebhookUrl(integrations.appUrl)}</code>
         </p>

@@ -166,7 +166,7 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
     accurascan: {
       enabled: db?.accurascanEnabled ?? false,
       apiKey: db?.accurascanApiKey || process.env.ACCURASCAN_API_KEY || null,
-      apiSecret: db?.accurascanApiSecret || process.env.ACCURASCAN_API_SECRET || null,
+      apiSecret: null,
       environment: db?.accurascanEnvironment === "sandbox" ? "sandbox" : "production",
     },
     activeVerificationProvider: db?.activeVerificationProvider || "IDNORM",
@@ -232,7 +232,6 @@ export async function getIntegrationSettingsForAdmin() {
     // Accurascan
     accurascanEnabled: config.accurascan.enabled,
     accurascanApiKey: maskSecret(db?.accurascanApiKey || process.env.ACCURASCAN_API_KEY),
-    accurascanApiSecret: maskSecret(db?.accurascanApiSecret || process.env.ACCURASCAN_API_SECRET),
     accurascanEnvironment: config.accurascan.environment,
     
     activeVerificationProvider: config.activeVerificationProvider,
@@ -244,7 +243,6 @@ export async function getIntegrationSettingsForAdmin() {
       accurascanConfigured: await isAccurascanConfigured(),
       emailSource: db?.zeptomailToken ? "database" : process.env.ZEPTOMAIL_TOKEN ? "environment" : "none",
       whatsappSource: db?.whatsappToken ? "database" : process.env.WHATSAPP_TOKEN ? "environment" : "none",
-      verificationSource: config.activeVerificationProvider ? "database" : "none",
     },
   };
 }
