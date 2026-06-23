@@ -1,7 +1,17 @@
 "use client";
 
-import { getVerificationPurposeLabel, getVerificationStatusLabel } from "@/lib/idnorm";
+function getVerificationPurposeLabel(purpose: string) {
+  switch (purpose) {
+    case "APPLICANT_IDENTITY": return "Applicant Identity";
+    case "BANK_ACCOUNT": return "Bank Account";
+    case "UNDERTAKING_IDENTITY": return "Undertaking Identity";
+    default: return purpose;
+  }
+}
 
+function getVerificationStatusLabel(status: string) {
+  return status;
+}
 type VerificationSessionRecord = {
   id: string;
   providerRequestId: string;

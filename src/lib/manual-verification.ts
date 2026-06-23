@@ -15,8 +15,7 @@ export async function isIdentityOnlineAvailable(): Promise<boolean> {
 }
 
 export async function isBankOnlineAvailable(): Promise<boolean> {
-  const { isSetConfigured } = await import("./setu");
-  return isSetConfigured();
+  return isIdentityVerificationConfigured();
 }
 
 export function getManualIdentityDocumentLabel(type: string): string {

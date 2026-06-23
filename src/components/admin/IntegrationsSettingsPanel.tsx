@@ -685,6 +685,7 @@ export function IntegrationsSettingsPanel({
           onChange={(e) => onIntegrationsChange({ ...integrations, activeVerificationProvider: e.target.value })}
           options={[
             { value: "SETU", label: "SetuHQ" },
+            { value: "MANUAL", label: "Manual Verification Only" },
           ]}
         />
       </div>
