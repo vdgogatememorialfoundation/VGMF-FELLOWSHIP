@@ -35,7 +35,7 @@ export async function getAccurascanConfig(): Promise<AccurascanConfig> {
 
 export async function isAccurascanConfigured(): Promise<boolean> {
   const config = await getAccurascanConfig();
-  return !!(config.enabled && config.apiKey && config.apiSecret);
+  return !!(config.enabled && config.apiKey);
 }
 
 export async function createAccurascanSession(input: {
