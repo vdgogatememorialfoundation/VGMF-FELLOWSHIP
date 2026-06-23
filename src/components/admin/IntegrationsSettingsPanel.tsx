@@ -245,7 +245,7 @@ export function IntegrationsSettingsPanel({
           onChange={(e) => onIntegrationsChange({ ...integrations, appUrl: e.target.value })}
         />
         <p className="text-xs text-gray-500">
-          Used for login links, Digio callbacks, and the default WhatsApp webhook URL below.
+          Used for login links, verification callbacks, and the default WhatsApp webhook URL below.
           For Google SEO, set the fellowship URL in the SEO & Google tab.
         </p>
         {integrations.appUrlCorrectedFromStored && (

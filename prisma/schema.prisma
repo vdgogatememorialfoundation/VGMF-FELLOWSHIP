@@ -580,7 +580,7 @@ model Fellowship {
   bankSubmittedAt   DateTime? @map("bank_submitted_at")
   bankVerifiedAt    DateTime? @map("bank_verified_at")
   bankVerificationStatus VerificationStatus @default(NOT_STARTED) @map("bank_verification_status")
-  bankDigioVerifiedAt DateTime? @map("bank_didit_verified_at")
+  bankOnlineVerifiedAt DateTime? @map("bank_online_verified_at")
   agreementPdfData  String?   @map("agreement_pdf_data") @db.Text
   agreementGeneratedAt DateTime? @map("agreement_generated_at")
   isActive         Boolean  @default(true) @map("is_active")

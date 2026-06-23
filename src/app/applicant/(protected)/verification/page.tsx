@@ -39,7 +39,7 @@ export default function ApplicantVerificationPage() {
           const modeData = await modeRes.json();
           if (modeRes.ok) {
             // Note: mode is determined dynamically based on active configuration
-            setVerificationMode(modeData.mode === "digio" || modeData.mode === "online" ? "online" : "manual");
+            setVerificationMode(modeData.mode === "online" ? "online" : "manual");
           } else {
             setVerificationMode("manual");
           }
@@ -88,7 +88,7 @@ export default function ApplicantVerificationPage() {
             purpose="APPLICANT_IDENTITY"
             applicationId={application.id}
             title="Applicant identity verification"
-            description="Verify your name and photo against your uploaded application details through Digio."
+            description="Verify your name and photo against your uploaded application details securely online."
             verifiedAt={application.identityVerifiedAt}
             onStatusChange={(status) =>
               setApplication((prev) =>
