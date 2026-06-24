@@ -42,7 +42,11 @@ export default function StaffApplicationsPage() {
               };
               return (
                 <tr key={a.id} className="border-b">
-                  <td className="py-3 pr-4 font-medium">{a.applicationNumber}</td>
+                  <td className="py-3 pr-4 font-medium">
+                    <a href={`/staff/applications/${a.id}`} className="text-primary-600 hover:underline">
+                      {a.applicationNumber}
+                    </a>
+                  </td>
                   <td className="py-3 pr-4">{a.user.profile?.name}</td>
                   <td className="py-3 pr-4">{a.researchProposal?.projectTitle ?? "—"}</td>
                   <td className="py-3 pr-4">
