@@ -48,7 +48,7 @@ export async function AdminLayout({ children }: { children: React.ReactNode }) {
 }
 
 export async function StaffLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAuth(["STAFF", "FINANCE"], "staff");
+  const user = await requireAuth(["STAFF", "FINANCE", "COADMIN"], "staff");
   return <PortalLayout user={user} portal="staff">{children}</PortalLayout>;
 }
 

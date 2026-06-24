@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { id, isActive, password } = parsed.data;
+    const { id, isActive, password, role } = parsed.data;
 
     if (id === user.id && isActive === false) {
       return NextResponse.json(
@@ -107,6 +107,7 @@ export async function PATCH(request: NextRequest) {
     const updated = await updateUserByAdmin(id, {
       ...(isActive !== undefined ? { isActive } : {}),
       ...(password ? { password } : {}),
+      ...(role ? { role } : {}),
     });
 
     if (!STAFF_ROLES.includes(updated.role)) {

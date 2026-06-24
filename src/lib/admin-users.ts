@@ -5,13 +5,14 @@ import { generateUserId } from "./numeric-id";
 import { normalizePhoneDigits } from "./phone";
 import { roleToPortal, getLoginPath } from "./portal";
 
-export const STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"];
+export const STAFF_ROLES: UserRole[] = ["ADMIN", "COADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"];
 
 export const ALL_PORTAL_ROLES: UserRole[] = [...STAFF_ROLES, "APPLICANT"];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   APPLICANT: "Applicant",
   ADMIN: "Admin",
+  COADMIN: "Co-Admin",
   STAFF: "Staff",
   FINANCE: "Finance",
   COMMITTEE: "Reviewer",
@@ -97,6 +98,7 @@ export async function updateUserByAdmin(
     name?: string;
     email?: string;
     phone?: string;
+    role?: UserRole;
   }
 ) {
   const update: {
@@ -105,10 +107,15 @@ export async function updateUserByAdmin(
     adminPassword?: string;
     email?: string;
     phone?: string | null;
+    role?: UserRole;
   } = {};
 
   if (data.isActive !== undefined) {
     update.isActive = data.isActive;
+  }
+
+  if (data.role !== undefined) {
+    update.role = data.role;
   }
 
   if (data.password) {

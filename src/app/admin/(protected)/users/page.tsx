@@ -20,6 +20,7 @@ interface PortalUser {
 
 const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Admin" },
+  { value: "COADMIN", label: "Co-Admin" },
   { value: "STAFF", label: "Staff" },
   { value: "FINANCE", label: "Finance" },
   { value: "COMMITTEE", label: "Reviewer" },
@@ -28,6 +29,7 @@ const ROLE_OPTIONS = [
 
 const LOGIN_PATHS: Record<string, string> = {
   ADMIN: "/admin",
+  COADMIN: "/staff",
   STAFF: "/staff",
   FINANCE: "/staff",
   COMMITTEE: "/reviewer",
@@ -100,6 +102,21 @@ export default function AdminUsersPage() {
     });
 
     if (res.ok) load();
+  }
+
+  async function updateRole(id: string, role: string) {
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, role }),
+    });
+
+    if (res.ok) {
+      load();
+    } else {
+      const data = await res.json();
+      setError(data.error || "Failed to update role");
+    }
   }
 
   async function deleteUser(id: string) {
@@ -207,7 +224,19 @@ export default function AdminUsersPage() {
                 <td className="py-3 pr-4 font-medium">{entry.userId}</td>
                 <td className="py-3 pr-4">{entry.name}</td>
                 <td className="py-3 pr-4">{entry.email}</td>
-                <td className="py-3 pr-4">{entry.roleLabel}</td>
+                <td className="py-3 pr-4">
+                  <select
+                    className="rounded-md border border-gray-300 py-1 pl-2 pr-6 text-xs text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    value={entry.role}
+                    onChange={(e) => updateRole(entry.id, e.target.value)}
+                  >
+                    {ROLE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="py-3 pr-4 font-mono text-xs text-primary-600">
                   {LOGIN_PATHS[entry.role] || "—"}
                 </td>

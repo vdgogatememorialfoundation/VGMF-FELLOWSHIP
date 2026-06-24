@@ -178,7 +178,7 @@ export const adminCreateUserSchema = z
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     phone: z.string().min(10, "Phone must be at least 10 digits").optional().or(z.literal("")),
-    role: z.enum(["ADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"]),
+    role: z.enum(["ADMIN", "COADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"]),
     ...passwordFields,
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -193,6 +193,7 @@ export const adminUpdateUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().optional(),
+  role: z.enum(["ADMIN", "COADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"]).optional(),
 });
 
 export const profileSchema = z.object({
