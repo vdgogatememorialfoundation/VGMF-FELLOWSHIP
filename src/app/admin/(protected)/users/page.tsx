@@ -43,8 +43,6 @@ export default function AdminUsersPage() {
     email: "",
     phone: "",
     role: "STAFF",
-    password: "",
-    confirmPassword: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -85,11 +83,9 @@ export default function AdminUsersPage() {
       email: "",
       phone: "",
       role: "STAFF",
-      password: "",
-      confirmPassword: "",
     });
     setMessage(
-      `Account created for ${data.user.name}. User ID: ${data.user.userId}. Login: ${data.user.loginPath}`
+      `Account created for ${data.user.name}. User ID: ${data.user.userId}. Login: ${data.user.loginPath}. Credentials have been emailed.`
     );
     load();
   }
@@ -172,20 +168,6 @@ export default function AdminUsersPage() {
             label="Phone (optional)"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-          <Input
-            label="Password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            value={form.confirmPassword}
-            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-            required
           />
         </div>
         <p className="text-sm text-gray-500">

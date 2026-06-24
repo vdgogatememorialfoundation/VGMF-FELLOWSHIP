@@ -140,13 +140,14 @@ export async function sendWelcomeNotifications(
   userId: string,
   email: string,
   name: string,
-  userUserId: string
+  userUserId: string,
+  password?: string
 ) {
   const access = await getAccessControl();
   const user = await getUserContact(userId);
 
   if (access.welcomeEmailEnabled) {
-    await sendWelcomeEmail(email, name, userUserId);
+    await sendWelcomeEmail(email, name, userUserId, password);
   }
 
   if (access.welcomeWhatsappEnabled && user?.phone) {

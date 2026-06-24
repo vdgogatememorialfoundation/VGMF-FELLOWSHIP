@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { createUserAccount, listUsersByRoles, formatAccountForAdmin, updateUserByAdmin, deleteUserByAdmin } from "@/lib/admin-users";
@@ -61,13 +62,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, phone, password } = parsed.data;
+    const { name, email, phone } = parsed.data;
+    const generatedPassword = randomBytes(6).toString("hex");
 
     const { user: created, loginPath } = await createUserAccount({
       name,
       email,
       phone: phone || undefined,
-      password,
+      password: generatedPassword,
       role: "APPLICANT",
     });
 
@@ -82,7 +84,8 @@ export async function POST(request: NextRequest) {
       created.id,
       created.email,
       created.profile?.name ?? name,
-      created.userId
+      created.userId,
+      generatedPassword
     );
 
     return NextResponse.json({

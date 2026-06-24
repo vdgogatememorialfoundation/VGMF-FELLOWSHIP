@@ -151,10 +151,21 @@ export async function sendOtpEmail(to: string, code: string): Promise<EmailSendR
 export async function sendWelcomeEmail(
   to: string,
   name: string,
-  userId: string
+  userId: string,
+  password?: string
 ): Promise<EmailSendResult> {
   const config = await getIntegrationConfig();
   const appUrl = config.appUrl;
+
+  const passwordSection = password
+    ? `
+    <div style="margin: 24px 0; padding: 20px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="margin: 0 0 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b;">Your Auto-Generated Password</p>
+      <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1b6b52; font-family: monospace;">${password}</p>
+    </div>
+    <p style="font-size: 13px; color: #64748b;">Please change this password immediately after logging in.</p>
+    `
+    : "";
 
   const bodyContent = `
     <p>Dear <strong>${name}</strong>,</p>
@@ -164,6 +175,7 @@ export async function sendWelcomeEmail(
       <p style="margin: 0 0 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b;">Your Registered User ID</p>
       <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1b6b52; font-family: monospace;">${userId}</p>
     </div>
+    ${passwordSection}
     <p>You can now proceed to your dashboard to complete and submit your fellowship application.</p>
     <div style="margin: 32px 0; text-align: center;">
       <a href="${appUrl}/applicant" style="display: inline-block; background-color: #1b6b52; color: #ffffff; font-weight: 600; padding: 14px 28px; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(27, 107, 82, 0.15); transition: background-color 0.2s;">Go to Dashboard</a>
@@ -220,10 +232,15 @@ export async function sendAccountCreatedEmail(
   name: string,
   userId: string,
   roleLabel: string,
-  loginPath: string
+  loginPath: string,
+  password?: string
 ): Promise<EmailSendResult> {
   const config = await getIntegrationConfig();
   const appUrl = config.appUrl;
+
+  const passwordSection = password
+    ? `<p style="margin: 0; margin-top: 10px;"><span style="color: #64748b; display: inline-block; width: 100px;">Password:</span> <strong style="color: #1b6b52; font-family: monospace; font-size: 16px;">${password}</strong></p>`
+    : "";
 
   const bodyContent = `
     <p>Dear <strong>${name}</strong>,</p>
@@ -231,8 +248,9 @@ export async function sendAccountCreatedEmail(
     <div style="margin: 24px 0; padding: 20px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left;">
       <p style="margin: 0 0 10px 0;"><span style="color: #64748b; display: inline-block; width: 100px;">User ID:</span> <strong style="color: #1b6b52; font-family: monospace; font-size: 16px;">${userId}</strong></p>
       <p style="margin: 0;"><span style="color: #64748b; display: inline-block; width: 100px;">Account Role:</span> <strong>${roleLabel}</strong></p>
+      ${passwordSection}
     </div>
-    <p>To access your account, please sign in at the link below using the temporary password provided by your administrator.</p>
+    <p>To access your account, please sign in at the link below using the temporary password provided.</p>
     <div style="margin: 32px 0; text-align: center;">
       <a href="${appUrl}${loginPath}" style="display: inline-block; background-color: #1b6b52; color: #ffffff; font-weight: 600; padding: 14px 28px; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(27, 107, 82, 0.15);">Access Portal Login</a>
     </div>

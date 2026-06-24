@@ -29,8 +29,6 @@ export default function AdminApplicantsPage() {
     name: "",
     email: "",
     phone: "",
-    password: "",
-    confirmPassword: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -70,11 +68,9 @@ export default function AdminApplicantsPage() {
       name: "",
       email: "",
       phone: "",
-      password: "",
-      confirmPassword: "",
     });
     setMessage(
-      `Applicant account created. User ID: ${data.applicant.userId}. They can log in at /applicant`
+      `Applicant account created. User ID: ${data.applicant.userId}. Login: ${data.applicant.loginPath}. Credentials have been emailed.`
     );
     load();
   }
@@ -133,24 +129,9 @@ export default function AdminApplicantsPage() {
             required
           />
           <Input
-            label="Phone"
+            label="Phone (optional)"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-          <div />
-          <Input
-            label="Password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            value={form.confirmPassword}
-            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-            required
           />
         </div>
         <p className="text-sm text-gray-500">

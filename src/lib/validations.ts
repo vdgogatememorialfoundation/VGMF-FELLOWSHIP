@@ -166,11 +166,6 @@ export const adminCreateApplicantSchema = z
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     phone: z.string().min(10, "Phone must be at least 10 digits").optional().or(z.literal("")),
-    ...passwordFields,
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
   });
 
 export const adminCreateUserSchema = z
@@ -179,11 +174,6 @@ export const adminCreateUserSchema = z
     email: z.string().email("Invalid email address"),
     phone: z.string().min(10, "Phone must be at least 10 digits").optional().or(z.literal("")),
     role: z.enum(["ADMIN", "COADMIN", "STAFF", "FINANCE", "COMMITTEE", "TRUSTEE"]),
-    ...passwordFields,
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
   });
 
 export const adminUpdateUserSchema = z.object({

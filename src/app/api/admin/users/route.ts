@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { getSession } from "@/lib/auth";
 import {
   STAFF_ROLES,
@@ -44,13 +45,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, phone, password, role } = parsed.data;
+    const { name, email, phone, role } = parsed.data;
+    const generatedPassword = randomBytes(6).toString("hex");
 
     const { user: created, loginPath } = await createUserAccount({
       name,
       email,
       phone: phone || undefined,
-      password,
+      password: generatedPassword,
       role,
     });
 
@@ -59,7 +61,8 @@ export async function POST(request: NextRequest) {
       created.profile?.name ?? name,
       created.userId,
       ROLE_LABELS[role],
-      loginPath
+      loginPath,
+      generatedPassword
     );
 
     return NextResponse.json({
