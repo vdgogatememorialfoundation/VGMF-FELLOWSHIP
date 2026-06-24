@@ -198,6 +198,7 @@ export function stampPdfLetterheadOnAllPages(
 ) {
   const range = doc.bufferedPageRange();
   const lastPageIndex = range.start + range.count - 1;
+  console.log("PDF generated with pages:", range.count);
 
   for (let pageIndex = range.start; pageIndex <= lastPageIndex; pageIndex++) {
     doc.switchToPage(pageIndex);

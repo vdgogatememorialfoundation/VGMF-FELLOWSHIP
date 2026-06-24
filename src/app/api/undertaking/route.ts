@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
 
     const application = await prisma.application.findFirst({
       where: { id: applicationId, userId: user.id },
-      include: { digitalUndertaking: true, researchProposal: true },
+      include: { digitalUndertaking: true, researchProposal: true, user: { include: { profile: true } } },
     });
 
     if (!application) {
@@ -265,6 +265,7 @@ export async function POST(request: NextRequest) {
       applicationNumber: application.applicationNumber,
       projectTitle: application.researchProposal?.projectTitle || "________________________________________________",
       fullName: fullName.trim(),
+      city: application.user.profile?.city || "_________________",
       signatureBuffer,
       ipAddress,
       submittedAt,

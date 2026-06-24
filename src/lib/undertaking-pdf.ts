@@ -27,6 +27,7 @@ type GenerateUndertakingPdfParams = {
   applicationNumber: string;
   projectTitle: string;
   fullName: string;
+  city: string;
   signatureBuffer: Buffer;
   ipAddress: string;
   submittedAt: Date;
@@ -101,7 +102,7 @@ export async function generateUndertakingPdf(
 
     const dateStr = params.submittedAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
     doc.text(`Date: ${dateStr}`);
-    doc.text(`Place: Online Submission`);
+    doc.text(`Place: ${params.city}`);
     doc.moveDown(1.5);
 
     doc.text("Signature:");
