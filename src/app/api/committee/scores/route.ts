@@ -6,7 +6,7 @@ import { getAssignedApplicationIds } from "@/lib/review-workflow";
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
-  if (!user || user.role !== "COMMITTEE") {
+  if (!user || !["COMMITTEE", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   const user = await getSession();
-  if (!user || user.role !== "COMMITTEE") {
+  if (!user || !["COMMITTEE", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

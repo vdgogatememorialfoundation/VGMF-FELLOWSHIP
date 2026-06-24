@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         name: user.profile?.name,
         role: user.role,
       },
-      redirect: getPortalPath(user.role),
+      redirect: portal ? `/${portal}` : getPortalPath(user.role),
     });
   } catch (error) {
     console.error("OTP login error:", error);

@@ -20,7 +20,7 @@ const TRUSTEE_PIPELINE_STATUSES = [
 
 export async function GET() {
   const user = await getSession();
-  if (!user || user.role !== "TRUSTEE") {
+  if (!user || !["TRUSTEE", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -55,7 +55,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
-  if (!user || user.role !== "TRUSTEE") {
+  if (!user || !["TRUSTEE", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

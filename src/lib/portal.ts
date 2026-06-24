@@ -19,11 +19,11 @@ export const PORTAL_DASHBOARD_PATHS: Record<PortalType, string> = {
 };
 
 export const PORTAL_ALLOWED_ROLES: Record<PortalType, UserRole[]> = {
-  applicant: ["APPLICANT"],
+  applicant: ["APPLICANT", "ADMIN"],
   admin: ["ADMIN"],
-  staff: ["STAFF", "FINANCE", "COADMIN"],
-  reviewer: ["COMMITTEE"],
-  trustee: ["TRUSTEE"],
+  staff: ["STAFF", "FINANCE", "COADMIN", "ADMIN"],
+  reviewer: ["COMMITTEE", "ADMIN"],
+  trustee: ["TRUSTEE", "ADMIN"],
 };
 
 export const PORTAL_LABELS: Record<PortalType, string> = {
