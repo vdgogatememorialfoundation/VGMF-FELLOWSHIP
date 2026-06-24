@@ -18,6 +18,16 @@ interface PortalUser {
   createdAt: string;
 }
 
+interface UserActivityData {
+  adminPassword?: string | null;
+  auditLogs?: {
+    id: string;
+    action: string;
+    createdAt: string;
+    details?: Record<string, unknown> | null;
+  }[];
+}
+
 const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Admin" },
   { value: "COADMIN", label: "Co-Admin" },
@@ -48,7 +58,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
-  const [selectedUserActivity, setSelectedUserActivity] = useState<any>(null);
+  const [selectedUserActivity, setSelectedUserActivity] = useState<UserActivityData | null>(null);
 
   function load() {
     fetch("/api/admin/users")
@@ -313,7 +323,7 @@ export default function AdminUsersPage() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Audit Logs</h3>
                 {selectedUserActivity.auditLogs && selectedUserActivity.auditLogs.length > 0 ? (
                   <ul className="space-y-4">
-                    {selectedUserActivity.auditLogs.map((log: any) => (
+                    {selectedUserActivity.auditLogs.map((log) => (
                       <li key={log.id} className="text-sm border-l-2 border-primary-200 pl-4 py-1">
                         <div className="font-medium text-gray-900">{log.action}</div>
                         <div className="text-xs text-gray-500 mt-0.5">

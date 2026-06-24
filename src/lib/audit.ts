@@ -1,6 +1,6 @@
 import prisma from "./db";
 
-export async function logActivity(userId: string, action: string, details?: Record<string, any>) {
+export async function logActivity(userId: string, action: string, details?: Record<string, unknown>) {
   try {
     await prisma.auditLog.create({
       data: {
