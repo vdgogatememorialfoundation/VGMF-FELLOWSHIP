@@ -11,7 +11,7 @@ import {
   putR2Object,
 } from "./r2-storage";
 
-const STAFF_ROLES = new Set(["ADMIN", "STAFF", "TRUSTEE", "COMMITTEE", "FINANCE"]);
+const STAFF_ROLES = new Set(["ADMIN", "STAFF", "COADMIN", "TRUSTEE", "COMMITTEE", "FINANCE"]);
 
 export function isObjectStorageConfigured(): boolean {
   return isR2Configured();

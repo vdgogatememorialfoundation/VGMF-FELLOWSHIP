@@ -3,7 +3,7 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getFellowshipAgreementFile } from "@/lib/agreement-service";
 
-const STAFF_ROLES = new Set(["ADMIN", "STAFF", "TRUSTEE", "FINANCE"]);
+const STAFF_ROLES = new Set(["ADMIN", "STAFF", "COADMIN", "TRUSTEE", "FINANCE"]);
 
 export async function GET(
   _request: NextRequest,
