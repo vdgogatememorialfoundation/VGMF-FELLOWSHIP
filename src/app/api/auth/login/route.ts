@@ -5,6 +5,7 @@ import {
   setSessionCookie,
   getPortalPath,
 } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { loginSchema } from "@/lib/validations";
 import { PORTAL_ALLOWED_ROLES, PORTAL_LABELS } from "@/lib/portal";
 import { assertApplicantLoginEnabled, getAccessControl } from "@/lib/access-control";
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = await createSession(user.id);
+    await logActivity(user.id, "LOGIN", { method: "password" });
     await setSessionCookie(token);
 
     return NextResponse.json({

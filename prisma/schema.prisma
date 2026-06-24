@@ -228,8 +228,23 @@ model User {
   supportTickets       SupportTicket[]             @relation("SupportTicketApplicant")
   assignedSupportTickets SupportTicket[]           @relation("SupportTicketAssignee")
   supportTicketReplies SupportTicketReply[]
+  auditLogs            AuditLog[]
 
   @@map("users")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model Session {

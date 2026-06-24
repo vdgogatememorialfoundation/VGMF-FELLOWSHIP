@@ -47,6 +47,8 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedUserActivity, setSelectedUserActivity] = useState<any>(null);
 
   function load() {
     fetch("/api/admin/users")
@@ -98,6 +100,20 @@ export default function AdminUsersPage() {
     });
 
     if (res.ok) load();
+  }
+
+  async function loadActivity(userId: string) {
+    setSelectedUserActivity(null);
+    setActivityModalOpen(true);
+    try {
+      const res = await fetch(`/api/admin/users/activity?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedUserActivity(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   async function updateRole(id: string, role: string) {
@@ -251,6 +267,14 @@ export default function AdminUsersPage() {
                     >
                       Delete
                     </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs text-blue-600 hover:text-blue-700"
+                      onClick={() => loadActivity(entry.id)}
+                    >
+                      Activity Log
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -265,6 +289,54 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+
+      {activityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-gray-900">User Activity & Credentials</h2>
+              <button onClick={() => setActivityModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                ✕
+              </button>
+            </div>
+            
+            {selectedUserActivity ? (
+              <div className="flex-1 overflow-y-auto">
+                <div className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Stored Credentials</h3>
+                  <div className="text-sm">
+                    <span className="text-gray-500 w-24 inline-block">Password:</span>
+                    <span className="font-mono font-medium text-gray-900">{selectedUserActivity.adminPassword || "N/A"}</span>
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Audit Logs</h3>
+                {selectedUserActivity.auditLogs && selectedUserActivity.auditLogs.length > 0 ? (
+                  <ul className="space-y-4">
+                    {selectedUserActivity.auditLogs.map((log: any) => (
+                      <li key={log.id} className="text-sm border-l-2 border-primary-200 pl-4 py-1">
+                        <div className="font-medium text-gray-900">{log.action}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(log.createdAt))}
+                        </div>
+                        {log.details && (
+                          <pre className="mt-2 bg-gray-50 p-2 rounded text-xs text-gray-700 overflow-x-auto">
+                            {JSON.stringify(log.details, null, 2)}
+                          </pre>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">No activity recorded yet.</p>
+                )}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-gray-500">Loading activity...</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

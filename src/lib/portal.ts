@@ -21,7 +21,7 @@ export const PORTAL_DASHBOARD_PATHS: Record<PortalType, string> = {
 export const PORTAL_ALLOWED_ROLES: Record<PortalType, UserRole[]> = {
   applicant: ["APPLICANT"],
   admin: ["ADMIN"],
-  staff: ["STAFF", "FINANCE"],
+  staff: ["STAFF", "FINANCE", "COADMIN"],
   reviewer: ["COMMITTEE"],
   trustee: ["TRUSTEE"],
 };
@@ -44,6 +44,7 @@ export function roleToPortal(role: UserRole): PortalType {
       return "admin";
     case "STAFF":
     case "FINANCE":
+    case "COADMIN":
       return "staff";
     case "COMMITTEE":
       return "reviewer";

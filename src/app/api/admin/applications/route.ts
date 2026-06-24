@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notifications";
 import { validateStatusTransition } from "@/lib/application-workflow";
 import { awardFellowship } from "@/lib/fellowship-service";
+import { logActivity } from "@/lib/audit";
 import { getIntegrationConfig, isIdentityVerificationConfigured } from "@/lib/integrations";
 import { BUDGET_MAX } from "@/lib/utils";
 import { deleteApplication } from "@/lib/application-delete";
@@ -182,6 +183,13 @@ export async function PATCH(request: NextRequest) {
       status,
       { fromStatus: existing.status }
     );
+
+    await logActivity(user.id, "PROCESSED_APPLICATION", {
+      applicationId,
+      applicationNumber: existing.applicationNumber,
+      fromStatus: existing.status,
+      toStatus: status,
+    });
 
     return NextResponse.json({ success: true, application });
   } catch (error) {
