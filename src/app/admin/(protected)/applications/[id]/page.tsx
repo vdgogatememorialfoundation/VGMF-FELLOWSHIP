@@ -336,9 +336,24 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         <div>
           <p className="text-xs uppercase tracking-wide text-gray-500">Digital undertaking</p>
           <p className="mt-1 text-sm">
-            {app.digitalUndertaking
-              ? `Submitted ${new Date(app.digitalUndertaking.submittedAt).toLocaleDateString("en-IN")}`
-              : "Not submitted"}
+            {app.digitalUndertaking ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-900">
+                  Submitted {new Date(app.digitalUndertaking.submittedAt).toLocaleDateString("en-IN")}
+                </span>
+                <span className="text-gray-300">|</span>
+                <a
+                  href={`/api/undertaking/${app.id}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-primary-600 hover:underline"
+                >
+                  View PDF
+                </a>
+              </div>
+            ) : (
+              "Not submitted"
+            )}
           </p>
         </div>
       </div>

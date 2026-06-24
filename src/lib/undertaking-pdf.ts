@@ -90,7 +90,9 @@ export async function generateUndertakingPdf(
     doc.font("Helvetica-Bold").text("Digital Signature:");
     doc.moveDown(0.5);
     try {
-      doc.image(params.signatureBuffer, { fit: [200, 80] });
+      const currentY = doc.y;
+      doc.image(params.signatureBuffer, doc.x, currentY, { fit: [200, 80] });
+      doc.y = currentY + 85;
     } catch {
       doc.font("Helvetica").text("[Signature image attached]");
     }
