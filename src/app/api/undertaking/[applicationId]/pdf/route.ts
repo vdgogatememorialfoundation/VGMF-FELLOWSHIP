@@ -45,7 +45,7 @@ export async function GET(
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${file.fileName.replace(/"/g, "")}"`,
-      "Cache-Control": "private, max-age=3600",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
     },
   });
 }
