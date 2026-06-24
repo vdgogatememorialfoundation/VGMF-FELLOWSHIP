@@ -9,10 +9,12 @@ import type { PortalType } from "@/lib/portal";
 export function PortalChrome({
   user,
   portal,
+  hiddenModules = [],
   children,
 }: {
   user: SessionUser;
   portal: PortalType;
+  hiddenModules?: string[];
   children: React.ReactNode;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -45,6 +47,7 @@ export function PortalChrome({
       <Sidebar
         user={user}
         portal={portal}
+        hiddenModules={hiddenModules}
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}
       />

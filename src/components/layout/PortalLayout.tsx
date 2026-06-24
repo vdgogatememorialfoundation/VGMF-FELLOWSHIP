@@ -4,6 +4,7 @@ import { PortalChrome } from "@/components/layout/PortalChrome";
 import type { UserRole } from "@prisma/client";
 import type { PortalType } from "@/lib/portal";
 import { getLoginPath } from "@/lib/portal";
+import { getHiddenModulesForRole } from "@/lib/admin-permissions";
 
 export async function requireAuth(allowedRoles?: UserRole[], portal?: PortalType) {
   const user = await getSession();
@@ -18,7 +19,7 @@ export async function requireAuth(allowedRoles?: UserRole[], portal?: PortalType
   return user;
 }
 
-export function PortalLayout({
+export async function PortalLayout({
   user,
   portal,
   children,
@@ -27,8 +28,10 @@ export function PortalLayout({
   portal: PortalType;
   children: React.ReactNode;
 }) {
+  const hiddenModules = await getHiddenModulesForRole(user.role);
+  
   return (
-    <PortalChrome user={user} portal={portal}>
+    <PortalChrome user={user} portal={portal} hiddenModules={hiddenModules}>
       {children}
     </PortalChrome>
   );

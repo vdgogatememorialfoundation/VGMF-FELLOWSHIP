@@ -33,11 +33,12 @@ import type { UserRole } from "@prisma/client";
 interface SidebarProps {
   user: SessionUser;
   portal: PortalType;
+  hiddenModules?: string[];
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
 
-const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }>; roles?: UserRole[] }[]> = {
+const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[]> = {
   applicant: [
     { href: "/applicant", label: "Dashboard", icon: LayoutDashboard },
     { href: "/applicant/forms", label: "Application Form", icon: FileText },
@@ -58,13 +59,14 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
     { href: "/admin/users", label: "Portal Users", icon: UserCog },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },
+    { href: "/admin/permissions", label: "Role Permissions", icon: ShieldCheck },
     { href: "/admin/reports", label: "Reports", icon: FileBarChart },
   ],
   staff: [
     { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
     { href: "/staff/applications", label: "Applications", icon: ClipboardList },
-    { href: "/staff/support", label: "Support Tickets", icon: MessageSquare, roles: ["STAFF"] },
-    { href: "/staff/finance", label: "Finance", icon: DollarSign, roles: ["FINANCE"] },
+    { href: "/staff/support", label: "Support Tickets", icon: MessageSquare },
+    { href: "/staff/finance", label: "Finance", icon: DollarSign },
     { href: "/staff/reports", label: "Reports", icon: BarChart3 },
   ],
   reviewer: [
@@ -86,7 +88,7 @@ const portalLabels: Record<PortalType, string> = {
   trustee: "Trustee",
 };
 
-export function Sidebar({ user, portal, mobileOpen = false, onMobileClose }: SidebarProps) {
+export function Sidebar({ user, portal, hiddenModules = [], mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const links = portalLinks[portal];
 
@@ -124,7 +126,7 @@ export function Sidebar({ user, portal, mobileOpen = false, onMobileClose }: Sid
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {links
-          .filter((link) => !link.roles || link.roles.includes(user.role as UserRole))
+          .filter((link) => !hiddenModules.includes(link.href))
           .map((link) => {
           const Icon = link.icon;
           const isActive =

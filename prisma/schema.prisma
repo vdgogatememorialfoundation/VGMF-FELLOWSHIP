@@ -937,6 +937,18 @@ model CmsPage {
   @@map("cms_pages")
 }
 
+model RoleModuleVisibility {
+  id        String   @id @default(cuid())
+  role      UserRole
+  module    String
+  isVisible Boolean  @default(true) @map("is_visible")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([role, module])
+  @@map("role_module_visibility")
+}
+
 enum NoticeCategory {
   EVENT
   DEADLINE
