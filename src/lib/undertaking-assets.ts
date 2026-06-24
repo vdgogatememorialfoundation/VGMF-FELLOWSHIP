@@ -4,7 +4,7 @@ import path from "path";
 import prisma from "./db";
 
 export function getUndertakingPdfUrl(applicationId: string): string {
-  return `/api/undertaking/${applicationId}/pdf`;
+  return `/api/undertaking/${applicationId}/pdf?t=${Date.now()}`;
 }
 
 export async function getUndertakingPdfFile(applicationId: string) {
