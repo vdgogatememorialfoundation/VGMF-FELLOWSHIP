@@ -6,7 +6,7 @@ import { SignaturePad } from "@/components/undertaking/SignaturePad";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { compressSignatureDataUrl } from "@/lib/signature-image";
-import { OnlineIdentityVerificationPanel } from "@/components/verification/OnlineIdentityVerificationPanel";
+
 
 type UndertakingRecord = {
   id: string;
@@ -203,14 +203,7 @@ export function DigitalUndertakingForm() {
           </a>
         </div>
 
-        <OnlineIdentityVerificationPanel
-          purpose="UNDERTAKING_IDENTITY"
-          applicationId={application.id}
-          title="Undertaking identity verification"
-          description="Optional step to confirm your identity matches the signed undertaking. Required only if your Foundation admin enables this template."
-          verifiedAt={null}
-          onStatusChange={() => {}}
-        />
+
 
         <Link href="/applicant/forms" className="text-sm text-primary-700 underline">
           ← Back to application form
