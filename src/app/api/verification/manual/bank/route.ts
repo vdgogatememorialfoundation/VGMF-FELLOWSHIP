@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   const fellowshipId = request.nextUrl.searchParams.get("fellowshipId") ?? undefined;
-  const isStaff = ["ADMIN", "STAFF", "FINANCE"].includes(user.role);
+  const isStaff = ["ADMIN", "STAFF", "COADMIN", "FINANCE"].includes(user.role);
 
   let fellowship = null as Awaited<ReturnType<typeof getFellowshipForApplicant>> | Awaited<
     ReturnType<typeof prisma.fellowship.findUnique>
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF", "FINANCE"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN", "FINANCE"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

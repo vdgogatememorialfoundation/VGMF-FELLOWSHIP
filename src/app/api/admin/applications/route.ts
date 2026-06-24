@@ -13,7 +13,7 @@ import { toUploadApiUrl, mapApplicationDocumentForClient } from "@/lib/upload-fi
 
 export async function GET(request: NextRequest) {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF", "COMMITTEE", "TRUSTEE"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN", "COMMITTEE", "TRUSTEE"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -200,7 +200,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

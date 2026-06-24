@@ -7,7 +7,7 @@ import { validateInstallmentRelease } from "@/lib/installment-gates";
 
 export async function GET() {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF", "FINANCE"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN", "FINANCE"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,7 +46,7 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF", "FINANCE"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN", "FINANCE"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -328,7 +328,7 @@ export async function notifySupportStaffNewTicket(
   isReply = false
 ) {
   const staff = await prisma.user.findMany({
-    where: { role: { in: ["ADMIN", "STAFF"] }, isActive: true },
+    where: { role: { in: ["ADMIN", "STAFF", "COADMIN"] }, isActive: true },
     select: { id: true },
   });
 

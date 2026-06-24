@@ -7,7 +7,7 @@ export type SupportTicketStatus =
   | "RESOLVED"
   | "CLOSED";
 
-export const SUPPORT_STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF"];
+export const SUPPORT_STAFF_ROLES: UserRole[] = ["ADMIN", "STAFF", "COADMIN"];
 
 export const SUPPORT_TICKET_STATUSES: SupportTicketStatus[] = [
   "OPEN",

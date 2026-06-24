@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 async function requireStaff() {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF"].includes(user.role)) return null;
+  if (!user || !["ADMIN", "STAFF", "COADMIN"].includes(user.role)) return null;
   return user;
 }
 

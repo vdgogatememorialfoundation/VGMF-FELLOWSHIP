@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only PDF or image files allowed" }, { status: 400 });
     }
 
-    const isStaff = ["ADMIN", "STAFF", "FINANCE"].includes(user.role);
+    const isStaff = ["ADMIN", "STAFF", "COADMIN", "FINANCE"].includes(user.role);
 
     const fellowship = await prisma.fellowship.findFirst({
       where: {
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF", "FINANCE"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN", "FINANCE"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

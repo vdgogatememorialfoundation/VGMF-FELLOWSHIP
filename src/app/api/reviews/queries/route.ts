@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   const isApplicant = application.userId === user.id;
-  const isStaff = ["ADMIN", "STAFF", "COMMITTEE", "TRUSTEE"].includes(user.role);
+  const isStaff = ["ADMIN", "STAFF", "COADMIN", "COMMITTEE", "TRUSTEE"].includes(user.role);
 
   if (!isApplicant && !isStaff) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "resolve") {
-      if (!["ADMIN", "STAFF", "COMMITTEE", "TRUSTEE"].includes(user.role)) {
+      if (!["ADMIN", "STAFF", "COADMIN", "COMMITTEE", "TRUSTEE"].includes(user.role)) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 

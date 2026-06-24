@@ -9,7 +9,7 @@ import {
 
 export const maxDuration = 60;
 
-const ALLOWED_ROLES = new Set(["ADMIN", "STAFF"]);
+const ALLOWED_ROLES = new Set(["ADMIN", "STAFF", "COADMIN"]);
 
 export async function GET(
   request: NextRequest,

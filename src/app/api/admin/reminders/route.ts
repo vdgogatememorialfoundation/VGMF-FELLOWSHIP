@@ -4,7 +4,7 @@ import { processFellowshipReminders } from "@/lib/fellowship-alerts";
 
 export async function POST() {
   const user = await getSession();
-  if (!user || !["ADMIN", "STAFF"].includes(user.role)) {
+  if (!user || !["ADMIN", "STAFF", "COADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
