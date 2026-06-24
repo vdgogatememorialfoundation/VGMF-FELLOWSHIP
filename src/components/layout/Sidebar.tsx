@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
 import { PORTAL_DASHBOARD_PATHS, type PortalType } from "@/lib/portal";
 
+import type { UserRole } from "@prisma/client";
+
 interface SidebarProps {
   user: SessionUser;
   portal: PortalType;
@@ -35,7 +37,7 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[]> = {
+const portalLinks: Record<PortalType, { href: string; label: string; icon: React.ComponentType<{ className?: string }>; roles?: UserRole[] }[]> = {
   applicant: [
     { href: "/applicant", label: "Dashboard", icon: LayoutDashboard },
     { href: "/applicant/forms", label: "Application Form", icon: FileText },
@@ -61,8 +63,8 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   staff: [
     { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
     { href: "/staff/applications", label: "Applications", icon: ClipboardList },
-    { href: "/staff/support", label: "Support Tickets", icon: MessageSquare },
-    { href: "/staff/finance", label: "Finance", icon: DollarSign },
+    { href: "/staff/support", label: "Support Tickets", icon: MessageSquare, roles: ["STAFF"] },
+    { href: "/staff/finance", label: "Finance", icon: DollarSign, roles: ["FINANCE"] },
     { href: "/staff/reports", label: "Reports", icon: BarChart3 },
   ],
   reviewer: [
@@ -121,7 +123,9 @@ export function Sidebar({ user, portal, mobileOpen = false, onMobileClose }: Sid
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-        {links.map((link) => {
+        {links
+          .filter((link) => !link.roles || link.roles.includes(user.role as UserRole))
+          .map((link) => {
           const Icon = link.icon;
           const isActive =
             pathname === link.href ||
