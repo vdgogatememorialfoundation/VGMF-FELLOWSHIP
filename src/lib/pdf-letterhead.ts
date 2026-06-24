@@ -200,6 +200,11 @@ export function stampPdfLetterheadOnAllPages(
   const lastPageIndex = range.start + range.count - 1;
   console.log("PDF generated with pages:", range.count);
 
+  const originalTop = doc.page.margins.top;
+  const originalBottom = doc.page.margins.bottom;
+  doc.page.margins.top = 0;
+  doc.page.margins.bottom = 0;
+
   for (let pageIndex = range.start; pageIndex <= lastPageIndex; pageIndex++) {
     doc.switchToPage(pageIndex);
     if (options?.documentTitle) {
@@ -213,5 +218,7 @@ export function stampPdfLetterheadOnAllPages(
     });
   }
 
+  doc.page.margins.top = originalTop;
+  doc.page.margins.bottom = originalBottom;
   doc.switchToPage(lastPageIndex);
 }
