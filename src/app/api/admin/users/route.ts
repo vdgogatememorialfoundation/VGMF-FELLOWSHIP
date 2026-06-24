@@ -7,6 +7,7 @@ import {
   listUsersByRoles,
   formatAccountForAdmin,
   updateUserByAdmin,
+  deleteUserByAdmin,
 } from "@/lib/admin-users";
 import { adminCreateUserSchema, adminUpdateUserSchema } from "@/lib/validations";
 import { sendAccountCreatedEmail } from "@/lib/email";
@@ -115,5 +116,28 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, user: formatAccountForAdmin(updated) });
   } catch {
     return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const id = request.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
+
+    if (id === user.id) {
+      return NextResponse.json(
+        { error: "You cannot delete your own account" },
+        { status: 400 }
+      );
+    }
+
+    await deleteUserByAdmin(id);
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
   }
 }

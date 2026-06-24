@@ -161,6 +161,20 @@ export async function updateUserByAdmin(
   return user;
 }
 
+export async function deleteUserByAdmin(id: string) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  await prisma.user.delete({
+    where: { id },
+  });
+
+  return user;
+}
+
 export function formatAccountForAdmin(
   entry: Awaited<ReturnType<typeof listAllAccounts>>[number]
 ) {

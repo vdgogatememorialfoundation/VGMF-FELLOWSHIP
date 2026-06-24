@@ -102,6 +102,21 @@ export default function AdminUsersPage() {
     if (res.ok) load();
   }
 
+  async function deleteUser(id: string) {
+    if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+
+    const res = await fetch(`/api/admin/users?id=${id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      load();
+    } else {
+      const data = await res.json();
+      setError(data.error || "Failed to delete user");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -208,14 +223,24 @@ export default function AdminUsersPage() {
                   </span>
                 </td>
                 <td className="py-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="text-xs"
-                    onClick={() => toggleActive(entry.id, entry.isActive)}
-                  >
-                    {entry.isActive ? "Deactivate" : "Activate"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs"
+                      onClick={() => toggleActive(entry.id, entry.isActive)}
+                    >
+                      {entry.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs text-red-600 hover:text-red-700"
+                      onClick={() => deleteUser(entry.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

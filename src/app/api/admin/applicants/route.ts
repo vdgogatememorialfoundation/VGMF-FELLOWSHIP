@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/db";
-import { createUserAccount, listUsersByRoles, formatAccountForAdmin, updateUserByAdmin } from "@/lib/admin-users";
+import { createUserAccount, listUsersByRoles, formatAccountForAdmin, updateUserByAdmin, deleteUserByAdmin } from "@/lib/admin-users";
 import { adminCreateApplicantSchema, adminUpdateUserSchema } from "@/lib/validations";
 import { createNotification, sendWelcomeNotifications } from "@/lib/notifications";
 
@@ -134,5 +134,29 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, applicant: formatAccountForAdmin(updated) });
   } catch {
     return NextResponse.json({ error: "Failed to update applicant" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const id = request.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing applicant id" }, { status: 400 });
+
+    const applicant = await prisma.user.findUnique({
+      where: { id, role: "APPLICANT" },
+    });
+
+    if (!applicant) {
+      return NextResponse.json({ error: "Applicant not found" }, { status: 404 });
+    }
+
+    await deleteUserByAdmin(id);
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to delete applicant" }, { status: 500 });
   }
 }

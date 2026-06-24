@@ -89,6 +89,21 @@ export default function AdminApplicantsPage() {
     if (res.ok) load();
   }
 
+  async function deleteApplicant(id: string) {
+    if (!window.confirm("Are you sure you want to delete this applicant? This action cannot be undone.")) return;
+
+    const res = await fetch(`/api/admin/applicants?id=${id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      load();
+    } else {
+      const data = await res.json();
+      setError(data.error || "Failed to delete applicant");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -224,6 +239,14 @@ export default function AdminApplicantsPage() {
                       onClick={() => toggleActive(applicant.id, applicant.isActive)}
                     >
                       {applicant.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs text-red-600 hover:text-red-700"
+                      onClick={() => deleteApplicant(applicant.id)}
+                    >
+                      Delete
                     </Button>
                   </div>
                 </td>

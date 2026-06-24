@@ -127,6 +127,21 @@ export default function AdminAccountsPage() {
     }
   }
 
+  async function deleteAccount(id: string) {
+    if (!window.confirm("Are you sure you want to delete this account? This action cannot be undone.")) return;
+
+    const res = await fetch(`/api/admin/accounts?id=${id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      load();
+    } else {
+      const data = await res.json();
+      setError(data.error || "Failed to delete account");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -321,6 +336,14 @@ export default function AdminAccountsPage() {
                         Reset password
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs text-red-600 hover:text-red-700"
+                      onClick={() => deleteAccount(account.id)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </td>
               </tr>
