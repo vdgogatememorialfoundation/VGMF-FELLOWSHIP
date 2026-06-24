@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
 
     const application = await prisma.application.findFirst({
       where: { id: applicationId, userId: user.id },
-      include: { digitalUndertaking: true },
+      include: { digitalUndertaking: true, researchProposal: true },
     });
 
     if (!application) {
@@ -263,6 +263,7 @@ export async function POST(request: NextRequest) {
     const { pdfBuffer, pdfPath } = await generateUndertakingPdf({
       applicationId,
       applicationNumber: application.applicationNumber,
+      projectTitle: application.researchProposal?.projectTitle || "________________________________________________",
       fullName: fullName.trim(),
       signatureBuffer,
       ipAddress,

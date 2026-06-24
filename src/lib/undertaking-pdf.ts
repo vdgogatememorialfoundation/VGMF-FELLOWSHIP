@@ -17,14 +17,7 @@ function ensurePdfkitFonts() {
   }
 }
 
-const UNDERTAKING_BODY = `I, the undersigned applicant, hereby submit this Digital Undertaking for the Viddhakarma Research Fellowship administered by Vd. Gogate Memorial Foundation, Pune.
 
-I confirm that:
-1. I have read and agree to abide by the Viddhakarma Research Fellowship Rulebook and all fellowship rules.
-2. I certify that all information and documents submitted in my application are true and correct to the best of my knowledge.
-3. I agree to utilize fellowship funds strictly for approved research purposes and maintain proper accounts, bills, and utilization records as required.
-
-I understand that any false statement, ethical misconduct, or misuse of funds may lead to rejection, termination of fellowship, or recovery of disbursed amounts.`;
 
 const AUDIT_NOTE =
   "This document was electronically generated and signed through the VGMF Fellowship Portal. The timestamp and IP address above form part of the audit record.";
@@ -32,6 +25,7 @@ const AUDIT_NOTE =
 type GenerateUndertakingPdfParams = {
   applicationId: string;
   applicationNumber: string;
+  projectTitle: string;
   fullName: string;
   signatureBuffer: Buffer;
   ipAddress: string;
@@ -55,7 +49,7 @@ export async function generateUndertakingPdf(
 
   const fileName = `undertaking_${params.applicationNumber}_${Date.now()}.pdf`;
   const fullPath = path.join(uploadDir, fileName);
-  const documentSubtitle = `${branding.siteName} — Fellowship Declaration`;
+  const documentSubtitle = undefined;
 
   const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({
@@ -72,23 +66,46 @@ export async function generateUndertakingPdf(
     applyPdfLetterheadLayout(doc);
     doc.y = PDF_CONTENT_TOP;
 
-    doc.fontSize(10).font("Helvetica-Bold").text("Application Number: ", { continued: true });
-    doc.font("Helvetica").text(params.applicationNumber);
-    doc.font("Helvetica-Bold").text("Applicant Name: ", { continued: true });
-    doc.font("Helvetica").text(params.fullName);
-    doc.font("Helvetica-Bold").text("Submitted At: ", { continued: true });
+    doc.fontSize(9).font("Helvetica-Bold").text("Application Number: ", { continued: true });
+    doc.font("Helvetica").text(params.applicationNumber, { continued: true });
+    doc.font("Helvetica-Bold").text("   |   Submitted At: ", { continued: true });
     doc.font("Helvetica").text(
-      params.submittedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+      params.submittedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+      { continued: true }
     );
-    doc.font("Helvetica-Bold").text("IP Address: ", { continued: true });
+    doc.font("Helvetica-Bold").text("   |   IP: ", { continued: true });
     doc.font("Helvetica").text(params.ipAddress);
+    doc.moveDown(2);
+
+    const cleanName = params.fullName.replace(/^(dr\.?|vd\.?)\s+/i, "");
+    
+    doc.fontSize(11).font("Helvetica").text(`I, Dr. ${cleanName}, hereby declare that:`, { align: "justify", lineGap: 4 });
     doc.moveDown(1);
 
-    doc.fontSize(10).font("Helvetica").text(UNDERTAKING_BODY, { align: "justify", lineGap: 4 });
+    doc.text(`1. The research work titled`, { align: "justify", lineGap: 4 });
+    doc.font("Helvetica-Bold").text(`"${params.projectTitle}"`);
+    doc.font("Helvetica").text(`submitted for the Viddhakarma Research Fellowship – 2026 is my/our original work.`, { align: "justify", lineGap: 4 });
+    doc.moveDown(1);
+
+    doc.text(`2. This work has not been submitted, published, accepted, or is under review in any other institution, journal, or fellowship.`, { align: "justify", lineGap: 4 });
+    doc.moveDown(1);
+
+    doc.text(`3. The work is free from plagiarism and all references are properly acknowledged.`, { align: "justify", lineGap: 4 });
+    doc.moveDown(1);
+
+    doc.text(`4. I/We take full responsibility for the authenticity and accuracy of the submitted work.`, { align: "justify", lineGap: 4 });
+    doc.moveDown(1);
+
+    doc.text(`5. In case of any discrepancy found in future, the foundation has full right to cancel the fellowship.`, { align: "justify", lineGap: 4 });
+    doc.moveDown(2);
+
+    const dateStr = params.submittedAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+    doc.text(`Date: ${dateStr}`);
+    doc.text(`Place: Online Submission`);
     doc.moveDown(1.5);
 
-    doc.font("Helvetica-Bold").text("Digital Signature:");
-    doc.moveDown(0.5);
+    doc.text("Signature:");
+    doc.moveDown(0.2);
     try {
       const currentY = doc.y;
       doc.image(params.signatureBuffer, doc.x, currentY, { fit: [200, 80] });
@@ -96,9 +113,11 @@ export async function generateUndertakingPdf(
     } catch {
       doc.font("Helvetica").text("[Signature image attached]");
     }
+    
+    doc.text(`Name: Dr. ${cleanName}`);
 
     stampPdfLetterheadOnAllPages(doc, branding, {
-      documentTitle: "DIGITAL UNDERTAKING",
+      documentTitle: "AFFIDAVIT / DECLARATION",
       documentSubtitle,
       auditNote: AUDIT_NOTE,
     });
