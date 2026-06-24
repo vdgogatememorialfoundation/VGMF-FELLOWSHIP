@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
       applicationNumber: application.applicationNumber,
       projectTitle: application.researchProposal?.projectTitle || "________________________________________________",
       fullName: fullName.trim(),
-      city: application.user.profile?.city || "_________________",
+      city: application.city || "_________________",
       signatureBuffer,
       ipAddress,
       submittedAt,
