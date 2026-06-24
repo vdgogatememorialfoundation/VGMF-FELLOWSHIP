@@ -61,8 +61,8 @@ export default function PermissionsPage() {
       if (!res.ok) throw new Error("Failed to load permissions");
       const data = await res.json();
       setPermissions(data.permissions);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -103,8 +103,8 @@ export default function PermissionsPage() {
           ];
         }
       });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     }
   };
 
