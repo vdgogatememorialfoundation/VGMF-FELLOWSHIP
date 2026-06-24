@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     });
     const relativePath = `/uploads/${applicationId}/${fileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { fileData } = await persistUpload(relativePath, buffer, file.type);
+    await persistUpload(relativePath, buffer, file.type);
 
     const document = existingDoc
       ? await prisma.applicationDocument.update({

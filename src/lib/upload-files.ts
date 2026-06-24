@@ -17,13 +17,9 @@ export function isObjectStorageConfigured(): boolean {
   return isR2Configured();
 }
 
-export function encodeFileData(buffer: Buffer): string {
-  return buffer.toString("base64");
-}
 
-export function decodeFileData(data: string): Buffer {
-  return Buffer.from(data, "base64");
-}
+
+
 
 export function applicationDocumentFileUrl(documentId: string): string {
   return `/api/documents/${documentId}/file`;
@@ -189,10 +185,7 @@ export async function readStoredUploadBytes(relativePath: string): Promise<Buffe
 const MAX_DB_FILE_BYTES = 10 * 1024 * 1024;
 
 /** Keep a PostgreSQL copy for fallback even when R2 is configured. */
-export function prepareFileDataForStorage(buffer: Buffer): string | null {
-  if (buffer.length > MAX_DB_FILE_BYTES) return null;
-  return encodeFileData(buffer);
-}
+
 
 async function backfillR2FromBuffer(
   storagePath: string,
@@ -213,8 +206,7 @@ export async function persistUpload(
   relativePath: string,
   buffer: Buffer,
   mimeType?: string | null
-): Promise<{ fileData: string | null }> {
-  const fileData = prepareFileDataForStorage(buffer);
+): Promise<void> {
   let storageError: unknown;
 
   try {
@@ -228,11 +220,9 @@ export async function persistUpload(
     console.error("Primary storage write failed:", relativePath, error);
   }
 
-  if (storageError && !fileData) {
+  if (storageError) {
     throw storageError instanceof Error ? storageError : new Error("Failed to store upload");
   }
-
-  return { fileData };
 }
 
 function buildApplicationDocumentStorageCandidates(document: {
@@ -483,23 +473,22 @@ async function findStoredUploadByPath(segments: string[]) {
   for (const storedPath of paths) {
     const applicationDoc = await prisma.applicationDocument.findFirst({
       where: { filePath: storedPath },
-      select: { fileData: true, mimeType: true, fileName: true, filePath: true },
+      select: { mimeType: true, fileName: true, filePath: true },
     });
     if (applicationDoc) return applicationDoc;
 
     const fellowshipDoc = await prisma.fellowshipDocument.findFirst({
       where: { filePath: storedPath },
-      select: { fileData: true, mimeType: true, fileName: true, filePath: true },
+      select: { mimeType: true, fileName: true, filePath: true },
     });
     if (fellowshipDoc) return fellowshipDoc;
 
     const progressReport = await prisma.progressReport.findFirst({
       where: { reportPath: storedPath },
-      select: { reportData: true, reportPath: true },
+      select: { reportPath: true },
     });
     if (progressReport) {
       return {
-        fileData: progressReport.reportData,
         mimeType: mimeTypeFromFileName(path.basename(storedPath)),
         fileName: path.basename(storedPath),
         filePath: storedPath,
@@ -516,16 +505,7 @@ async function findStoredUploadByPath(segments: string[]) {
       },
     });
     if (finalSubmission) {
-      let fileData: string | null | undefined = null;
-      if (finalSubmission.finalReportPath === storedPath) {
-        fileData = finalSubmission.finalReportData;
-      } else if (finalSubmission.manuscriptPath === storedPath) {
-        fileData = finalSubmission.manuscriptData;
-      } else if (finalSubmission.utilizationCertPath === storedPath) {
-        fileData = finalSubmission.utilizationCertData;
-      }
       return {
-        fileData,
         mimeType: mimeTypeFromFileName(path.basename(storedPath)),
         fileName: path.basename(storedPath),
         filePath: storedPath,
@@ -543,7 +523,7 @@ async function findStoredUploadByPath(segments: string[]) {
           type: docType as never,
         },
         orderBy: { uploadedAt: "desc" },
-        select: { fileData: true, mimeType: true, fileName: true, filePath: true },
+        select: { mimeType: true, fileName: true, filePath: true },
       });
       if (applicationDoc) return applicationDoc;
     }
@@ -617,18 +597,6 @@ export async function readStoredUpload(segments: string[]) {
     normalizeUploadSegments(segments)[segments.length - 1] ??
     "file";
 
-  if (record?.fileData?.trim()) {
-    const data = decodeFileData(record.fileData);
-    const storagePath = normalizeStoragePath(record.filePath);
-    if (storagePath) {
-      void backfillR2FromBuffer(storagePath, data, record.mimeType);
-    }
-    return {
-      data,
-      fileName,
-      mimeType: record.mimeType || mimeTypeFromFileName(fileName),
-    };
-  }
 
   if (record?.filePath) {
     const storagePath = normalizeStoragePath(record.filePath);

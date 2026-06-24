@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     const fileName = `${docType}_${Date.now()}_${file.name}`;
     const relativePath = `/uploads/fellowships/${fellowshipId}/inst${installmentNo}/${fileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { fileData } = await persistUpload(relativePath, buffer, file.type);
+    await persistUpload(relativePath, buffer, file.type);
 
     const document = await prisma.fellowshipDocument.upsert({
       where: {
@@ -158,7 +158,6 @@ export async function POST(request: NextRequest) {
       update: {
         fileName: file.name,
         filePath: relativePath,
-        fileData,
         fileSize: file.size,
         mimeType: file.type,
         status: "PENDING",
@@ -172,7 +171,6 @@ export async function POST(request: NextRequest) {
         type: docType,
         fileName: file.name,
         filePath: relativePath,
-        fileData,
         fileSize: file.size,
         mimeType: file.type,
       },

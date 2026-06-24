@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const fileName = `Q${quarter}_${year}_${Date.now()}_${reportFile.name}`;
     const reportPath = `/uploads/fellowships/${fellowshipId}/${fileName}`;
     const buffer = Buffer.from(await reportFile.arrayBuffer());
-    const { fileData: reportData } = await persistUpload(reportPath, buffer, reportFile.type);
+    await persistUpload(reportPath, buffer, reportFile.type);
 
     const report = await prisma.progressReport.upsert({
       where: {
@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
       },
       update: {
         reportPath,
-        reportData,
         status: "SUBMITTED",
         submittedAt: new Date(),
       },
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
         quarter,
         year,
         reportPath,
-        reportData,
       },
     });
 

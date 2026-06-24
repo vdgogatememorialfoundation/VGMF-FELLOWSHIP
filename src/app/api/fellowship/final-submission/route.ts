@@ -7,10 +7,9 @@ async function saveFile(fellowshipId: string, prefix: string, file: File) {
   const fileName = `${prefix}_${Date.now()}_${file.name}`;
   const storedPath = `/uploads/fellowships/${fellowshipId}/${fileName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { fileData } = await persistUpload(storedPath, buffer, file.type);
+  await persistUpload(storedPath, buffer, file.type);
   return {
     path: storedPath,
-    data: fileData,
   };
 }
 
@@ -52,22 +51,16 @@ export async function POST(request: NextRequest) {
       where: { fellowshipId },
       update: {
         finalReportPath: finalReportFile.path,
-        finalReportData: finalReportFile.data,
         manuscriptPath: manuscriptFile?.path ?? null,
-        manuscriptData: manuscriptFile?.data ?? null,
         utilizationCertPath: utilizationCertFile?.path ?? null,
-        utilizationCertData: utilizationCertFile?.data ?? null,
         status: "SUBMITTED",
         submittedAt: new Date(),
       },
       create: {
         fellowshipId,
         finalReportPath: finalReportFile.path,
-        finalReportData: finalReportFile.data,
         manuscriptPath: manuscriptFile?.path ?? null,
-        manuscriptData: manuscriptFile?.data ?? null,
         utilizationCertPath: utilizationCertFile?.path ?? null,
-        utilizationCertData: utilizationCertFile?.data ?? null,
       },
     });
 

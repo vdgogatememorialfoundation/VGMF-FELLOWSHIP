@@ -288,7 +288,7 @@ model Application {
   adminNotes            String?           @map("admin_notes")
 
   applicationType       String            @default("INDIVIDUAL") @map("application_type")
-  groupMemberDetails    String?           @map("group_member_details") @db.Text
+  groupMemberDetails    String?           @map("group_member_details")
 
   // New fields for Team / Official details
   teamName              String?           @map("team_name")
@@ -296,9 +296,9 @@ model Application {
   officialContactPerson String?           @map("official_contact_person")
   alternateMobile       String?           @map("alternate_mobile")
   officialPostalAddress  String?           @map("official_postal_address")
-  ageProof              String?           @map("age_proof") @db.Text
-  identityProof         String?           @map("identity_proof") @db.Text
-  otherSupportingDocument String?          @map("other_supporting_document") @db.Text
+  ageProof              String?           @map("age_proof")
+  identityProof         String?           @map("identity_proof")
+  otherSupportingDocument String?          @map("other_supporting_document")
 
   // Personal Details
   name                  String
@@ -416,8 +416,7 @@ model DigitalUndertaking {
   signaturePath        String   @map("signature_path")
   signatureType        String   @map("signature_type")
   pdfPath              String   @map("pdf_path")
-  pdfData              String?  @map("pdf_data") @db.Text
-  signatureData        String?  @map("signature_data") @db.Text
+
   ipAddress            String   @map("ip_address")
   submittedAt          DateTime @default(now()) @map("submitted_at")
 
@@ -433,7 +432,7 @@ model FellowshipDocument {
   type            FellowshipDocType
   fileName        String            @map("file_name")
   filePath        String            @map("file_path")
-  fileData        String?           @map("file_data") @db.Text
+
   fileSize        Int               @map("file_size")
   mimeType        String            @map("mime_type")
   status          DocumentStatus    @default(PENDING)
@@ -492,7 +491,7 @@ model ApplicationDocument {
   type            DocumentType
   fileName        String         @map("file_name")
   filePath        String         @map("file_path")
-  fileData        String?        @map("file_data") @db.Text
+
   fileSize        Int            @map("file_size")
   mimeType        String         @map("mime_type")
   status          DocumentStatus @default(PENDING)
@@ -597,7 +596,7 @@ model Fellowship {
   bankVerifiedAt    DateTime? @map("bank_verified_at")
   bankVerificationStatus VerificationStatus @default(NOT_STARTED) @map("bank_verification_status")
   bankOnlineVerifiedAt DateTime? @map("bank_online_verified_at")
-  agreementPdfData  String?   @map("agreement_pdf_data") @db.Text
+
   agreementGeneratedAt DateTime? @map("agreement_generated_at")
   isActive         Boolean  @default(true) @map("is_active")
   isCompleted      Boolean  @default(false) @map("is_completed")
@@ -644,7 +643,7 @@ model ProgressReport {
   quarter         Int
   year            Int
   reportPath      String?              @map("report_path")
-  reportData      String?              @map("report_data") @db.Text
+
   caseRecordsPath String?              @map("case_records_path")
   photosPath      String?              @map("photos_path")
   publicationsPath String?             @map("publications_path")
@@ -685,11 +684,7 @@ model FinalSubmission {
   id                    String   @id @default(cuid())
   fellowshipId          String   @unique @map("fellowship_id")
   finalReportPath       String?  @map("final_report_path")
-  finalReportData       String?  @map("final_report_data") @db.Text
-  manuscriptPath        String?  @map("manuscript_path")
-  manuscriptData        String?  @map("manuscript_data") @db.Text
-  utilizationCertPath   String?  @map("utilization_cert_path")
-  utilizationCertData   String?  @map("utilization_cert_data") @db.Text
+
   billsVouchersPath     String?  @map("bills_vouchers_path")
   presentationPath      String?  @map("presentation_path")
   status                ProgressReportStatus @default(SUBMITTED)
