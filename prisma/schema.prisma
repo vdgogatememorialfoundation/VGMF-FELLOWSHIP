@@ -684,6 +684,8 @@ model FinalSubmission {
   id                    String   @id @default(cuid())
   fellowshipId          String   @unique @map("fellowship_id")
   finalReportPath       String?  @map("final_report_path")
+  manuscriptPath        String?  @map("manuscript_path")
+  utilizationCertPath   String?  @map("utilization_cert_path")
 
   billsVouchersPath     String?  @map("bills_vouchers_path")
   presentationPath      String?  @map("presentation_path")
