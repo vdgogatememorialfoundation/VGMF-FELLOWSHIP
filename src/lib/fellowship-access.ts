@@ -41,8 +41,8 @@ async function createFellowshipForApplication(app: {
   return fellowship;
 }
 
-async function ensureAgreementPdf(fellowshipId: string, agreementPdfData: string | null | undefined) {
-  if (agreementPdfData) return;
+async function ensureAgreementPdf(fellowshipId: string, agreementGeneratedAt: Date | null | undefined) {
+  if (agreementGeneratedAt) return;
   try {
     await generateAndStoreFellowshipAgreement(fellowshipId);
   } catch (error) {
@@ -105,7 +105,7 @@ export async function ensureApplicantFellowship(userId: string) {
   }
 
   if (fellowship) {
-    await ensureAgreementPdf(fellowship.id, fellowship.agreementPdfData);
+    await ensureAgreementPdf(fellowship.id, fellowship.agreementGeneratedAt);
     const refreshed = await prisma.fellowship.findUnique({
       where: { id: fellowship.id },
       include: fellowshipInclude,
@@ -147,7 +147,7 @@ export async function repairApplicationIfNeeded(app: {
     id: string;
     isCompleted: boolean;
     currentStage: string;
-    agreementPdfData?: string | null;
+    agreementGeneratedAt?: Date | null;
   } | null;
   trusteeApproval: { approved: boolean } | null;
   budget: { total: number } | null;
@@ -167,7 +167,7 @@ export async function repairApplicationIfNeeded(app: {
   }
 
   if (fellowship) {
-    await ensureAgreementPdf(fellowship.id, fellowship.agreementPdfData);
+    await ensureAgreementPdf(fellowship.id, fellowship.agreementGeneratedAt);
     const refreshed = await prisma.fellowship.findUnique({
       where: { id: fellowship.id },
       include: fellowshipInclude,

@@ -3,8 +3,7 @@ import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getClientIp } from "@/lib/request-ip";
 import { generateUndertakingPdf } from "@/lib/undertaking-pdf";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { persistUpload } from "@/lib/upload-files";
 import {
   formatUndertakingForClient,
   repairOrphanUndertaking,
@@ -246,16 +245,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const sigDir = path.join(process.cwd(), "public", "uploads", applicationId, "signatures");
-    await mkdir(sigDir, { recursive: true });
     const sigFileName = `signature_${Date.now()}.png`;
-    const sigFullPath = path.join(sigDir, sigFileName);
-    try {
-      await writeFile(sigFullPath, signatureBuffer);
-    } catch {
-      // Optional local cache; signature is stored in the database.
-    }
     const signaturePath = `/uploads/${applicationId}/signatures/${sigFileName}`;
+    await persistUpload(signaturePath, signatureBuffer, "image/png");
 
     const ipAddress = getClientIp(request);
     const submittedAt = new Date();
@@ -270,6 +262,7 @@ export async function POST(request: NextRequest) {
       ipAddress,
       submittedAt,
     });
+    await persistUpload(pdfPath, pdfBuffer, "application/pdf");
 
     const undertaking = await prisma.digitalUndertaking.create({
       data: {
@@ -281,8 +274,6 @@ export async function POST(request: NextRequest) {
         signaturePath,
         signatureType: signatureType === "upload" ? "UPLOADED" : "DRAWN",
         pdfPath,
-        pdfData: pdfBuffer.toString("base64"),
-        signatureData: signatureBuffer.toString("base64"),
         ipAddress,
         submittedAt,
       },

@@ -78,7 +78,6 @@ export async function GET(request: NextRequest) {
             id: true,
             applicationId: true,
             pdfPath: true,
-            pdfData: true,
             submittedAt: true,
           },
         }),
