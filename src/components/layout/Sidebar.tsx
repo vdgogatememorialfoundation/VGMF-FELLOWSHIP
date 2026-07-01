@@ -74,6 +74,10 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/reviewer/applications", label: "Applications", icon: ClipboardList },
     { href: "/reviewer/rankings", label: "Rankings", icon: BarChart3 },
   ],
+  committee: [
+    { href: "/committee", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/committee/applications", label: "Applications", icon: ClipboardList },
+  ],
   trustee: [
     { href: "/trustee", label: "Dashboard", icon: LayoutDashboard },
     { href: "/trustee/approvals", label: "Approvals", icon: Award },
@@ -85,6 +89,7 @@ const portalLabels: Record<PortalType, string> = {
   admin: "Admin",
   staff: "Staff",
   reviewer: "Reviewer",
+  committee: "Research Committee",
   trustee: "Trustee",
 };
 

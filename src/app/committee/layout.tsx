@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CommitteeLayout as CommitteeShell } from "@/components/layout/PortalLayout";
+import { CommitteeLayout } from "@/components/layout/PortalLayout";
 import { buildPortalRobotsMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPortalRobotsMetadata();
@@ -9,5 +9,5 @@ export default async function CommitteeRootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <CommitteeShell>{children}</CommitteeShell>;
+  return <CommitteeLayout>{children}</CommitteeLayout>;
 }

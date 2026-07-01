@@ -1,6 +1,6 @@
 import type { UserRole } from "@prisma/client";
 
-export type PortalType = "applicant" | "admin" | "staff" | "reviewer" | "trustee";
+export type PortalType = "applicant" | "admin" | "staff" | "reviewer" | "trustee" | "committee";
 
 export const PORTAL_LOGIN_PATHS: Record<PortalType, string> = {
   applicant: "/applicant",
@@ -8,6 +8,7 @@ export const PORTAL_LOGIN_PATHS: Record<PortalType, string> = {
   staff: "/staff",
   reviewer: "/reviewer",
   trustee: "/trustee",
+  committee: "/committee",
 };
 
 export const PORTAL_DASHBOARD_PATHS: Record<PortalType, string> = {
@@ -16,6 +17,7 @@ export const PORTAL_DASHBOARD_PATHS: Record<PortalType, string> = {
   staff: "/staff",
   reviewer: "/reviewer",
   trustee: "/trustee",
+  committee: "/committee",
 };
 
 export const PORTAL_ALLOWED_ROLES: Record<PortalType, UserRole[]> = {
@@ -24,6 +26,7 @@ export const PORTAL_ALLOWED_ROLES: Record<PortalType, UserRole[]> = {
   staff: ["STAFF", "FINANCE", "COADMIN", "ADMIN"],
   reviewer: ["COMMITTEE", "ADMIN"],
   trustee: ["TRUSTEE", "ADMIN"],
+  committee: ["COMMITTEE", "ADMIN"],
 };
 
 export const PORTAL_LABELS: Record<PortalType, string> = {
@@ -32,6 +35,7 @@ export const PORTAL_LABELS: Record<PortalType, string> = {
   staff: "Staff Portal",
   reviewer: "Reviewer Portal",
   trustee: "Trustee Portal",
+  committee: "Research Committee Portal",
 };
 
 export function getLoginPath(portal: PortalType): string {
@@ -47,7 +51,7 @@ export function roleToPortal(role: UserRole): PortalType {
     case "COADMIN":
       return "staff";
     case "COMMITTEE":
-      return "reviewer";
+      return "committee";
     case "TRUSTEE":
       return "trustee";
     default:

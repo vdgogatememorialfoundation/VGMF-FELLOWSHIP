@@ -58,7 +58,8 @@ export async function ReviewerLayout({ children }: { children: React.ReactNode }
 }
 
 export async function CommitteeLayout({ children }: { children: React.ReactNode }) {
-  return <ReviewerLayout>{children}</ReviewerLayout>;
+  const user = await requireAuth(["COMMITTEE"], "committee");
+  return <PortalLayout user={user} portal="committee">{children}</PortalLayout>;
 }
 
 export async function TrusteeLayout({ children }: { children: React.ReactNode }) {

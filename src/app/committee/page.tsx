@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
+import { PortalGate } from "@/components/auth/PortalGate";
+import { ReviewerDashboard } from "@/components/reviewer/ReviewerDashboard";
 
-export default function CommitteeRedirect() {
-  redirect("/reviewer");
+export default function CommitteePage() {
+  return (
+    <PortalGate portal="committee">
+      <ReviewerDashboard />
+    </PortalGate>
+  );
 }

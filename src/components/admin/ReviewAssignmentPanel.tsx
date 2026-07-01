@@ -117,6 +117,11 @@ export function ReviewAssignmentPanel({
           >
             Assign to Committee
           </Button>
+          {committeeReviewers.length > 0 && (
+            <p className="mt-1 text-xs text-gray-500">
+              Committee members access their portal at: <span className="font-medium">/committee</span>
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
