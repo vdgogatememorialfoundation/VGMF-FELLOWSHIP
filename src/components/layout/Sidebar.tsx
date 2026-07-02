@@ -23,6 +23,7 @@ import {
   FilePlus,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -58,6 +59,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/applications/new", label: "New Application", icon: FilePlus },
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
     { href: "/admin/users", label: "Portal Users", icon: UserCog },
+    { href: "/admin/notifications", label: "Notifications", icon: Bell },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },
     { href: "/admin/permissions", label: "Role Permissions", icon: ShieldCheck },
     { href: "/admin/reports", label: "Reports", icon: FileBarChart },

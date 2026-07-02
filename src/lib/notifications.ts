@@ -254,18 +254,24 @@ export async function notifyDocumentReviewed(
   reason?: string
 ) {
   const label = status.replace(/_/g, " ");
-  const message =
-    status === "APPROVED"
-      ? `Your ${docType.replace(/_/g, " ")} document has been approved.`
-      : status === "RESUBMIT_REQUIRED"
-        ? `Your ${docType.replace(/_/g, " ")} document requires resubmission.${reason ? ` Reason: ${reason}` : ""}`
-        : status === "REJECTED"
-          ? `Your ${docType.replace(/_/g, " ")} document was rejected.${reason ? ` Reason: ${reason}` : ""} Please re-upload a corrected file.`
-          : `Your ${docType.replace(/_/g, " ")} document status is now ${label}.${reason ? ` Note: ${reason}` : ""}`;
+  const docLabel = docType.replace(/_/g, " ");
+  
+  let message: string;
+  let sendEmail = true;
+  
+  if (status === "APPROVED") {
+    message = `Your ${docLabel} document has been approved.`;
+  } else if (status === "RESUBMIT_REQUIRED") {
+    message = `Your ${docLabel} document requires resubmission.${reason ? ` Reason: ${reason}` : ""}`;
+  } else if (status === "REJECTED") {
+    message = `Your ${docLabel} document was rejected.${reason ? ` Reason: ${reason}` : ""} Please re-upload a corrected file.`;
+  } else {
+    message = `Your ${docLabel} document status is now ${label}.${reason ? ` Note: ${reason}` : ""}`;
+  }
 
   await dispatchStatusUpdate(userId, `Document Update: ${label}`, message, {
     whatsappEvent: "DOCUMENT_REVIEW",
-    email: false,
+    email: sendEmail,
     whatsapp: false,
   });
 }
