@@ -33,7 +33,7 @@ const ROLE_OPTIONS = [
   { value: "COADMIN", label: "Co-Admin" },
   { value: "STAFF", label: "Staff" },
   { value: "FINANCE", label: "Finance" },
-  { value: "COMMITTEE", label: "Reviewer" },
+  { value: "COMMITTEE", label: "Research Committee" },
   { value: "TRUSTEE", label: "Trustee" },
 ];
 
@@ -42,7 +42,7 @@ const LOGIN_PATHS: Record<string, string> = {
   COADMIN: "/staff",
   STAFF: "/staff",
   FINANCE: "/staff",
-  COMMITTEE: "/reviewer",
+  COMMITTEE: "/committee",
   TRUSTEE: "/trustee",
 };
 
