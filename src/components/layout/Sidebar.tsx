@@ -25,6 +25,7 @@ import {
   X,
   Bell,
   Inbox,
+  Clipboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -61,6 +62,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/applications/new", label: "New Application", icon: FilePlus },
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
     { href: "/admin/users", label: "Portal Users", icon: UserCog },
+    { href: "/admin/scoring", label: "Scoring Criteria", icon: Clipboard },
     { href: "/admin/notifications", label: "Notifications", icon: Bell },
     { href: "/admin/inbox", label: "Inbox", icon: Inbox },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },

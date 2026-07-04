@@ -529,6 +529,19 @@ model CommitteeScore {
   @@map("committee_scores")
 }
 
+model ScoringCriteria {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String @map("description")
+  maxScore    Float  @map("max_score")
+  order       Int    @default(0)
+  isActive    Boolean @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("scoring_criteria")
+}
+
 model CommitteeRemark {
   id              String   @id @default(cuid())
   applicationId   String   @map("application_id")
