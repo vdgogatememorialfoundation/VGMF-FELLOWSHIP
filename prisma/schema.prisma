@@ -67,7 +67,6 @@ enum FellowshipStage {
   FINAL_PRESENTATION
   INSTALLMENT_3_RELEASED
   COMPLETED
-  SUSPENDED
   TERMINATED
 }
 
@@ -617,6 +616,8 @@ model Fellowship {
 
   agreementGeneratedAt DateTime? @map("agreement_generated_at")
   agreementSignedAt   DateTime? @map("agreement_signed_at")
+  terminationReason   String?   @map("termination_reason")
+  terminationDate     DateTime? @map("termination_date")
   isActive         Boolean  @default(true) @map("is_active")
   isCompleted      Boolean  @default(false) @map("is_completed")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -634,6 +635,27 @@ model Fellowship {
   verificationSessions VerificationSession[]
 
   @@map("fellowships")
+}
+
+model FellowshipDocumentChecklist {
+  id              String   @id @default(cuid())
+  fellowshipId    String   @map("fellowship_id")
+  weekNumber      Int      @map("week_number")
+  title           String
+  description     String?
+  documentType    String   @map("document_type")
+  isRequired      Boolean  @default(true) @map("is_required")
+  isUploaded      Boolean  @default(false) @map("is_uploaded")
+  uploadedAt      DateTime? @map("uploaded_at")
+  filePath        String?  @map("file_path")
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewStatus    String   @default("PENDING") @map("review_status")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  fellowship      Fellowship @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  @@unique([fellowshipId, weekNumber, documentType])
+  @@map("fellowship_document_checklist")
 }
 
 model FundInstallment {

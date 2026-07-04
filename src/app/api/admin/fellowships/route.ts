@@ -295,10 +295,30 @@ export async function PATCH(request: NextRequest) {
 
       const fellowship = await prisma.fellowship.update({
         where: { id: fellowshipId },
-        data: { currentStage: stage, isCompleted: stage === "COMPLETED" },
+        data: { currentStage: stage, isCompleted: stage === "COMPLETED" || stage === "TERMINATED" },
       });
 
       return NextResponse.json({ success: true, fellowship });
+    }
+
+    if (action === "terminate") {
+      const { fellowshipId, reason } = body as { fellowshipId: string; reason?: string };
+      if (!fellowshipId) {
+        return NextResponse.json({ error: "fellowshipId required" }, { status: 400 });
+      }
+
+      const fellowship = await prisma.fellowship.update({
+        where: { id: fellowshipId },
+        data: {
+          currentStage: "TERMINATED",
+          isActive: false,
+          isCompleted: false,
+          terminationReason: reason || null,
+          terminationDate: new Date(),
+        },
+      });
+
+      return NextResponse.json({ success: true, fellowship, message: "Fellowship terminated" });
     }
 
     if (action === "approve_document") {
