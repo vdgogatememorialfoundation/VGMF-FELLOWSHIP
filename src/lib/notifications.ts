@@ -303,6 +303,19 @@ export async function notifyInstallmentReleased(
   );
 }
 
+export async function notifyFellowshipAgreementReady(
+  userId: string,
+  fellowshipId: string,
+  applicationNumber: string
+) {
+  await dispatchNotification(
+    userId,
+    "Fellowship Agreement Ready for Signing",
+    `Your fellowship agreement (ID: ${fellowshipId}) for application ${applicationNumber} is ready. Please log in to the fellowship portal to review and digitally sign the agreement.`,
+    { channel: "EMAIL", emailTemplate: "agreement_ready" }
+  );
+}
+
 export async function notifyReportDue(userId: string, quarter: number, year: number) {
   await dispatchStatusUpdate(
     userId,

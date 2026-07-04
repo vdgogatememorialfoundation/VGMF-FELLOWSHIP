@@ -613,6 +613,7 @@ model Fellowship {
   bankOnlineVerifiedAt DateTime? @map("bank_online_verified_at")
 
   agreementGeneratedAt DateTime? @map("agreement_generated_at")
+  agreementSignedAt   DateTime? @map("agreement_signed_at")
   isActive         Boolean  @default(true) @map("is_active")
   isCompleted      Boolean  @default(false) @map("is_completed")
   createdAt        DateTime @default(now()) @map("created_at")

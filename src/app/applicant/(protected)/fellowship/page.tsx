@@ -40,6 +40,8 @@ type FellowshipData = {
   bankSubmittedAt: string | null;
   bankVerifiedAt: string | null;
   awardLetterPath: string | null;
+  agreementGeneratedAt: string | null;
+  agreementSignedAt: string | null;
   installments: Installment[];
   progressReports: Array<{ quarter: number; year: number; status: string; submittedAt: string }>;
   finalSubmission: { status: string; submittedAt: string } | null;
@@ -247,17 +249,58 @@ export default function ApplicantFellowshipPage() {
       {f.awardLetterPath && (
         <div className="card">
           <h2 className="mb-2 font-semibold">Fellowship Agreement</h2>
-          <p className="text-sm text-gray-600">
-            Auto-generated when your fellowship was awarded. Review and keep a copy for your records.
-          </p>
+          
+          {!f.agreementSignedAt ? (
+            <>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-4">
+                <p className="text-sm text-amber-900">
+                  <strong>Action Required:</strong> Please review the fellowship agreement below and click 
+                  "Sign Agreement" to confirm your acceptance of the terms and conditions.
+                </p>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                By signing this agreement, you confirm that you have read, understood, and agree to 
+                abide by the terms and conditions of the VGMF Fellowship.
+              </p>
+            </>
+          ) : (
+            <div className="rounded-lg bg-green-50 p-4 mb-4">
+              <p className="text-sm text-green-800">
+                <strong>✓ Agreement Signed</strong> on {formatDate(f.agreementSignedAt)}
+              </p>
+            </div>
+          )}
+          
           <a
             href={f.awardLetterPath}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-block text-sm font-medium text-primary-600 hover:underline"
+            className="inline-block text-sm font-medium text-primary-600 hover:underline mr-4"
           >
             View Fellowship Agreement (PDF)
           </a>
+          
+          {!f.agreementSignedAt && (
+            <Button
+              onClick={async () => {
+                if (!confirm("Are you sure you want to sign this agreement? This action cannot be undone.")) return;
+                setLoading(true);
+                const res = await fetch(`/api/fellowship/${f.id}/sign`, { method: "POST" });
+                setLoading(false);
+                if (res.ok) {
+                  setMessage("Agreement signed successfully!");
+                  reload();
+                } else {
+                  const result = await res.json();
+                  setMessage(result.error || "Failed to sign agreement");
+                }
+              }}
+              loading={loading}
+              className="mt-2"
+            >
+              Sign Agreement
+            </Button>
+          )}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import prisma from "./db";
 import { generateFellowshipId } from "./auth";
-import { notifyInstallmentReleased, notifyStatusChange } from "./notifications";
+import { notifyInstallmentReleased, notifyStatusChange, notifyFellowshipAgreementReady } from "./notifications";
 import { stageForInstallmentRelease } from "./fellowship-stage";
 import { validateInstallmentRelease } from "./installment-gates";
 import { generateAndStoreFellowshipAgreement } from "./agreement-service";
@@ -10,6 +10,16 @@ const INSTALLMENT_SPLITS = [
   { no: 2, percentage: 40, label: "After mid-term review (40%)" },
   { no: 3, percentage: 20, label: "Final report & presentation (20%)" },
 ];
+
+// Parse duration string to months
+function parseDurationToMonths(duration: string): number {
+  const match = duration.match(/(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  // Default to 12 months if can't parse
+  return 12;
+}
 
 export async function awardFellowship(params: {
   applicationId: string;
@@ -35,7 +45,8 @@ export async function awardFellowship(params: {
   const fellowshipId = await generateFellowshipId();
   const start = startDate ?? new Date();
   const end = new Date(start);
-  end.setMonth(end.getMonth() + (duration.includes("12") ? 12 : 6));
+  const months = parseDurationToMonths(duration);
+  end.setMonth(end.getMonth() + months);
 
   const fellowship = await prisma.fellowship.create({
     data: {
@@ -90,6 +101,12 @@ export async function awardFellowship(params: {
 
   try {
     await generateAndStoreFellowshipAgreement(fellowship.id);
+    // Send email notification to applicant that agreement is ready for signing
+    await notifyFellowshipAgreementReady(
+      application.userId,
+      fellowship.fellowshipId,
+      application.applicationNumber
+    );
   } catch (err) {
     console.error("Failed to auto-generate fellowship agreement:", err);
   }
