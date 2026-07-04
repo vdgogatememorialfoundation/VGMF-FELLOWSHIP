@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { scoreSchema } from "@/lib/validations";
 import { getAssignedApplicationIds } from "@/lib/review-workflow";
 
+// POST - Save score (auto-save) or submit/lock score
 export async function POST(request: NextRequest) {
   const user = await getSession();
   if (!user || !["COMMITTEE", "ADMIN"].includes(user.role)) {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { applicationId, ...scoreData } = body;
+    const { applicationId, submit, ...scoreData } = body;
     const parsed = scoreSchema.safeParse(scoreData);
 
     if (!parsed.success) {
@@ -20,6 +21,21 @@ export async function POST(request: NextRequest) {
     }
 
     const d = parsed.data;
+
+    // Check if already submitted
+    const existingScore = await prisma.committeeScore.findUnique({
+      where: {
+        applicationId_committeeUserId: {
+          applicationId,
+          committeeUserId: user.id,
+        },
+      },
+    });
+
+    if (existingScore?.isSubmitted && user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Score already submitted and locked" }, { status: 403 });
+    }
+
     const totalScore =
       d.scientificMerit +
       d.innovation +
@@ -34,12 +50,19 @@ export async function POST(request: NextRequest) {
           committeeUserId: user.id,
         },
       },
-      update: { ...d, totalScore },
+      update: {
+        ...d,
+        totalScore,
+        isSubmitted: submit ? true : existingScore?.isSubmitted || false,
+        submittedAt: submit ? new Date() : existingScore?.submittedAt,
+      },
       create: {
         applicationId,
         committeeUserId: user.id,
         ...d,
         totalScore,
+        isSubmitted: submit || false,
+        submittedAt: submit ? new Date() : null,
       },
     });
 
@@ -53,31 +76,35 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const app = await prisma.application.findUnique({ where: { id: applicationId } });
-    if (app?.status === "UNDER_REVIEW") {
-      await prisma.application.update({
-        where: { id: applicationId },
-        data: {
-          status: "TECHNICAL_SCORING",
-          statusHistory: {
-            create: {
-              fromStatus: "UNDER_REVIEW",
-              toStatus: "TECHNICAL_SCORING",
-              changedBy: user.id,
-              notes: `Technical score submitted: ${totalScore}/100`,
+    // Update application status if this is a new submission
+    if (submit) {
+      const app = await prisma.application.findUnique({ where: { id: applicationId } });
+      if (app?.status === "UNDER_REVIEW") {
+        await prisma.application.update({
+          where: { id: applicationId },
+          data: {
+            status: "TECHNICAL_SCORING",
+            statusHistory: {
+              create: {
+                fromStatus: "UNDER_REVIEW",
+                toStatus: "TECHNICAL_SCORING",
+                changedBy: user.id,
+                notes: `Technical score submitted: ${totalScore}/100`,
+              },
             },
           },
-        },
-      });
+        });
+      }
     }
 
-    return NextResponse.json({ success: true, score });
+    return NextResponse.json({ success: true, score, locked: score.isSubmitted });
   } catch (error) {
     console.error("Scoring error:", error);
     return NextResponse.json({ error: "Failed to save score" }, { status: 500 });
   }
 }
 
+// GET - Get applications with scores
 export async function GET() {
   const user = await getSession();
   if (!user || !["COMMITTEE", "ADMIN"].includes(user.role)) {
@@ -106,7 +133,13 @@ export async function GET() {
       user: { include: { profile: true } },
       researchProposal: true,
       budget: true,
-      committeeScores: true,
+      committeeScores: {
+        include: {
+          committeeUser: {
+            include: { profile: true }
+          }
+        }
+      },
       applicationQueries: { orderBy: { createdAt: "desc" }, take: 3 },
     },
     orderBy: { submittedAt: "desc" },

@@ -517,6 +517,8 @@ model CommitteeScore {
   totalScore      Float    @map("total_score")
   remarks         String?
   isShortlisted   Boolean  @default(false) @map("is_shortlisted")
+  isSubmitted     Boolean  @default(false) @map("is_submitted")
+  submittedAt     DateTime? @map("submitted_at")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -789,6 +791,30 @@ model SupportTicketReply {
 
   @@index([ticketId])
   @@map("support_ticket_replies")
+}
+
+model InboxMessage {
+  id              String   @id @default(cuid())
+  applicationId   String?  @map("application_id")
+  senderId        String   @map("sender_id")
+  recipientId     String   @map("recipient_id")
+  subject         String
+  body            String   @db.Text
+  isRead          Boolean  @default(false) @map("is_read")
+  readAt          DateTime? @map("read_at")
+  parentMessageId String?  @map("parent_message_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient    User         @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  parentMessage InboxMessage? @relation("MessageThread", fields: [parentMessageId], references: [id], onDelete: SetNull)
+  replies      InboxMessage[] @relation("MessageThread")
+
+  @@index([recipientId, isRead])
+  @@index([senderId])
+  @@index([applicationId])
+  @@map("inbox_messages")
 }
 
 model OtpCode {

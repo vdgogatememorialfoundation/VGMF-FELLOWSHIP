@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   Bell,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -48,6 +49,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/applicant/status", label: "Application Tracking", icon: Activity },
     { href: "/applicant/fellowship", label: "My Fellowship", icon: Award },
     { href: "/applicant/support", label: "Support", icon: HelpCircle },
+    { href: "/applicant/inbox", label: "Inbox", icon: Inbox },
   ],
   admin: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -60,6 +62,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
     { href: "/admin/users", label: "Portal Users", icon: UserCog },
     { href: "/admin/notifications", label: "Notifications", icon: Bell },
+    { href: "/admin/inbox", label: "Inbox", icon: Inbox },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },
     { href: "/admin/permissions", label: "Role Permissions", icon: ShieldCheck },
     { href: "/admin/reports", label: "Reports", icon: FileBarChart },
@@ -68,6 +71,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
     { href: "/staff/applications", label: "Applications", icon: ClipboardList },
     { href: "/staff/support", label: "Support Tickets", icon: MessageSquare },
+    { href: "/staff/inbox", label: "Inbox", icon: Inbox },
     { href: "/staff/finance", label: "Finance", icon: DollarSign },
     { href: "/staff/reports", label: "Reports", icon: BarChart3 },
   ],
@@ -75,14 +79,17 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/reviewer", label: "Dashboard", icon: LayoutDashboard },
     { href: "/reviewer/applications", label: "Applications", icon: ClipboardList },
     { href: "/reviewer/rankings", label: "Rankings", icon: BarChart3 },
+    { href: "/reviewer/inbox", label: "Inbox", icon: Inbox },
   ],
   committee: [
     { href: "/committee", label: "Dashboard", icon: LayoutDashboard },
     { href: "/committee/applications", label: "Applications", icon: ClipboardList },
+    { href: "/committee/inbox", label: "Inbox", icon: Inbox },
   ],
   trustee: [
     { href: "/trustee", label: "Dashboard", icon: LayoutDashboard },
     { href: "/trustee/approvals", label: "Approvals", icon: Award },
+    { href: "/trustee/inbox", label: "Inbox", icon: Inbox },
   ],
 };
 
