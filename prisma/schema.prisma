@@ -229,6 +229,8 @@ model User {
   assignedSupportTickets SupportTicket[]           @relation("SupportTicketAssignee")
   supportTicketReplies SupportTicketReply[]
   auditLogs            AuditLog[]
+  sentMessages         InboxMessage[] @relation("MessageSender")
+  receivedMessages     InboxMessage[] @relation("MessageRecipient")
 
   @@map("users")
 }
@@ -351,6 +353,7 @@ model Application {
   reviewAssignments  ApplicationReviewAssignment[]
   applicationQueries ApplicationQuery[]
   verificationSessions VerificationSession[]
+  inboxMessages      InboxMessage[]
 
   @@map("applications")
 }
