@@ -246,7 +246,7 @@ export default function ApplicantFellowshipPage() {
         </div>
       </div>
 
-      {f.awardLetterPath && (
+      {(f.awardLetterPath || f.agreementGeneratedAt) && (
         <div className="card">
           <h2 className="mb-2 font-semibold">Fellowship Agreement</h2>
           
@@ -271,14 +271,16 @@ export default function ApplicantFellowshipPage() {
             </div>
           )}
           
-          <a
-            href={f.awardLetterPath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-sm font-medium text-primary-600 hover:underline mr-4"
-          >
-            View Fellowship Agreement (PDF)
-          </a>
+          {f.awardLetterPath && (
+            <a
+              href={f.awardLetterPath}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-medium text-primary-600 hover:underline mr-4"
+            >
+              View Fellowship Agreement (PDF)
+            </a>
+          )}
           
           {!f.agreementSignedAt && (
             <Button
