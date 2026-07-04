@@ -29,11 +29,12 @@ type Message = {
 };
 
 type Props = {
-  currentUserId: string;
+  userId: string;
+  userRole: string;
   showApplicationFilter?: boolean;
 };
 
-export function InboxView({ currentUserId, showApplicationFilter = false }: Props) {
+export function InboxView({ userId, userRole, showApplicationFilter = false }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -44,7 +45,7 @@ export function InboxView({ currentUserId, showApplicationFilter = false }: Prop
 
   function loadMessages() {
     setLoading(true);
-    fetch(`/api/inbox?folder=${activeTab}`)
+    fetch(`/api/inbox?folder=${activeTab}&role=${userRole}`)
       .then((r) => r.json())
       .then((d) => {
         setMessages(d.messages || []);
@@ -61,7 +62,7 @@ export function InboxView({ currentUserId, showApplicationFilter = false }: Prop
   async function selectMessage(msg: Message) {
     setSelectedMessage(msg);
     
-    if (!msg.isRead && msg.recipientId === currentUserId) {
+    if (!msg.isRead && msg.recipientId === userId) {
       await fetch(`/api/inbox/${msg.id}`, { method: "PATCH" });
       loadMessages();
     }
@@ -103,7 +104,7 @@ export function InboxView({ currentUserId, showApplicationFilter = false }: Prop
   }
 
   function getOtherParty(msg: Message) {
-    return msg.senderId === currentUserId ? msg.recipient : msg.sender;
+    return msg.senderId === userId ? msg.recipient : msg.sender;
   }
 
   return (
@@ -151,7 +152,7 @@ export function InboxView({ currentUserId, showApplicationFilter = false }: Prop
                     onClick={() => selectMessage(msg)}
                     className={`w-full p-4 text-left hover:bg-gray-50 ${
                       selectedMessage?.id === msg.id ? "bg-primary-50" : ""
-                    } ${!msg.isRead && msg.recipientId === currentUserId ? "bg-blue-50/50" : ""}`}
+                    } ${!msg.isRead && msg.recipientId === userId ? "bg-blue-50/50" : ""}`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
@@ -172,7 +173,7 @@ export function InboxView({ currentUserId, showApplicationFilter = false }: Prop
                         </p>
                       </div>
                       <div className="ml-2 flex flex-col items-end">
-                        {!msg.isRead && msg.recipientId === currentUserId && (
+                        {!msg.isRead && msg.recipientId === userId && (
                           <span className="mb-1 h-2 w-2 rounded-full bg-primary-600"></span>
                         )}
                         <span className="text-xs text-gray-400">
@@ -217,7 +218,7 @@ export function InboxView({ currentUserId, showApplicationFilter = false }: Prop
                   <div
                     key={reply.id}
                     className={`rounded-lg p-4 ${
-                      reply.senderId === currentUserId
+                      reply.senderId === userId
                         ? "bg-primary-50 ml-8"
                         : "bg-gray-50 mr-8"
                     }`}

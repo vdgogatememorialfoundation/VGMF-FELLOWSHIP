@@ -1,14 +1,13 @@
 "use client";
 
-import { useSession } from "@/lib/auth";
+import { useSession } from "@/hooks/useSession";
 import { InboxView } from "@/components/inbox/InboxView";
 
 export default function TrusteeInboxPage() {
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
 
-  if (!session) {
-    return <p>Loading...</p>;
-  }
+  if (loading) return <p className="p-8">Loading...</p>;
+  if (!user) return <p className="p-8">Please login to view inbox.</p>;
 
   return (
     <div className="space-y-6">
@@ -18,7 +17,7 @@ export default function TrusteeInboxPage() {
           Communicate with applicants and other portal users
         </p>
       </div>
-      <InboxView currentUserId={session.user.id} />
+      <InboxView userId={user.id} userRole="TRUSTEE" />
     </div>
   );
 }
