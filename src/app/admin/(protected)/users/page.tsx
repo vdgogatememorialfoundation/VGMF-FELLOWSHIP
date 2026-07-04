@@ -205,7 +205,14 @@ export default function AdminUsersPage() {
           <Link href="/admin/accounts" className="font-medium text-primary-600 underline">
             All Accounts
           </Link>
-          .
+          .{" "}
+          <button
+            type="button"
+            className="font-medium text-purple-600 underline hover:text-purple-700"
+            onClick={() => window.open(LOGIN_PATHS[form.role], "_blank")}
+          >
+            Access Portal →
+          </button>
         </p>
         <Button type="submit" loading={loading}>
           Create User Account
@@ -284,6 +291,14 @@ export default function AdminUsersPage() {
                       onClick={() => loadActivity(entry.id)}
                     >
                       Activity Log
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs text-purple-600 hover:text-purple-700"
+                      onClick={() => window.open(LOGIN_PATHS[entry.role], "_blank")}
+                    >
+                      Access Portal
                     </Button>
                   </div>
                 </td>
