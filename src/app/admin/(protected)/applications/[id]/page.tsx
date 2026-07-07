@@ -140,6 +140,35 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       decisionJson: unknown;
     }>
   >([]);
+  const [regeneratingPdf, setRegeneratingPdf] = useState(false);
+
+  async function regenerateUndertakingPdf() {
+    if (!app) return;
+    setRegeneratingPdf(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/undertaking", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId: app.id }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to regenerate PDF");
+        return;
+      }
+
+      setMessage("Undertaking PDF regenerated successfully. Refresh to see the updated PDF.");
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to regenerate PDF");
+    } finally {
+      setRegeneratingPdf(false);
+    }
+  }
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/admin/applications?id=${id}`);
@@ -350,6 +379,14 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 >
                   View PDF
                 </a>
+                <span className="text-gray-300">|</span>
+                <button
+                  onClick={regenerateUndertakingPdf}
+                  disabled={regeneratingPdf}
+                  className="text-sm font-medium text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                >
+                  {regeneratingPdf ? "Regenerating..." : "Regenerate PDF"}
+                </button>
               </div>
             ) : (
               "Not submitted"

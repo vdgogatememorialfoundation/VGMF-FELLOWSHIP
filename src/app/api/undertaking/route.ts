@@ -14,6 +14,8 @@ export const maxDuration = 60;
 
 const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
 
+const ADMIN_ROLES = new Set(["ADMIN", "STAFF", "COADMIN"]);
+
 function parseBoolean(value: FormDataEntryValue | boolean | null | undefined): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value !== "string") return false;
@@ -309,5 +311,74 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const user = await getSession();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!ADMIN_ROLES.has(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { applicationId } = body;
+
+    if (!applicationId) {
+      return NextResponse.json({ error: "applicationId is required" }, { status: 400 });
+    }
+
+    const application = await prisma.application.findFirst({
+      where: { id: applicationId },
+      include: { digitalUndertaking: true, researchProposal: true },
+    });
+
+    if (!application) {
+      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
+
+    const undertaking = application.digitalUndertaking;
+    if (!undertaking) {
+      return NextResponse.json({ error: "No undertaking found for this application" }, { status: 404 });
+    }
+
+    if (!undertaking.signatureData) {
+      return NextResponse.json({ error: "No signature data found. Applicant needs to re-sign." }, { status: 400 });
+    }
+
+    const signatureBuffer = Buffer.from(undertaking.signatureData, "base64");
+
+    const { pdfBuffer, pdfPath } = await generateUndertakingPdf({
+      applicationId,
+      applicationNumber: application.applicationNumber,
+      projectTitle: application.researchProposal?.projectTitle || "________________________________________________",
+      fullName: undertaking.fullName,
+      city: application.city || "_________________",
+      signatureBuffer,
+      ipAddress: undertaking.ipAddress || "0.0.0.0",
+      submittedAt: undertaking.submittedAt,
+    });
+
+    const updatedUndertaking = await prisma.digitalUndertaking.update({
+      where: { applicationId },
+      data: {
+        pdfPath,
+        pdfData: pdfBuffer.toString("base64"),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Undertaking PDF regenerated successfully",
+      undertaking: formatUndertakingForClient(updatedUndertaking),
+    });
+  } catch (error) {
+    console.error("Undertaking regenerate error:", error);
+    const message = error instanceof Error ? error.message : "Failed to regenerate undertaking";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
