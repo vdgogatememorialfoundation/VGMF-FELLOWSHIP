@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const formTemplateId = searchParams.get("formTemplateId");
 
+  // Build where clause for form submissions if formTemplateId provided
+  const formSubmissionWhere = formTemplateId ? { formTemplateId } : {};
+
   // Get all applicants with their applications
   const applicants = await prisma.user.findMany({
     where: { role: "APPLICANT", isActive: true },
@@ -31,23 +34,30 @@ export async function GET(request: NextRequest) {
           status: true,
         },
       },
-      formSubmissions: formTemplateId
-        ? {
-            where: { formTemplateId },
-            select: {
-              id: true,
-              status: true,
-              submittedAt: true,
-            },
-          }
-        : false,
     },
     orderBy: { createdAt: "desc" },
   });
 
+  // If filtering by form, get users who have form submissions
+  let filteredUserIds: string[] | null = null;
+  if (formTemplateId) {
+    const formSubmissions = await prisma.formSubmission.findMany({
+      where: formSubmissionWhere,
+      select: { userId: true },
+      distinct: ["userId"],
+    });
+    filteredUserIds = formSubmissions.map((s) => s.userId);
+  }
+
   // Flatten applications to get applicant-level data
   const applicantsWithEmails = applicants
-    .filter((a) => a.email)
+    .filter((a) => {
+      // Filter by form if specified
+      if (filteredUserIds && !filteredUserIds.includes(a.id)) {
+        return false;
+      }
+      return a.email;
+    })
     .map((a) => ({
       id: a.id,
       userId: a.userId,
@@ -58,7 +68,6 @@ export async function GET(request: NextRequest) {
       applicationNumber: a.applications[0]?.applicationNumber || null,
       applicationStatus: a.applications[0]?.status || null,
       hasSubmittedApplication: a.applications.some((app) => app.status !== "DRAFT"),
-      formSubmissions: formTemplateId ? a.formSubmissions : null,
     }));
 
   return NextResponse.json({ applicants: applicantsWithEmails });
