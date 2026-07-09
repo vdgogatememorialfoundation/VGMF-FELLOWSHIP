@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { Eye, EyeOff, FileText } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -38,6 +39,14 @@ const ROLE_FILTERS = [
   { value: "COMMITTEE", label: "Reviewers" },
   { value: "TRUSTEE", label: "Trustees" },
 ];
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default function AdminAccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -184,7 +193,7 @@ export default function AdminAccountsPage() {
         <h2 className="mb-4 font-semibold">
           Accounts ({accounts.length})
         </h2>
-        <table className="w-full min-w-[1100px] text-sm">
+        <table className="w-full min-w-[1200px] text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
               <th className="pb-3 pr-4">12-digit User ID</th>
@@ -192,8 +201,8 @@ export default function AdminAccountsPage() {
               <th className="pb-3 pr-4">Email</th>
               <th className="pb-3 pr-4">Phone</th>
               <th className="pb-3 pr-4">Role</th>
+              <th className="pb-3 pr-4">Created</th>
               <th className="pb-3 pr-4">Password</th>
-              <th className="pb-3 pr-4">Login</th>
               <th className="pb-3 pr-4">Applications</th>
               <th className="pb-3 pr-4">Status</th>
               <th className="pb-3">Actions</th>
@@ -212,6 +221,9 @@ export default function AdminAccountsPage() {
                 <td className="py-3 pr-4">{account.email}</td>
                 <td className="py-3 pr-4">{account.phone ?? "—"}</td>
                 <td className="py-3 pr-4">{account.roleLabel}</td>
+                <td className="py-3 pr-4 text-xs text-gray-600">
+                  {formatDate(account.createdAt)}
+                </td>
                 <td className="py-3 pr-4">
                   <div className="flex items-start gap-2">
                     <div className="min-w-0">
@@ -283,6 +295,13 @@ export default function AdminAccountsPage() {
                 </td>
                 <td className="py-3">
                   <div className="flex flex-col gap-2">
+                    <Link
+                      href={`/admin/accounts/${account.id}`}
+                      className="inline-flex items-center gap-1 rounded-lg bg-primary-100 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-200"
+                    >
+                      <FileText className="h-3 w-3" />
+                      View Details
+                    </Link>
                     <Button
                       type="button"
                       variant="secondary"
