@@ -60,17 +60,27 @@ export function EmailMessagingPanel({
     const url = formId
       ? `/api/admin/messaging/email?formTemplateId=${formId}`
       : "/api/admin/messaging/email";
-    const res = await fetch(url);
-    const data = await res.json();
-    setApplicants(data.applicants || []);
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      setApplicants(data.applicants || []);
+    } catch (err) {
+      console.error("Failed to load applicants:", err);
+      setApplicants([]);
+    }
     setLoadingApplicants(false);
   }, []);
 
   const loadForms = useCallback(async () => {
     setLoadingForms(true);
-    const res = await fetch("/api/admin/cms");
-    const data = await res.json();
-    setForms(data.forms || []);
+    try {
+      const res = await fetch("/api/admin/cms");
+      const data = await res.json();
+      setForms(data.forms || []);
+    } catch (err) {
+      console.error("Failed to load forms:", err);
+      setForms([]);
+    }
     setLoadingForms(false);
   }, []);
 
@@ -94,6 +104,7 @@ export function EmailMessagingPanel({
       newSelected.add(applicantId);
     }
     setSelectedApplicantIds(newSelected);
+    // If selecting individual, uncheck selectAll
     if (newSelected.size > 0) {
       setSelectAll(false);
     }
@@ -119,7 +130,7 @@ export function EmailMessagingPanel({
       return;
     }
     if (!selectAll && selectedApplicantIds.size === 0) {
-      setMessageFeedback({ type: "error", text: "Please select at least one applicant or select all" });
+      setMessageFeedback({ type: "error", text: "Please select at least one applicant" });
       return;
     }
 
@@ -198,30 +209,69 @@ export function EmailMessagingPanel({
                   label={`Select All (${applicants.length} applicants)`}
                   checked={selectAll}
                   onChange={toggleSelectAll}
-                  disabled={applicants.length === 0}
+                  disabled={applicants.length === 0 || loadingApplicants}
                 />
-                <span className="text-sm text-gray-600">
-                  {recipientCount} selected
-                </span>
               </div>
             </div>
           </div>
 
-          {!selectAll && applicants.length > 0 && (
-            <div className="max-h-60 overflow-y-auto rounded-lg border">
+          {/* Selection count */}
+          <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3">
+            <span className="text-sm font-medium text-blue-800">
+              {loadingApplicants ? "Loading applicants..." : 
+               applicants.length === 0 ? "No applicants found" :
+               `${recipientCount} of ${applicants.length} applicants selected`}
+            </span>
+            {!selectAll && applicants.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectAll(true);
+                  setSelectedApplicantIds(new Set(applicants.map((a) => a.id)));
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Select All
+              </button>
+            )}
+            {selectAll && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectAll(false);
+                  setSelectedApplicantIds(new Set());
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Clear Selection
+              </button>
+            )}
+          </div>
+
+          {/* Applicant list - show when not selecting all or always show list */}
+          {applicants.length > 0 && (
+            <div className="max-h-80 overflow-y-auto rounded-lg border bg-white">
               <div className="p-2">
                 {applicants.map((applicant) => (
                   <label
                     key={applicant.id}
-                    className="flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50"
+                    className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-gray-50"
                   >
-                    <Checkbox
-                      checked={selectedApplicantIds.has(applicant.id)}
-                      onChange={() => toggleApplicant(applicant.id)}
+                    <input
+                      type="checkbox"
+                      checked={selectAll || selectedApplicantIds.has(applicant.id)}
+                      onChange={() => {
+                        if (selectAll) {
+                          toggleSelectAll();
+                        } else {
+                          toggleApplicant(applicant.id);
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{applicant.name}</p>
-                      <p className="truncate text-xs text-gray-500">{applicant.email}</p>
+                      <p className="truncate text-sm font-medium">{applicant.name || "Unnamed"}</p>
+                      <p className="truncate text-xs text-gray-500">{applicant.email || "No email"}</p>
                     </div>
                     {applicant.applicationNumber && (
                       <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
@@ -232,6 +282,10 @@ export function EmailMessagingPanel({
                 ))}
               </div>
             </div>
+          )}
+
+          {loadingApplicants && (
+            <div className="py-4 text-center text-gray-500">Loading applicants...</div>
           )}
 
           <div>
