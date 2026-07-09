@@ -257,7 +257,7 @@ export async function notifyDocumentReviewed(
   const docLabel = docType.replace(/_/g, " ");
   
   let message: string;
-  let sendEmail = true;
+  const sendEmail = true;
   
   if (status === "APPROVED") {
     message = `Your ${docLabel} document has been approved.`;
