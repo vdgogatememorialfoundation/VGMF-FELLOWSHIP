@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { sendEmail, renderEmailHtml } from "@/lib/email";
+import { sendEmail, sendNotificationEmail } from "@/lib/email";
 import { ORGANIZATION_NAME } from "@/lib/constants";
 
 async function requireAdmin() {
@@ -142,18 +142,14 @@ export async function POST(request: NextRequest) {
       }
 
       const applicantName = applicant.profile?.name || "Applicant";
-      const bodyContent = `
-        <p>Dear <strong>${applicantName}</strong>,</p>
-        <div style="margin: 24px 0; padding: 20px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; white-space: pre-wrap;">${message.replace(/\n/g, "<br/>")}</div>
-        <p style="font-size: 13px; color: #64748b; margin-top: 24px;">This is an official communication from the ${ORGANIZATION_NAME} Fellowship Portal.</p>
-      `;
 
-      const emailResult = await sendEmail({
-        to: applicant.email,
-        toName: applicantName,
-        subject: `[${ORGANIZATION_NAME}] ${subject}`,
-        html: renderEmailHtml("Fellowship Portal Notification", bodyContent),
-      });
+      // Use sendNotificationEmail for consistent styling
+      const emailResult = await sendNotificationEmail(
+        applicant.email,
+        applicantName,
+        subject,
+        message
+      );
 
       if (emailResult.ok) {
         results.success++;
