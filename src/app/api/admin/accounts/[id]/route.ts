@@ -72,12 +72,7 @@ export async function GET(
         take: 20,
       },
       // Fellowship related data
-      fellowships: {
-        include: {
-          fellowship: true,
-        },
-        orderBy: { createdAt: "desc" },
-      },
+      fellowships: true,
     },
   });
 
@@ -130,7 +125,6 @@ export async function GET(
       emailLogs: account.emailLogs,
       auditLogs: account.auditLogs,
       verificationSessions: account.verificationSessions,
-      fellowships: account.fellowships,
     },
   });
 }
