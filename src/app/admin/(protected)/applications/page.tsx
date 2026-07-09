@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { APPLICATION_STATUSES } from "@/lib/utils";
+import { EmailMessagingPanel } from "@/components/admin/EmailMessagingPanel";
 
 interface Application {
   id: string;
@@ -85,6 +86,8 @@ export default function AdminApplicationsPage() {
           className="w-48"
         />
       </div>
+
+      <EmailMessagingPanel />
 
       <div className="card overflow-x-auto">
         {loading ? (

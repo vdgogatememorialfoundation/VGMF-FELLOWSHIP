@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { FIELD_TYPES } from "@/lib/constants";
 import { isProtectedFormSlug } from "@/lib/form-slug";
+import { EmailMessagingPanel } from "@/components/admin/EmailMessagingPanel";
 
 export interface FormField {
   id: string;
@@ -72,6 +73,7 @@ export function FormBuilderEditor({ slug }: FormBuilderEditorProps) {
   const [loading, setLoading] = useState(true);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
+  const [activeTab, setActiveTab] = useState<"fields" | "submissions">("fields");
 
   const loadForm = useCallback(async () => {
     setLoading(true);
@@ -252,13 +254,55 @@ export function FormBuilderEditor({ slug }: FormBuilderEditorProps) {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-6">
+          <button
+            onClick={() => setActiveTab("fields")}
+            className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
+              activeTab === "fields"
+                ? "border-primary-600 text-primary-600"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            }`}
+          >
+            Fields & Settings
+          </button>
+          <button
+            onClick={() => setActiveTab("submissions")}
+            className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
+              activeTab === "submissions"
+                ? "border-primary-600 text-primary-600"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            }`}
+          >
+            Submissions & Email
+          </button>
+        </nav>
+      </div>
+
       {message && (
         <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>
       )}
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-      <div className="card space-y-4">
-        <h2 className="font-semibold">Form Details</h2>
+      {activeTab === "submissions" ? (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="mb-4 font-semibold">Form Submissions</h2>
+            <p className="text-sm text-gray-600">
+              View and manage submissions for this form. Use the email feature below to send
+              notifications to applicants who have submitted this form.
+            </p>
+          </div>
+          <EmailMessagingPanel
+            formTemplateId={template.id}
+            formName={template.name}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="card space-y-4">
+            <h2 className="font-semibold">Form Details</h2>
         <Input
           label="Form name"
           value={formMeta.name}
@@ -410,6 +454,8 @@ export function FormBuilderEditor({ slug }: FormBuilderEditorProps) {
           ))
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
