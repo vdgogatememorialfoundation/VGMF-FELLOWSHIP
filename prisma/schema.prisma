@@ -631,6 +631,7 @@ model Fellowship {
   financeRecords   FinanceRecord?
   certificates     Certificate[]
   fellowshipDocuments FellowshipDocument[]
+  fellowshipDocumentChecklist FellowshipDocumentChecklist[]
   reminders        FellowshipReminder[]
   verificationSessions VerificationSession[]
 
