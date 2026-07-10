@@ -7,7 +7,7 @@ import { ORGANIZATION_NAME } from "@/lib/constants";
 
 const ALLOWED_ROLES = new Set(["ADMIN", "STAFF", "COADMIN"]);
 
-// GET - Get applicants for messaging
+// GET - Get application forms and applicants
 export async function GET(request: NextRequest) {
   const user = await getSession();
   if (!user || !ALLOWED_ROLES.has(user.role)) {
@@ -16,68 +16,84 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = request.nextUrl;
-    const search = searchParams.get("search") || "";
-    const status = searchParams.get("status");
-    const fellowshipId = searchParams.get("fellowshipId");
+    const fellowshipProgramId = searchParams.get("fellowshipProgramId");
 
-    const whereClause: Record<string, unknown> = {};
+    // If fellowshipProgramId is provided, return applicants for that form
+    if (fellowshipProgramId) {
+      const applications = await prisma.application.findMany({
+        where: { fellowshipProgramId },
+        select: {
+          id: true,
+          applicationNumber: true,
+          name: true,
+          email: true,
+          mobile: true,
+          status: true,
+          submittedAt: true,
+          userId: true,
+          fellowship: {
+            select: {
+              id: true,
+              fellowshipId: true,
+              fellowName: true,
+            },
+          },
+        },
+        orderBy: { applicationNumber: "asc" },
+      });
 
-    if (search) {
-      whereClause.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { applicationNumber: { contains: search, mode: "insensitive" } },
-      ];
+      // Count by status
+      const submitted = applications.filter(a => a.submittedAt !== null).length;
+      const notSubmitted = applications.filter(a => a.submittedAt === null).length;
+
+      return NextResponse.json({
+        applicants: applications,
+        summary: {
+          total: applications.length,
+          submitted,
+          notSubmitted,
+        },
+      });
     }
 
-    if (status) {
-      whereClause.status = status;
-    }
-
-    if (fellowshipId === "has_fellowship") {
-      whereClause.fellowship = { isNot: null };
-    } else if (fellowshipId === "no_fellowship") {
-      whereClause.fellowship = null;
-    }
-
-    const applications = await prisma.application.findMany({
-      where: whereClause,
+    // Otherwise, return list of fellowship programs (application forms)
+    const fellowshipPrograms = await prisma.fellowshipProgram.findMany({
       select: {
         id: true,
-        applicationNumber: true,
         name: true,
-        email: true,
-        mobile: true,
-        status: true,
-        submittedAt: true,
-        fellowship: {
+        year: true,
+        applicationCount: true,
+        _count: {
           select: {
-            id: true,
-            fellowshipId: true,
-            fellowName: true,
+            applications: true,
           },
         },
       },
-      orderBy: { submittedAt: "desc" },
-      take: 100,
+      orderBy: { createdAt: "desc" },
     });
 
-    // Get status counts
-    const statusCounts = await prisma.application.groupBy({
-      by: ["status"],
-      _count: true,
+    // Also get applications without fellowship program (legacy)
+    const legacyCount = await prisma.application.count({
+      where: { fellowshipProgramId: null },
     });
 
     return NextResponse.json({
-      applications,
-      statusCounts: statusCounts.reduce(
-        (acc, item) => ({ ...acc, [item.status]: item._count }),
-        {}
-      ),
+      fellowshipPrograms: fellowshipPrograms.map(fp => ({
+        id: fp.id,
+        name: fp.name,
+        year: fp.year,
+        applicantCount: fp._count.applications,
+      })),
+      legacyApplications: legacyCount > 0 ? {
+        id: "legacy",
+        name: "Legacy Applications",
+        year: null,
+        applicantCount: legacyCount,
+      } : null,
     });
   } catch (error) {
-    console.error("Error fetching applicants:", error);
-    return NextResponse.json({ error: "Failed to fetch applicants" }, { status: 500 });
+    console.error("Error fetching data:", error);
+    return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
 

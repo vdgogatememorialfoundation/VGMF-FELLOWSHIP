@@ -15,6 +15,9 @@ import {
   XCircle,
   Loader2,
   Users,
+  FileText,
+  Plus,
+  RefreshCw,
 } from "lucide-react";
 
 interface ApplicantApplication {
@@ -34,6 +37,24 @@ interface Applicant {
   applications: ApplicantApplication[];
 }
 
+interface FellowshipProgram {
+  id: string;
+  name: string;
+  year: number | null;
+  applicantCount: number;
+}
+
+interface ApplicationForEmail {
+  id: string;
+  applicationNumber: string;
+  name: string;
+  email: string;
+  mobile: string | null;
+  status: string;
+  submittedAt: string | null;
+  userId: string;
+}
+
 interface SendResult {
   id: string;
   name: string;
@@ -42,77 +63,9 @@ interface SendResult {
   error?: string;
 }
 
-const TEMPLATE_OPTIONS = [
-  { value: "", label: "Custom Message" },
-  { value: "interview_invite", label: "Interview Invitation" },
-  { value: "status_update", label: "Status Update" },
-  { value: "document_request", label: "Document Request" },
-  { value: "fellowship_offer", label: "Fellowship Offer" },
-  { value: "general", label: "General Communication" },
-];
-
-const TEMPLATE_MESSAGES: Record<string, { subject: string; message: string }> = {
-  interview_invite: {
-    subject: "Interview Invitation - VGMF Fellowship",
-    message: `We are pleased to invite you for an interview for your fellowship application.
-
-Date: {{date}}
-Time: {{time}}
-Venue/Link: {{venue}}
-
-Please ensure you are available at the scheduled time.
-
-Best regards,
-VGMF Team`,
-  },
-  status_update: {
-    subject: "Application Status Update",
-    message: `Dear {{name}},
-
-We are writing to inform you about an update to your fellowship application.
-
-Your application is currently under review. We will notify you of further updates.
-
-For any queries, please use the support portal.
-
-Best regards,
-VGMF Team`,
-  },
-  document_request: {
-    subject: "Document Request - Fellowship Application",
-    message: `Dear {{name}},
-
-We require additional documents for your fellowship application.
-
-Please log in to the fellowship portal to view the list of required documents and submit them at your earliest convenience.
-
-Best regards,
-VGMF Team`,
-  },
-  fellowship_offer: {
-    subject: "Fellowship Offer",
-    message: `Dear {{name}},
-
-Congratulations! We are pleased to offer you a fellowship under our program.
-
-Please log in to the fellowship portal to review the agreement and complete the acceptance process.
-
-Best regards,
-VGMF Team`,
-  },
-  general: {
-    subject: "Communication from VGMF Fellowship",
-    message: `Dear {{name}},
-
-We hope this message finds you well.
-
-Best regards,
-VGMF Fellowship Team`,
-  },
-};
-
 export default function AdminApplicantsPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [programs, setPrograms] = useState<FellowshipProgram[]>([]);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -124,13 +77,18 @@ export default function AdminApplicantsPage() {
 
   // Email composition state
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState("");
+  const [programApplications, setProgramApplications] = useState<ApplicationForEmail[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState("");
   const [emailResults, setEmailResults] = useState<SendResult[]>([]);
+  const [showNewProgram, setShowNewProgram] = useState(false);
+  const [newProgramName, setNewProgramName] = useState("");
+  const [newProgramYear, setNewProgramYear] = useState("");
 
   function load() {
     fetch("/api/admin/applicants")
@@ -140,7 +98,47 @@ export default function AdminApplicantsPage() {
 
   useEffect(() => {
     load();
+    fetchPrograms();
   }, []);
+
+  async function fetchPrograms() {
+    try {
+      const res = await fetch("/api/admin/fellowship-programs");
+      const data = await res.json();
+      if (data.programs) {
+        setPrograms(data.programs);
+      }
+    } catch (err) {
+      console.error("Failed to fetch programs:", err);
+    }
+  }
+
+  async function createProgram() {
+    if (!newProgramName.trim()) {
+      setError("Program name is required");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/fellowship-programs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newProgramName,
+          year: newProgramYear ? parseInt(newProgramYear) : null,
+        }),
+      });
+
+      if (res.ok) {
+        setNewProgramName("");
+        setNewProgramYear("");
+        setShowNewProgram(false);
+        fetchPrograms();
+      }
+    } catch (err) {
+      setError("Failed to create program");
+    }
+  }
 
   async function createApplicant(e: React.FormEvent) {
     e.preventDefault();
@@ -198,33 +196,68 @@ export default function AdminApplicantsPage() {
     }
   }
 
-  // Email functions
+  // Email functions - New Version
   function openEmailModal() {
-    setSelectedApplicants(applicants.map((a) => a.id));
+    setSelectedProgramId("");
+    setProgramApplications([]);
+    setSelectedApplicationIds([]);
     setEmailSubject("");
     setEmailMessage("");
-    setSelectedTemplate("");
     setEmailSuccess("");
     setEmailResults([]);
     setShowEmailModal(true);
   }
 
-  function handleTemplateChange(template: string) {
-    setSelectedTemplate(template);
-    if (template && TEMPLATE_MESSAGES[template]) {
-      setEmailSubject(TEMPLATE_MESSAGES[template].subject);
-      setEmailMessage(TEMPLATE_MESSAGES[template].message);
+  async function fetchApplicationsForProgram(programId: string) {
+    setLoadingApplications(true);
+    setSelectedApplicationIds([]);
+    try {
+      const res = await fetch(`/api/admin/messages?fellowshipProgramId=${programId}`);
+      const data = await res.json();
+      if (data.applicants) {
+        setProgramApplications(data.applicants);
+      }
+    } catch (err) {
+      console.error("Failed to fetch applications:", err);
+    }
+    setLoadingApplications(false);
+  }
+
+  function handleProgramChange(programId: string) {
+    setSelectedProgramId(programId);
+    if (programId) {
+      fetchApplicationsForProgram(programId);
+    } else {
+      setProgramApplications([]);
     }
   }
 
-  function toggleApplicantSelection(id: string) {
-    setSelectedApplicants((prev) =>
+  function toggleApplicationSelection(id: string) {
+    setSelectedApplicationIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   }
 
+  function selectAllSubmitted() {
+    const submitted = programApplications
+      .filter((a) => a.submittedAt !== null)
+      .map((a) => a.id);
+    setSelectedApplicationIds(submitted);
+  }
+
+  function selectAllNotSubmitted() {
+    const notSubmitted = programApplications
+      .filter((a) => a.submittedAt === null)
+      .map((a) => a.id);
+    setSelectedApplicationIds(notSubmitted);
+  }
+
+  function selectAll() {
+    setSelectedApplicationIds(programApplications.map((a) => a.id));
+  }
+
   async function sendEmails() {
-    if (selectedApplicants.length === 0) {
+    if (selectedApplicationIds.length === 0) {
       setError("Please select at least one applicant");
       return;
     }
@@ -242,10 +275,9 @@ export default function AdminApplicantsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipientIds: selectedApplicants,
+          recipientIds: selectedApplicationIds,
           subject: emailSubject.trim(),
           message: emailMessage.trim(),
-          template: selectedTemplate,
         }),
       });
 
@@ -257,7 +289,7 @@ export default function AdminApplicantsPage() {
 
       setEmailResults(data.results);
       setEmailSuccess(data.message);
-      setSelectedApplicants([]);
+      setSelectedApplicationIds([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send emails");
     }
@@ -265,10 +297,13 @@ export default function AdminApplicantsPage() {
     setSendingEmail(false);
   }
 
-  const selectedCount = selectedApplicants.length;
-  const selectedApplicantNames = applicants
-    .filter((a) => selectedApplicants.includes(a.id))
+  const selectedCount = selectedApplicationIds.length;
+  const selectedApplicationNames = programApplications
+    .filter((a) => selectedApplicationIds.includes(a.id))
     .map((a) => a.name);
+
+  const submittedCount = programApplications.filter((a) => a.submittedAt !== null).length;
+  const notSubmittedCount = programApplications.filter((a) => a.submittedAt === null).length;
 
   return (
     <div className="space-y-6">
@@ -420,10 +455,10 @@ export default function AdminApplicantsPage() {
         </table>
       </div>
 
-      {/* Email Compose Modal */}
+      {/* NEW Email Compose Modal */}
       {showEmailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[95vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white shadow-xl">
+          <div className="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-lg bg-white shadow-xl">
             {/* Modal Header */}
             <div className="sticky top-0 flex items-center justify-between border-b bg-white p-4">
               <div className="flex items-center gap-3">
@@ -432,7 +467,11 @@ export default function AdminApplicantsPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold">Compose Email</h2>
-                  <p className="text-sm text-gray-500">{selectedCount} recipient{selectedCount !== 1 ? "s" : ""} selected</p>
+                  <p className="text-sm text-gray-500">
+                    {selectedProgramId 
+                      ? `${selectedCount} of ${programApplications.length} applicants selected`
+                      : "Select an application form to view applicants"}
+                  </p>
                 </div>
               </div>
               <button
@@ -443,154 +482,270 @@ export default function AdminApplicantsPage() {
               </button>
             </div>
 
-            <div className="grid lg:grid-cols-5 divide-x">
-              {/* Left Side - Recipient Selection */}
-              <div className="col-span-2 p-4">
-                <div className="mb-4">
-                  <h3 className="mb-2 flex items-center gap-2 font-medium">
-                    <Users className="h-4 w-4" />
-                    Select Recipients
-                  </h3>
-                  <div className="mb-2 flex gap-2">
-                    <button
-                      onClick={() => setSelectedApplicants(applicants.map((a) => a.id))}
-                      className="text-xs text-primary-600 hover:underline"
-                    >
-                      Select All ({applicants.length})
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={() => setSelectedApplicants([])}
-                      className="text-xs text-primary-600 hover:underline"
-                    >
-                      Clear
-                    </button>
-                  </div>
+            <div className="p-6">
+              {/* Step 1: Select Application Form */}
+              <div className="mb-6">
+                <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">1</span>
+                  Select Application Form
+                </h3>
+                
+                <div className="flex gap-3">
+                  <Select
+                    value={selectedProgramId}
+                    onChange={(e) => handleProgramChange(e.target.value)}
+                    options={[
+                      { value: "", label: "-- Select Application Form --" },
+                      ...programs.map((p) => ({
+                        value: p.id,
+                        label: `${p.name}${p.year ? ` (${p.year})` : ""} - ${p.applicantCount} applicants`,
+                      })),
+                    ]}
+                    className="flex-1"
+                  />
+                  
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => setShowNewProgram(!showNewProgram)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Form
+                  </Button>
                 </div>
 
-                <div className="max-h-80 space-y-2 overflow-y-auto pr-2">
-                  {applicants.map((applicant) => (
-                    <label
-                      key={applicant.id}
-                      className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                        selectedApplicants.includes(applicant.id)
-                          ? "border-primary-500 bg-primary-50"
-                          : "hover:bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedApplicants.includes(applicant.id)}
-                        onChange={() => toggleApplicantSelection(applicant.id)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600"
+                {showNewProgram && (
+                  <div className="mt-3 rounded-lg border bg-gray-50 p-4">
+                    <div className="flex gap-3">
+                      <Input
+                        placeholder="Form Name (e.g., VGMF Fellowship 2024)"
+                        value={newProgramName}
+                        onChange={(e) => setNewProgramName(e.target.value)}
+                        className="flex-1"
                       />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{applicant.name}</p>
-                        <p className="text-sm text-gray-500 truncate">{applicant.email}</p>
-                        {applicant.applications.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            {applicant.applications.length} application(s)
-                          </p>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-
-                {selectedCount > 0 && (
-                  <div className="mt-4 rounded-lg bg-gray-50 p-3">
-                    <p className="text-sm font-medium">Selected:</p>
-                    <p className="text-xs text-gray-600 mt-1 max-h-20 overflow-y-auto">
-                      {selectedApplicantNames.slice(0, 5).join(", ")}
-                      {selectedApplicantNames.length > 5 && ` and ${selectedApplicantNames.length - 5} more...`}
-                    </p>
+                      <Input
+                        placeholder="Year (e.g., 2024)"
+                        value={newProgramYear}
+                        onChange={(e) => setNewProgramYear(e.target.value)}
+                        className="w-32"
+                      />
+                      <Button onClick={createProgram}>Create</Button>
+                      <Button variant="secondary" onClick={() => setShowNewProgram(false)}>Cancel</Button>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Right Side - Compose */}
-              <div className="col-span-3 p-4 space-y-4">
-                {/* Template Selection */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Message Template</label>
-                  <Select
-                    value={selectedTemplate}
-                    onChange={(e) => handleTemplateChange(e.target.value)}
-                    options={TEMPLATE_OPTIONS}
-                  />
-                </div>
-
-                {/* Subject */}
-                <Input
-                  label="Subject"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Enter email subject..."
-                />
-
-                {/* Message */}
-                <div>
-                  <Textarea
-                    label="Message"
-                    value={emailMessage}
-                    onChange={(e) => setEmailMessage(e.target.value)}
-                    placeholder="Enter your message... Use {{name}} for applicant's name."
-                    rows={8}
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Placeholders: {"{{name}}"}
-                  </p>
-                </div>
-
-                {/* Success Message */}
-                {emailSuccess && (
-                  <div className="rounded-lg bg-green-50 p-3">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <CheckCircle2 className="h-5 w-5" />
-                      <span className="font-medium">{emailSuccess}</span>
+              {/* Step 2: Applicant List with Selection */}
+              {selectedProgramId && (
+                <div className="mb-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="flex items-center gap-2 text-lg font-semibold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">2</span>
+                      Select Applicants
+                    </h3>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={selectAll}
+                        className="text-xs text-primary-600 hover:underline"
+                      >
+                        Select All ({programApplications.length})
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={selectAllSubmitted}
+                        className="text-xs text-green-600 hover:underline"
+                      >
+                        Submitted ({submittedCount})
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={selectAllNotSubmitted}
+                        className="text-xs text-yellow-600 hover:underline"
+                      >
+                        Not Submitted ({notSubmittedCount})
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={() => setSelectedApplicationIds([])}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Clear
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {/* Results */}
-                {emailResults.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto rounded-lg border">
-                    <div className="p-2 bg-gray-50 border-b">
-                      <p className="text-sm font-medium">Send Results</p>
+                  {loadingApplications ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                     </div>
-                    <div className="divide-y">
-                      {emailResults.map((result, idx) => (
-                        <div key={idx} className="flex items-center gap-3 p-2">
-                          {result.ok ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{result.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{result.email}</p>
+                  ) : programApplications.length === 0 ? (
+                    <div className="rounded-lg border border-dashed py-8 text-center text-gray-500">
+                      No applicants found for this form
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto rounded-lg border">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left w-10"></th>
+                            <th className="px-3 py-2 text-left">App ID</th>
+                            <th className="px-3 py-2 text-left">Name</th>
+                            <th className="px-3 py-2 text-left">Email</th>
+                            <th className="px-3 py-2 text-left">Status</th>
+                            <th className="px-3 py-2 text-left">Submission</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {programApplications.map((app) => (
+                            <tr 
+                              key={app.id} 
+                              className={`hover:bg-gray-50 cursor-pointer ${
+                                selectedApplicationIds.includes(app.id) ? "bg-primary-50" : ""
+                              }`}
+                              onClick={() => toggleApplicationSelection(app.id)}
+                            >
+                              <td className="px-3 py-2">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedApplicationIds.includes(app.id)}
+                                  onChange={() => toggleApplicationSelection(app.id)}
+                                  className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                                />
+                              </td>
+                              <td className="px-3 py-2 font-mono text-xs">{app.applicationNumber}</td>
+                              <td className="px-3 py-2">{app.name}</td>
+                              <td className="px-3 py-2">{app.email}</td>
+                              <td className="px-3 py-2">
+                                <StatusBadge status={app.status} />
+                              </td>
+                              <td className="px-3 py-2">
+                                {app.submittedAt ? (
+                                  <span className="text-xs text-green-600">✓ Submitted</span>
+                                ) : (
+                                  <span className="text-xs text-yellow-600">○ Not Submitted</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {selectedCount > 0 && (
+                    <div className="mt-2 rounded-lg bg-primary-50 p-2 text-sm">
+                      <strong>{selectedCount}</strong> applicant(s) selected
+                      <span className="mx-2 text-gray-400">|</span>
+                      <span className="text-green-600">
+                        {programApplications.filter(a => selectedApplicationIds.includes(a.id) && a.submittedAt).length} submitted
+                      </span>
+                      <span className="mx-2 text-gray-400">|</span>
+                      <span className="text-yellow-600">
+                        {programApplications.filter(a => selectedApplicationIds.includes(a.id) && !a.submittedAt).length} not submitted
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Compose Email */}
+              {selectedProgramId && (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">3</span>
+                    Compose Email
+                  </h3>
+
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    {/* Left: Message Composition */}
+                    <div className="space-y-4">
+                      <Input
+                        label="Subject *"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Enter email subject..."
+                      />
+                      
+                      <Textarea
+                        label="Message *"
+                        value={emailMessage}
+                        onChange={(e) => setEmailMessage(e.target.value)}
+                        placeholder="Dear {name},
+
+Enter your message here...
+
+Use {name} as placeholder for applicant name.
+Use {applicationNumber} for application ID."
+                        rows={10}
+                      />
+                    </div>
+
+                    {/* Right: Preview & Results */}
+                    <div className="space-y-4">
+                      {/* Success/Error Messages */}
+                      {emailSuccess && (
+                        <div className="rounded-lg bg-green-50 p-3">
+                          <div className="flex items-center gap-2 text-green-800">
+                            <CheckCircle2 className="h-5 w-5" />
+                            <span className="font-medium">{emailSuccess}</span>
                           </div>
                         </div>
-                      ))}
+                      )}
+
+                      {error && (
+                        <div className="rounded-lg bg-red-50 p-3">
+                          <div className="flex items-center gap-2 text-red-800">
+                            <XCircle className="h-5 w-5" />
+                            <span className="font-medium">{error}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Results */}
+                      {emailResults.length > 0 && (
+                        <div className="max-h-48 overflow-y-auto rounded-lg border">
+                          <div className="bg-gray-50 border-b px-3 py-2">
+                            <p className="text-sm font-medium">Send Results</p>
+                          </div>
+                          <div className="divide-y">
+                            {emailResults.map((result, idx) => (
+                              <div key={idx} className="flex items-center gap-3 px-3 py-2">
+                                {result.ok ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{result.name}</p>
+                                  <p className="text-xs text-gray-500 truncate">{result.email}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Send Button */}
+                      <Button
+                        onClick={sendEmails}
+                        loading={sendingEmail}
+                        disabled={selectedCount === 0 || !emailSubject.trim() || !emailMessage.trim()}
+                        className="w-full"
+                        size="lg"
+                      >
+                        <Send className="h-4 w-4" />
+                        Send Email to {selectedCount} Applicant{selectedCount !== 1 ? "s" : ""}
+                      </Button>
+
+                      <p className="text-xs text-gray-500 text-center">
+                        Emails will be sent via ZeptoMail with "[VGMF Fellowship]" prefix
+                      </p>
                     </div>
                   </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="secondary" onClick={() => setShowEmailModal(false)}>
-                    Close
-                  </Button>
-                  <Button
-                    onClick={sendEmails}
-                    loading={sendingEmail}
-                    disabled={selectedCount === 0 || !emailSubject.trim() || !emailMessage.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                    Send to {selectedCount} Recipient{selectedCount !== 1 ? "s" : ""}
-                  </Button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
