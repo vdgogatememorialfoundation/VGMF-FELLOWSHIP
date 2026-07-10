@@ -4,7 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  Mail,
+  Send,
+  X,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Users,
+} from "lucide-react";
 
 interface ApplicantApplication {
   id: string;
@@ -23,6 +34,83 @@ interface Applicant {
   applications: ApplicantApplication[];
 }
 
+interface SendResult {
+  id: string;
+  name: string;
+  email: string;
+  ok: boolean;
+  error?: string;
+}
+
+const TEMPLATE_OPTIONS = [
+  { value: "", label: "Custom Message" },
+  { value: "interview_invite", label: "Interview Invitation" },
+  { value: "status_update", label: "Status Update" },
+  { value: "document_request", label: "Document Request" },
+  { value: "fellowship_offer", label: "Fellowship Offer" },
+  { value: "general", label: "General Communication" },
+];
+
+const TEMPLATE_MESSAGES: Record<string, { subject: string; message: string }> = {
+  interview_invite: {
+    subject: "Interview Invitation - VGMF Fellowship",
+    message: `We are pleased to invite you for an interview for your fellowship application.
+
+Date: {{date}}
+Time: {{time}}
+Venue/Link: {{venue}}
+
+Please ensure you are available at the scheduled time.
+
+Best regards,
+VGMF Team`,
+  },
+  status_update: {
+    subject: "Application Status Update",
+    message: `Dear {{name}},
+
+We are writing to inform you about an update to your fellowship application.
+
+Your application is currently under review. We will notify you of further updates.
+
+For any queries, please use the support portal.
+
+Best regards,
+VGMF Team`,
+  },
+  document_request: {
+    subject: "Document Request - Fellowship Application",
+    message: `Dear {{name}},
+
+We require additional documents for your fellowship application.
+
+Please log in to the fellowship portal to view the list of required documents and submit them at your earliest convenience.
+
+Best regards,
+VGMF Team`,
+  },
+  fellowship_offer: {
+    subject: "Fellowship Offer",
+    message: `Dear {{name}},
+
+Congratulations! We are pleased to offer you a fellowship under our program.
+
+Please log in to the fellowship portal to review the agreement and complete the acceptance process.
+
+Best regards,
+VGMF Team`,
+  },
+  general: {
+    subject: "Communication from VGMF Fellowship",
+    message: `Dear {{name}},
+
+We hope this message finds you well.
+
+Best regards,
+VGMF Fellowship Team`,
+  },
+};
+
 export default function AdminApplicantsPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [form, setForm] = useState({
@@ -33,6 +121,16 @@ export default function AdminApplicantsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Email composition state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState("");
+  const [emailResults, setEmailResults] = useState<SendResult[]>([]);
 
   function load() {
     fetch("/api/admin/applicants")
@@ -100,13 +198,91 @@ export default function AdminApplicantsPage() {
     }
   }
 
+  // Email functions
+  function openEmailModal() {
+    setSelectedApplicants(applicants.map((a) => a.id));
+    setEmailSubject("");
+    setEmailMessage("");
+    setSelectedTemplate("");
+    setEmailSuccess("");
+    setEmailResults([]);
+    setShowEmailModal(true);
+  }
+
+  function handleTemplateChange(template: string) {
+    setSelectedTemplate(template);
+    if (template && TEMPLATE_MESSAGES[template]) {
+      setEmailSubject(TEMPLATE_MESSAGES[template].subject);
+      setEmailMessage(TEMPLATE_MESSAGES[template].message);
+    }
+  }
+
+  function toggleApplicantSelection(id: string) {
+    setSelectedApplicants((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
+  async function sendEmails() {
+    if (selectedApplicants.length === 0) {
+      setError("Please select at least one applicant");
+      return;
+    }
+    if (!emailSubject.trim() || !emailMessage.trim()) {
+      setError("Please enter subject and message");
+      return;
+    }
+
+    setSendingEmail(true);
+    setError("");
+    setEmailSuccess("");
+
+    try {
+      const res = await fetch("/api/admin/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientIds: selectedApplicants,
+          subject: emailSubject.trim(),
+          message: emailMessage.trim(),
+          template: selectedTemplate,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send emails");
+      }
+
+      setEmailResults(data.results);
+      setEmailSuccess(data.message);
+      setSelectedApplicants([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send emails");
+    }
+
+    setSendingEmail(false);
+  }
+
+  const selectedCount = selectedApplicants.length;
+  const selectedApplicantNames = applicants
+    .filter((a) => selectedApplicants.includes(a.id))
+    .map((a) => a.name);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Applicants</h1>
-        <p className="mt-1 text-gray-600">
-          Create applicant accounts and manage registered fellowship applicants
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Applicants</h1>
+          <p className="mt-1 text-gray-600">
+            Create applicant accounts and manage registered fellowship applicants
+          </p>
+        </div>
+        <Button onClick={openEmailModal} className="flex items-center gap-2">
+          <Mail className="h-4 w-4" />
+          Compose Email
+        </Button>
       </div>
 
       {message && <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>}
@@ -243,6 +419,182 @@ export default function AdminApplicantsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Email Compose Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[95vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white shadow-xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 flex items-center justify-between border-b bg-white p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-primary-100 p-2">
+                  <Mail className="h-5 w-5 text-primary-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold">Compose Email</h2>
+                  <p className="text-sm text-gray-500">{selectedCount} recipient{selectedCount !== 1 ? "s" : ""} selected</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="rounded-lg p-2 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid lg:grid-cols-5 divide-x">
+              {/* Left Side - Recipient Selection */}
+              <div className="col-span-2 p-4">
+                <div className="mb-4">
+                  <h3 className="mb-2 flex items-center gap-2 font-medium">
+                    <Users className="h-4 w-4" />
+                    Select Recipients
+                  </h3>
+                  <div className="mb-2 flex gap-2">
+                    <button
+                      onClick={() => setSelectedApplicants(applicants.map((a) => a.id))}
+                      className="text-xs text-primary-600 hover:underline"
+                    >
+                      Select All ({applicants.length})
+                    </button>
+                    <span className="text-gray-300">|</span>
+                    <button
+                      onClick={() => setSelectedApplicants([])}
+                      className="text-xs text-primary-600 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-80 space-y-2 overflow-y-auto pr-2">
+                  {applicants.map((applicant) => (
+                    <label
+                      key={applicant.id}
+                      className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                        selectedApplicants.includes(applicant.id)
+                          ? "border-primary-500 bg-primary-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedApplicants.includes(applicant.id)}
+                        onChange={() => toggleApplicantSelection(applicant.id)}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{applicant.name}</p>
+                        <p className="text-sm text-gray-500 truncate">{applicant.email}</p>
+                        {applicant.applications.length > 0 && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {applicant.applications.length} application(s)
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {selectedCount > 0 && (
+                  <div className="mt-4 rounded-lg bg-gray-50 p-3">
+                    <p className="text-sm font-medium">Selected:</p>
+                    <p className="text-xs text-gray-600 mt-1 max-h-20 overflow-y-auto">
+                      {selectedApplicantNames.slice(0, 5).join(", ")}
+                      {selectedApplicantNames.length > 5 && ` and ${selectedApplicantNames.length - 5} more...`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Side - Compose */}
+              <div className="col-span-3 p-4 space-y-4">
+                {/* Template Selection */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Message Template</label>
+                  <Select
+                    value={selectedTemplate}
+                    onChange={(e) => handleTemplateChange(e.target.value)}
+                    options={TEMPLATE_OPTIONS}
+                  />
+                </div>
+
+                {/* Subject */}
+                <Input
+                  label="Subject"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Enter email subject..."
+                />
+
+                {/* Message */}
+                <div>
+                  <Textarea
+                    label="Message"
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    placeholder="Enter your message... Use {{name}} for applicant's name."
+                    rows={8}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Placeholders: {"{{name}}"}
+                  </p>
+                </div>
+
+                {/* Success Message */}
+                {emailSuccess && (
+                  <div className="rounded-lg bg-green-50 p-3">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <CheckCircle2 className="h-5 w-5" />
+                      <span className="font-medium">{emailSuccess}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Results */}
+                {emailResults.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto rounded-lg border">
+                    <div className="p-2 bg-gray-50 border-b">
+                      <p className="text-sm font-medium">Send Results</p>
+                    </div>
+                    <div className="divide-y">
+                      {emailResults.map((result, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-2">
+                          {result.ok ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{result.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{result.email}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button variant="secondary" onClick={() => setShowEmailModal(false)}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={sendEmails}
+                    loading={sendingEmail}
+                    disabled={selectedCount === 0 || !emailSubject.trim() || !emailMessage.trim()}
+                  >
+                    <Send className="h-4 w-4" />
+                    Send to {selectedCount} Recipient{selectedCount !== 1 ? "s" : ""}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
