@@ -1,19 +1,11 @@
 import prisma from "./db";
 import PDFDocument from "pdfkit";
-import { existsSync } from "fs";
-import path from "path";
+import archiver from "archiver";
 import { formatDate, formatCurrency, getStatusLabel } from "./utils";
 import type { AdminReportId } from "./admin-report-types";
 import { ADMIN_REPORTS } from "./admin-report-types";
 
 export { ADMIN_REPORTS, type AdminReportId, isAdminReportId, reportDownloadFilename } from "./admin-report-types";
-
-function ensurePdfkitFonts() {
-  const fontDir = path.join(process.cwd(), "node_modules", "pdfkit", "js", "data");
-  if (existsSync(fontDir)) {
-    process.env.PDFKIT_FONT_PATH = fontDir;
-  }
-}
 
 function escapeCsv(value: unknown): string {
   const text = value == null ? "" : String(value);
@@ -304,6 +296,237 @@ async function loadPublicationRows(): Promise<string[][]> {
   return rows;
 }
 
+async function loadAllSubmissionsRows(): Promise<string[][]> {
+  const applications = await prisma.application.findMany({
+    orderBy: { submittedAt: "desc" },
+    include: {
+      user: { include: { profile: true } },
+      researchProposal: true,
+      budget: true,
+      documents: { orderBy: { uploadedAt: "desc" } },
+      fellowship: { select: { fellowshipId: true, sanctionedAmount: true, currentStage: true } },
+      interview: { select: { scheduledDate: true, scheduledTime: true, status: true, interviewType: true } },
+      statusHistory: { orderBy: { createdAt: "desc" }, take: 5 },
+      committeeScores: { include: { committeeUser: { include: { profile: true } } } },
+    },
+  });
+
+  return [
+    [
+      "App Number",
+      "Name",
+      "Email",
+      "Mobile",
+      "City",
+      "State",
+      "Gender",
+      "DOB",
+      "Status",
+      "Submitted At",
+      "Project Title",
+      "Research Area",
+      "BAMS College",
+      "Year of Passing",
+      "Designation",
+      "Institution",
+      "Years of Practice",
+      "Budget Total",
+      "Documents Count",
+      "Documents Verified",
+      "Interview Date",
+      "Interview Status",
+      "Fellowship ID",
+      "Fellowship Amount",
+      "Committee Scores",
+      "Last Status Change",
+    ],
+    ...applications.map((app) => {
+      const docsVerified = app.documents.filter(d => d.status === "APPROVED").length;
+      const lastStatusChange = app.statusHistory[0]?.createdAt 
+        ? formatDate(app.statusHistory[0].createdAt) 
+        : "";
+      const committeeScore = app.committeeScores.length > 0 
+        ? app.committeeScores.map(s => `${s.committeeUser.profile?.name || 'N/A'}: ${s.totalScore}`).join("; ")
+        : "";
+      
+      return [
+        app.applicationNumber,
+        app.name,
+        app.email,
+        app.mobile,
+        app.city,
+        app.state,
+        app.gender,
+        app.dob ? formatDate(app.dob) : "",
+        getStatusLabel(app.status),
+        app.submittedAt ? formatDate(app.submittedAt) : "",
+        app.researchProposal?.projectTitle ?? "",
+        app.researchProposal?.researchArea ?? "",
+        app.bamsCollege,
+        String(app.yearOfPassing),
+        app.currentDesignation,
+        app.institutionName,
+        String(app.yearsOfPractice),
+        app.budget?.total ? formatCurrency(app.budget.total) : "",
+        String(app.documents.length),
+        `${docsVerified}/${app.documents.length}`,
+        app.interview?.scheduledDate ? formatDate(app.interview.scheduledDate) : "",
+        app.interview?.status ?? "",
+        app.fellowship?.fellowshipId ?? "",
+        app.fellowship?.sanctionedAmount ? formatCurrency(app.fellowship.sanctionedAmount) : "",
+        committeeScore,
+        lastStatusChange,
+      ];
+    }),
+  ];
+}
+
+async function loadDocumentStatusRows(): Promise<string[][]> {
+  const documents = await prisma.applicationDocument.findMany({
+    orderBy: { uploadedAt: "desc" },
+    include: {
+      application: {
+        select: {
+          applicationNumber: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  return [
+    [
+      "App Number",
+      "Applicant Name",
+      "Email",
+      "Document Type",
+      "File Name",
+      "File Size (KB)",
+      "Uploaded At",
+      "Status",
+      "Reviewed At",
+      "Rejection Reason",
+    ],
+    ...documents.map((doc) => [
+      doc.application.applicationNumber,
+      doc.application.name,
+      doc.application.email,
+      doc.documentType.replace(/_/g, " "),
+      doc.fileName,
+      doc.fileSize ? String(Math.round(doc.fileSize / 1024)) : "",
+      formatDate(doc.uploadedAt),
+      doc.status,
+      doc.reviewedAt ? formatDate(doc.reviewedAt) : "",
+      doc.rejectionReason ?? "",
+    ]),
+  ];
+}
+
+async function loadInterviewHistoryRows(): Promise<string[][]> {
+  const interviews = await prisma.interview.findMany({
+    orderBy: { scheduledDate: "desc" },
+    include: {
+      application: {
+        select: {
+          applicationNumber: true,
+          name: true,
+          email: true,
+          mobile: true,
+        },
+      },
+    },
+  });
+
+  return [
+    [
+      "App Number",
+      "Applicant Name",
+      "Email",
+      "Mobile",
+      "Interview Type",
+      "Scheduled Date",
+      "Scheduled Time",
+      "Duration (min)",
+      "Location",
+      "Meeting Link",
+      "Panel Members",
+      "Status",
+      "Feedback",
+      "Notes",
+      "Created At",
+      "Cancelled Reason",
+    ],
+    ...interviews.map((int) => [
+      int.application.applicationNumber,
+      int.application.name,
+      int.application.email,
+      int.application.mobile,
+      int.interviewType,
+      formatDate(int.scheduledDate),
+      int.scheduledTime,
+      String(int.durationMinutes),
+      int.location ?? "",
+      int.meetingLink ?? "",
+      int.panelMembers,
+      int.status,
+      int.feedback ?? "",
+      int.notes ?? "",
+      formatDate(int.createdAt),
+      int.cancellationReason ?? "",
+    ]),
+  ];
+}
+
+async function loadStatusTrackerRows(): Promise<string[][]> {
+  const applications = await prisma.application.findMany({
+    orderBy: { submittedAt: "desc" },
+    include: {
+      statusHistory: { orderBy: { createdAt: "asc" } },
+    },
+  });
+
+  return [
+    [
+      "App Number",
+      "Name",
+      "Email",
+      "Current Status",
+      "Submitted At",
+      "Stage 1: Scrutiny",
+      "Stage 2: Eligibility",
+      "Stage 3: Committee Review",
+      "Stage 4: Interview",
+      "Stage 5: Trustee Review",
+      "Stage 6: Final",
+      "Time in Current Stage",
+    ],
+    ...applications.map((app) => {
+      const history = app.statusHistory;
+      const getStageDate = (statuses: string[]) => {
+        const entry = history.find(h => statuses.includes(h.toStatus));
+        return entry ? formatDate(entry.createdAt) : "";
+      };
+      const currentStageStart = history.length > 0 ? formatDate(history[history.length - 1].createdAt) : "";
+      
+      return [
+        app.applicationNumber,
+        app.name,
+        app.email,
+        getStatusLabel(app.status),
+        app.submittedAt ? formatDate(app.submittedAt) : "",
+        getStageDate(["SCRUTINY", "SCRUTINY_APPROVED"]),
+        getStageDate(["ELIGIBILITY_CHECK", "ELIGIBLE", "NOT_ELIGIBLE"]),
+        getStageDate(["UNDER_REVIEW", "SHORTLISTED", "WAITLISTED"]),
+        getStageDate(["INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED"]),
+        getStageDate(["TRUSTEE_REVIEW"]),
+        getStageDate(["SELECTED", "REJECTED", "COMPLETED"]),
+        currentStageStart,
+      ];
+    }),
+  ];
+}
+
 async function loadReportRows(reportId: AdminReportId): Promise<string[][]> {
   switch (reportId) {
     case "applicants":
@@ -318,6 +541,14 @@ async function loadReportRows(reportId: AdminReportId): Promise<string[][]> {
       return loadFundUtilizationRows();
     case "publications":
       return loadPublicationRows();
+    case "all-submissions":
+      return loadAllSubmissionsRows();
+    case "document-status":
+      return loadDocumentStatusRows();
+    case "interview-history":
+      return loadInterviewHistoryRows();
+    case "status-tracker":
+      return loadStatusTrackerRows();
   }
 }
 
@@ -393,7 +624,6 @@ export async function buildAdminReportCsv(reportId: AdminReportId): Promise<Buff
 }
 
 export async function buildAdminReportPdf(reportId: AdminReportId): Promise<Buffer> {
-  ensurePdfkitFonts();
   const rows = await loadReportRows(reportId);
   const title = ADMIN_REPORTS.find((report) => report.id === reportId)?.title ?? "Report";
 
@@ -407,4 +637,70 @@ export async function buildAdminReportPdf(reportId: AdminReportId): Promise<Buff
     drawPdfTable(doc, title, rows);
     doc.end();
   });
+}
+
+export async function buildAllReportsZip(): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    
+    archive.on("data", (chunk) => chunks.push(chunk));
+    archive.on("end", () => resolve(Buffer.concat(chunks)));
+    archive.on("error", reject);
+
+    // Add all reports as CSV files
+    const reportPromises = ADMIN_REPORTS.map(async (report) => {
+      try {
+        const csvBuffer = await buildAdminReportCsv(report.id);
+        const filename = `csv/${report.id}.csv`;
+        archive.append(csvBuffer, { name: filename });
+      } catch (error) {
+        console.error(`Failed to add CSV for ${report.id}:`, error);
+      }
+    });
+
+    // Add all reports as PDF files
+    const pdfPromises = ADMIN_REPORTS.map(async (report) => {
+      try {
+        const pdfBuffer = await buildAdminReportPdf(report.id);
+        const filename = `pdf/${report.id}.pdf`;
+        archive.append(pdfBuffer, { name: filename });
+      } catch (error) {
+        console.error(`Failed to add PDF for ${report.id}:`, error);
+      }
+    });
+
+    // Wait for all files to be added
+    Promise.all([...reportPromises, ...pdfPromises])
+      .then(() => archive.finalize())
+      .catch((error) => {
+        reject(error);
+      });
+  });
+}
+
+export interface ReportEmailData {
+  reportId: AdminReportId;
+  format: "csv" | "pdf";
+}
+
+export async function buildReportForEmail(
+  reportId: AdminReportId,
+  format: "csv" | "pdf"
+): Promise<{ filename: string; buffer: Buffer; contentType: string }> {
+  if (format === "pdf") {
+    const buffer = await buildAdminReportPdf(reportId);
+    return {
+      filename: reportDownloadFilename(reportId, "pdf"),
+      buffer,
+      contentType: "application/pdf",
+    };
+  }
+  
+  const buffer = await buildAdminReportCsv(reportId);
+  return {
+    filename: reportDownloadFilename(reportId, "csv"),
+    buffer,
+    contentType: "text/csv",
+  };
 }

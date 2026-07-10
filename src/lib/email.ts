@@ -12,6 +12,12 @@ interface SendEmailOptions {
   text?: string;
 }
 
+interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  content: Buffer | string; // Base64 encoded content or raw Buffer
+}
+
 export type EmailSendResult =
   | { ok: true }
   | {
@@ -93,6 +99,116 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailSendRes
       detail: error instanceof Error ? error.message : "Network error",
     };
   }
+}
+
+export async function sendEmailWithAttachment(
+  options: SendEmailOptions,
+  attachments?: EmailAttachment[]
+): Promise<EmailSendResult> {
+  const config = await getIntegrationConfig();
+  if (!config.email.token || !config.email.fromEmail) {
+    console.warn("ZeptoMail not configured — skipping email send");
+    return { ok: false, reason: "not_configured" };
+  }
+
+  const authToken = config.email.token.startsWith("Zoho-enczapikey")
+    ? config.email.token
+    : `Zoho-enczapikey ${config.email.token}`;
+
+  try {
+    // Prepare attachments
+    const emailAttachments = attachments?.map((att) => ({
+      content: Buffer.isBuffer(att.content) 
+        ? att.content.toString("base64") 
+        : att.content,
+      filename: att.filename,
+      content_type: att.contentType,
+    })) || [];
+
+    const response = await fetch(getZeptoMailApiUrl(), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: authToken,
+      },
+      body: JSON.stringify({
+        from: { address: config.email.fromEmail, name: config.email.fromName },
+        to: [
+          {
+            email_address: {
+              address: options.to,
+              name: options.toName || options.to,
+            },
+          },
+        ],
+        subject: options.subject,
+        htmlbody: options.html,
+        textbody: options.text || options.html.replace(/<[^>]*>/g, ""),
+        attachments: emailAttachments,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      const detail = formatZeptoMailError(error);
+      console.error("ZeptoMail error with attachment:", error);
+      return { ok: false, reason: "api_error", detail };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error("ZeptoMail send with attachment failed:", error);
+    return {
+      ok: false,
+      reason: "network_error",
+      detail: error instanceof Error ? error.message : "Network error",
+    };
+  }
+}
+
+export async function sendBulkEmailWithAttachments(
+  recipients: Array<{ email: string; name: string }>,
+  subject: string,
+  body: string,
+  attachments?: EmailAttachment[]
+): Promise<Array<{ email: string; ok: boolean; error?: string }>> {
+  const results: Array<{ email: string; ok: boolean; error?: string }> = [];
+
+  for (const recipient of recipients) {
+    try {
+      const bodyContent = `
+        <p>Dear <strong>${recipient.name}</strong>,</p>
+        <div style="white-space: pre-wrap; line-height: 1.8;">${body}</div>
+        <p style="margin-top: 24px; font-size: 13px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 16px;">This is an official communication from ${ORGANIZATION_NAME}. Please do not reply directly to this email. For any queries, please use the support portal.</p>
+      `;
+
+      const result = await sendEmailWithAttachment(
+        {
+          to: recipient.email,
+          toName: recipient.name,
+          subject: `[${ORGANIZATION_NAME}] ${subject}`,
+          html: renderEmailHtml(subject, bodyContent),
+          text: `Dear ${recipient.name},\n\n${body}\n\nThis is an official communication from ${ORGANIZATION_NAME}. Please do not reply directly to this email. For any queries, please use the support portal.`,
+        },
+        attachments
+      );
+
+      results.push({
+        email: recipient.email,
+        ok: result.ok,
+        error: result.ok ? undefined : (result as { detail?: string }).detail,
+      });
+    } catch (error) {
+      results.push({
+        email: recipient.email,
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
 }
 
 function renderEmailHtml(title: string, bodyContent: string): string {
@@ -283,6 +399,51 @@ export async function sendNotificationEmail(
     subject: `${ORGANIZATION_NAME} Portal: ${title}`,
     html: renderEmailHtml(title, bodyContent),
   });
+}
+
+interface BulkEmailRecipient {
+  email: string;
+  name: string;
+}
+
+export async function sendBulkEmail(
+  recipients: BulkEmailRecipient[],
+  subject: string,
+  body: string
+): Promise<Array<{ email: string; ok: boolean; error?: string }>> {
+  const results: Array<{ email: string; ok: boolean; error?: string }> = [];
+
+  for (const recipient of recipients) {
+    try {
+      const bodyContent = `
+        <p>Dear <strong>${recipient.name}</strong>,</p>
+        <div style="white-space: pre-wrap; line-height: 1.8;">${body}</div>
+        <p style="margin-top: 24px; font-size: 13px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 16px;">This is an official communication from ${ORGANIZATION_NAME}. Please do not reply directly to this email. For any queries, please use the support portal.</p>
+      `;
+
+      const result = await sendEmail({
+        to: recipient.email,
+        toName: recipient.name,
+        subject: `[${ORGANIZATION_NAME}] ${subject}`,
+        html: renderEmailHtml(subject, bodyContent),
+        text: `Dear ${recipient.name},\n\n${body}\n\nThis is an official communication from ${ORGANIZATION_NAME}. Please do not reply directly to this email. For any queries, please use the support portal.`,
+      });
+
+      results.push({
+        email: recipient.email,
+        ok: result.ok,
+        error: result.ok ? undefined : (result as { detail?: string }).detail,
+      });
+    } catch (error) {
+      results.push({
+        email: recipient.email,
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
 }
 
 const STATUS_EMAIL_COLORS: Record<StatusEmailContent["tone"], string> = {
