@@ -36,6 +36,16 @@ export interface IntegrationConfig {
     productInstanceId: string | null;
     environment: "sandbox" | "production";
   };
+  mirotalk: {
+    enabled: boolean;
+    url: string | null;
+    apiKey: string | null;
+    secret: string | null;
+  };
+  interviewSettings: {
+    linkAccessMinutes: number;
+    reminderHours: number;
+  };
   activeVerificationProvider: string;
 }
 
@@ -159,6 +169,16 @@ export async function getIntegrationConfig(): Promise<IntegrationConfig> {
       clientSecret: db?.setuClientSecret || process.env.SETU_CLIENT_SECRET || null,
       productInstanceId: db?.setuProductInstanceId || process.env.SETU_PRODUCT_INSTANCE_ID || null,
       environment: db?.setuEnvironment === "sandbox" ? "sandbox" : "production",
+    },
+    mirotalk: {
+      enabled: db?.mirotalkEnabled ?? false,
+      url: db?.mirotalkUrl || process.env.MIROTALK_URL || null,
+      apiKey: db?.mirotalkApiKey || process.env.MIROTALK_API_KEY || null,
+      secret: db?.mirotalkSecret || process.env.MIROTALK_SECRET || null,
+    },
+    interviewSettings: {
+      linkAccessMinutes: db?.interviewLinkAccessMinutes ?? 15,
+      reminderHours: db?.interviewReminderHours ?? 24,
     },
     activeVerificationProvider: db?.activeVerificationProvider || "SETU",
   };

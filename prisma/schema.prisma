@@ -49,6 +49,13 @@ enum InterviewStatus {
   SCHEDULED
   COMPLETED
   NO_SHOW
+  CANCELLED
+  RESCHEDULED
+}
+
+enum InterviewType {
+  ONLINE
+  IN_PERSON
 }
 
 enum FellowshipStage {
@@ -544,6 +551,45 @@ model ScoringCriteria {
   @@map("scoring_criteria")
 }
 
+// New Dynamic Scoring System
+model ApplicationScore {
+  id              String   @id @default(cuid())
+  applicationId   String   @map("application_id")
+  reviewerId      String   @map("reviewer_id")
+  reviewerName    String   @map("reviewer_name")
+  isSubmitted     Boolean  @default(false) @map("is_submitted")
+  isLocked        Boolean  @default(false) @map("is_locked")
+  lockedAt        DateTime? @map("locked_at")
+  totalScore      Float    @default(0) @map("total_score")
+  maxPossibleScore Float   @default(100) @map("max_possible_score")
+  remarks         String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scores        ApplicationScoreItem[]
+
+  @@unique([applicationId, reviewerId])
+  @@map("application_scores")
+}
+
+model ApplicationScoreItem {
+  id              String   @id @default(cuid())
+  scoreId         String   @map("score_id")
+  criteriaId      String   @map("criteria_id")
+  criteriaName    String   @map("criteria_name")
+  criteriaDescription String @map("criteria_description")
+  maxScore        Float   @map("max_score")
+  score           Float   @map("score")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  applicationScore ApplicationScore @relation(fields: [scoreId], references: [id], onDelete: Cascade)
+
+  @@unique([scoreId, criteriaId])
+  @@map("application_score_items")
+}
+
 model CommitteeRemark {
   id              String   @id @default(cuid())
   applicationId   String   @map("application_id")
@@ -560,13 +606,40 @@ model CommitteeRemark {
 model Interview {
   id            String   @id @default(cuid())
   applicationId String   @unique @map("application_id")
+  interviewType InterviewType @default(ONLINE) @map("interview_type")
+  
+  // Schedule
   scheduledDate DateTime @map("scheduled_date")
   scheduledTime String   @map("scheduled_time")
-  meetingLink   String   @map("meeting_link")
+  durationMinutes Int    @default(30) @map("duration_minutes")
+  
+  // Online meeting details
+  meetingLink   String?  @map("meeting_link")
+  meetingRoomId String?  @map("meeting_room_id")
+  mirotalkRoom  String?  @map("mirotalk_room")
+  
+  // In-person location details
+  location      String?  @map("location")
+  address       String?  @map("address")
+  googleMapsUrl String?  @map("google_maps_url")
+  
+  // Panel info
   panelMembers  String   @map("panel_members")
+  
+  // Status and feedback
   status        InterviewStatus @default(SCHEDULED)
   feedback      String?
   notes         String?
+  
+  // Tracking
+  previousScheduledDate DateTime? @map("previous_scheduled_date")
+  previousScheduledTime String?   @map("previous_scheduled_time")
+  cancellationReason    String?   @map("cancellation_reason")
+  
+  // Notifications
+  applicantNotifiedAt   DateTime? @map("applicant_notified_at")
+  reminderSentAt        DateTime? @map("reminder_sent_at")
+  
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -970,6 +1043,17 @@ model IntegrationSettings {
   setuClientSecret            String?  @map("setu_client_secret")
   setuProductInstanceId       String?  @map("setu_product_instance_id")
   setuEnvironment             String?  @default("sandbox") @map("setu_environment")
+  
+  // MiroTalk Video Conferencing
+  mirotalkEnabled            Boolean  @default(false) @map("mirotalk_enabled")
+  mirotalkUrl                String?  @map("mirotalk_url")
+  mirotalkApiKey             String?  @map("mirotalk_api_key")
+  mirotalkSecret             String?  @map("mirotalk_secret")
+  
+  // Interview Settings
+  interviewLinkAccessMinutes Int     @default(15) @map("interview_link_access_minutes")
+  interviewReminderHours      Int     @default(24) @map("interview_reminder_hours")
+  
   updatedAt                   DateTime @updatedAt @map("updated_at")
 
   @@map("integration_settings")

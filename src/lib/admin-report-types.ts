@@ -5,6 +5,10 @@ export const ADMIN_REPORTS = [
   { id: "progress-reports", title: "Progress Reports" },
   { id: "fund-utilization", title: "Fund Utilization" },
   { id: "publications", title: "Publications" },
+  { id: "all-submissions", title: "All Submissions (Comprehensive)", description: "Complete applicant data including personal info, documents, and status" },
+  { id: "document-status", title: "Document Status Report", description: "All submitted documents with verification status" },
+  { id: "interview-history", title: "Interview History", description: "All interviews with scheduling and outcome details" },
+  { id: "status-tracker", title: "Application Status Tracker", description: "Track all applications through workflow stages" },
 ] as const;
 
 export type AdminReportId = (typeof ADMIN_REPORTS)[number]["id"];
@@ -19,4 +23,9 @@ export function reportDownloadFilename(reportId: AdminReportId, format: "csv" | 
   return format === "csv"
     ? `vgmf_${base}_${stamp}.csv`
     : `vgmf_${base}_${stamp}.pdf`;
+}
+
+export function reportZipFilename(): string {
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `vgmf_all_reports_${stamp}.zip`;
 }

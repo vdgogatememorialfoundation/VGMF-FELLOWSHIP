@@ -278,14 +278,149 @@ export async function notifyDocumentReviewed(
 
 export async function notifyInterviewScheduled(
   userId: string,
+  applicationNumber: string,
   date: string,
   time: string,
-  link: string
+  interviewType: "ONLINE" | "IN_PERSON",
+  options: {
+    meetingLink?: string;
+    location?: string;
+    address?: string;
+    durationMinutes?: number;
+    linkAccessMinutes?: number;
+  } = {}
 ) {
+  const { meetingLink, location, address, durationMinutes = 30, linkAccessMinutes = 15 } = options;
+  
+  let message = `Your fellowship interview has been scheduled.\n\n`;
+  message += `Application: ${applicationNumber}\n`;
+  message += `Date: ${date}\n`;
+  message += `Time: ${time}\n`;
+  message += `Duration: ${durationMinutes} minutes\n`;
+  message += `Mode: ${interviewType === "ONLINE" ? "Online (Video Call)" : "In-Person"}\n`;
+  
+  if (interviewType === "ONLINE" && meetingLink) {
+    message += `\nThe meeting link will be accessible ${linkAccessMinutes} minutes before the scheduled time. Please log in to your portal to access the link when it's time.`;
+  } else if (interviewType === "IN_PERSON" && location) {
+    message += `\nVenue: ${location}`;
+    if (address) {
+      message += `\nAddress: ${address}`;
+    }
+  }
+
   await dispatchStatusUpdate(
     userId,
     "Interview Scheduled",
-    `Your fellowship interview is scheduled for ${date} at ${time}. Meeting link: ${link}`,
+    message,
+    { whatsappEvent: "INTERVIEW_SCHEDULED" }
+  );
+}
+
+export async function notifyInterviewRescheduled(
+  userId: string,
+  applicationNumber: string,
+  previousDate: string,
+  previousTime: string,
+  newDate: string,
+  newTime: string,
+  interviewType: "ONLINE" | "IN_PERSON",
+  options: {
+    meetingLink?: string;
+    location?: string;
+    address?: string;
+    durationMinutes?: number;
+    linkAccessMinutes?: number;
+  } = {}
+) {
+  const { meetingLink, location, address, durationMinutes = 30, linkAccessMinutes = 15 } = options;
+  
+  let message = `Your fellowship interview has been rescheduled.\n\n`;
+  message += `Application: ${applicationNumber}\n`;
+  message += `Previous Schedule: ${previousDate} at ${previousTime}\n`;
+  message += `New Schedule: ${newDate} at ${newTime}\n`;
+  message += `Duration: ${durationMinutes} minutes\n`;
+  message += `Mode: ${interviewType === "ONLINE" ? "Online (Video Call)" : "In-Person"}\n`;
+  
+  if (interviewType === "ONLINE" && meetingLink) {
+    message += `\nThe new meeting link will be accessible ${linkAccessMinutes} minutes before the scheduled time.`;
+  } else if (interviewType === "IN_PERSON" && location) {
+    message += `\nVenue: ${location}`;
+    if (address) {
+      message += `\nAddress: ${address}`;
+    }
+  }
+  
+  message += `\n\nPlease ensure you are available at the new scheduled time.`;
+
+  await dispatchStatusUpdate(
+    userId,
+    "Interview Rescheduled",
+    message,
+    { whatsappEvent: "INTERVIEW_SCHEDULED" }
+  );
+}
+
+export async function notifyInterviewCancelled(
+  userId: string,
+  applicationNumber: string,
+  date: string,
+  time: string,
+  reason?: string
+) {
+  let message = `Your scheduled fellowship interview has been cancelled.\n\n`;
+  message += `Application: ${applicationNumber}\n`;
+  message += `Original Schedule: ${date} at ${time}\n`;
+  
+  if (reason) {
+    message += `\nReason: ${reason}`;
+  }
+  
+  message += `\n\nYou will be notified if a new interview is scheduled.`;
+
+  await dispatchStatusUpdate(
+    userId,
+    "Interview Cancelled",
+    message,
+    { whatsappEvent: "INTERVIEW_SCHEDULED" }
+  );
+}
+
+export async function notifyInterviewReminder(
+  userId: string,
+  applicationNumber: string,
+  date: string,
+  time: string,
+  interviewType: "ONLINE" | "IN_PERSON",
+  options: {
+    meetingLink?: string;
+    location?: string;
+    address?: string;
+    linkAccessMinutes?: number;
+  } = {}
+) {
+  const { meetingLink, location, address, linkAccessMinutes = 15 } = options;
+  
+  let message = `Reminder: Your fellowship interview is tomorrow!\n\n`;
+  message += `Application: ${applicationNumber}\n`;
+  message += `Date: ${date}\n`;
+  message += `Time: ${time}\n`;
+  message += `Mode: ${interviewType === "ONLINE" ? "Online (Video Call)" : "In-Person"}\n`;
+  
+  if (interviewType === "ONLINE" && meetingLink) {
+    message += `\nThe meeting link will be accessible ${linkAccessMinutes} minutes before the scheduled time.`;
+  } else if (interviewType === "IN_PERSON" && location) {
+    message += `\nVenue: ${location}`;
+    if (address) {
+      message += `\nAddress: ${address}`;
+    }
+  }
+  
+  message += `\n\nPlease ensure you join on time.`;
+
+  await dispatchStatusUpdate(
+    userId,
+    "Interview Tomorrow - Reminder",
+    message,
     { whatsappEvent: "INTERVIEW_SCHEDULED" }
   );
 }

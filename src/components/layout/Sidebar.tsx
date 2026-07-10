@@ -26,6 +26,9 @@ import {
   Bell,
   Inbox,
   Clipboard,
+  Mail,
+  CalendarClock,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth";
@@ -48,6 +51,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/applicant/undertaking", label: "Digital Undertaking", icon: FileText },
     { href: "/applicant/verification", label: "Identity Verification", icon: ShieldCheck },
     { href: "/applicant/status", label: "Application Tracking", icon: Activity },
+    { href: "/applicant/interview", label: "My Interview", icon: CalendarClock },
     { href: "/applicant/fellowship", label: "My Fellowship", icon: Award },
     { href: "/applicant/support", label: "Support", icon: HelpCircle },
     { href: "/applicant/inbox", label: "Inbox", icon: Inbox },
@@ -63,11 +67,15 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
     { href: "/admin/users", label: "Portal Users", icon: UserCog },
     { href: "/admin/scoring", label: "Scoring Criteria", icon: Clipboard },
+    { href: "/admin/scoring/all", label: "Score Dashboard", icon: BarChart3 },
     { href: "/admin/notifications", label: "Notifications", icon: Bell },
+    { href: "/admin/email-campaigns", label: "Email Campaigns", icon: Mail },
+    { href: "/admin/interviews", label: "Interviews", icon: CalendarClock },
     { href: "/admin/inbox", label: "Inbox", icon: Inbox },
     { href: "/admin/fellowships", label: "Fellowships", icon: Award },
     { href: "/admin/permissions", label: "Role Permissions", icon: ShieldCheck },
     { href: "/admin/reports", label: "Reports", icon: FileBarChart },
+    { href: "/admin/backup", label: "Data Backup", icon: Database },
   ],
   staff: [
     { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
@@ -86,6 +94,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
   committee: [
     { href: "/committee", label: "Dashboard", icon: LayoutDashboard },
     { href: "/committee/applications", label: "Applications", icon: ClipboardList },
+    { href: "/committee/scores", label: "Score Applications", icon: Clipboard },
     { href: "/committee/inbox", label: "Inbox", icon: Inbox },
   ],
   trustee: [
