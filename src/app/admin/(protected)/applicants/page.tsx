@@ -37,22 +37,25 @@ interface Applicant {
   applications: ApplicantApplication[];
 }
 
-interface FellowshipProgram {
+interface FellowshipForm {
   id: string;
   name: string;
-  year: number | null;
+  slug: string;
+  description: string | null;
+  isActive: boolean;
   applicantCount: number;
 }
 
 interface ApplicationForEmail {
-  id: string;
-  applicationNumber: string;
-  name: string;
-  email: string;
-  mobile: string | null;
-  status: string;
+  submissionId: string;
   submittedAt: string | null;
   userId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  applicationId: string | null;
+  applicationNumber: string | null;
+  applicationStatus: string | null;
 }
 
 interface SendResult {
@@ -65,7 +68,7 @@ interface SendResult {
 
 export default function AdminApplicantsPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
-  const [programs, setPrograms] = useState<FellowshipProgram[]>([]);
+  const [fellowshipForms, setFellowshipForms] = useState<FellowshipForm[]>([]);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -77,18 +80,15 @@ export default function AdminApplicantsPage() {
 
   // Email composition state
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [selectedProgramId, setSelectedProgramId] = useState("");
-  const [programApplications, setProgramApplications] = useState<ApplicationForEmail[]>([]);
-  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [selectedFormId, setSelectedFormId] = useState("");
+  const [formApplicants, setFormApplicants] = useState<ApplicationForEmail[]>([]);
+  const [loadingApplicants, setLoadingApplications] = useState(false);
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState("");
   const [emailResults, setEmailResults] = useState<SendResult[]>([]);
-  const [showNewProgram, setShowNewProgram] = useState(false);
-  const [newProgramName, setNewProgramName] = useState("");
-  const [newProgramYear, setNewProgramYear] = useState("");
 
   function load() {
     fetch("/api/admin/applicants")
@@ -98,47 +98,7 @@ export default function AdminApplicantsPage() {
 
   useEffect(() => {
     load();
-    fetchPrograms();
   }, []);
-
-  async function fetchPrograms() {
-    try {
-      const res = await fetch("/api/admin/fellowship-programs");
-      const data = await res.json();
-      if (data.programs) {
-        setPrograms(data.programs);
-      }
-    } catch (err) {
-      console.error("Failed to fetch programs:", err);
-    }
-  }
-
-  async function createProgram() {
-    if (!newProgramName.trim()) {
-      setError("Program name is required");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/admin/fellowship-programs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newProgramName,
-          year: newProgramYear ? parseInt(newProgramYear) : null,
-        }),
-      });
-
-      if (res.ok) {
-        setNewProgramName("");
-        setNewProgramYear("");
-        setShowNewProgram(false);
-        fetchPrograms();
-      }
-    } catch (err) {
-      setError("Failed to create program");
-    }
-  }
 
   async function createApplicant(e: React.FormEvent) {
     e.preventDefault();
@@ -196,26 +156,34 @@ export default function AdminApplicantsPage() {
     }
   }
 
-  // Email functions - New Version
+  // Email functions
   function openEmailModal() {
-    setSelectedProgramId("");
-    setProgramApplications([]);
+    setSelectedFormId("");
+    setFormApplicants([]);
     setSelectedApplicationIds([]);
     setEmailSubject("");
     setEmailMessage("");
     setEmailSuccess("");
     setEmailResults([]);
+    // Fetch fellowship forms
+    fetch("/api/admin/messages")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.fellowshipForms) {
+          setFellowshipForms(d.fellowshipForms);
+        }
+      });
     setShowEmailModal(true);
   }
 
-  async function fetchApplicationsForProgram(programId: string) {
+  async function fetchApplicantsForForm(formId: string) {
     setLoadingApplications(true);
     setSelectedApplicationIds([]);
     try {
-      const res = await fetch(`/api/admin/messages?fellowshipProgramId=${programId}`);
+      const res = await fetch(`/api/admin/messages?formId=${formId}`);
       const data = await res.json();
       if (data.applicants) {
-        setProgramApplications(data.applicants);
+        setFormApplicants(data.applicants);
       }
     } catch (err) {
       console.error("Failed to fetch applications:", err);
@@ -223,37 +191,37 @@ export default function AdminApplicantsPage() {
     setLoadingApplications(false);
   }
 
-  function handleProgramChange(programId: string) {
-    setSelectedProgramId(programId);
-    if (programId) {
-      fetchApplicationsForProgram(programId);
+  function handleFormChange(formId: string) {
+    setSelectedFormId(formId);
+    if (formId) {
+      fetchApplicantsForForm(formId);
     } else {
-      setProgramApplications([]);
+      setFormApplicants([]);
     }
   }
 
-  function toggleApplicationSelection(id: string) {
+  function toggleApplicationSelection(userId: string) {
     setSelectedApplicationIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      prev.includes(userId) ? prev.filter((i) => i !== userId) : [...prev, userId]
     );
   }
 
   function selectAllSubmitted() {
-    const submitted = programApplications
+    const submitted = formApplicants
       .filter((a) => a.submittedAt !== null)
-      .map((a) => a.id);
+      .map((a) => a.userId);
     setSelectedApplicationIds(submitted);
   }
 
   function selectAllNotSubmitted() {
-    const notSubmitted = programApplications
+    const notSubmitted = formApplicants
       .filter((a) => a.submittedAt === null)
-      .map((a) => a.id);
+      .map((a) => a.userId);
     setSelectedApplicationIds(notSubmitted);
   }
 
   function selectAll() {
-    setSelectedApplicationIds(programApplications.map((a) => a.id));
+    setSelectedApplicationIds(formApplicants.map((a) => a.userId));
   }
 
   async function sendEmails() {
@@ -298,12 +266,12 @@ export default function AdminApplicantsPage() {
   }
 
   const selectedCount = selectedApplicationIds.length;
-  const selectedApplicationNames = programApplications
-    .filter((a) => selectedApplicationIds.includes(a.id))
+  const selectedApplicationNames = formApplicants
+    .filter((a) => selectedApplicationIds.includes(a.userId))
     .map((a) => a.name);
 
-  const submittedCount = programApplications.filter((a) => a.submittedAt !== null).length;
-  const notSubmittedCount = programApplications.filter((a) => a.submittedAt === null).length;
+  const submittedCount = formApplicants.filter((a) => a.submittedAt !== null).length;
+  const notSubmittedCount = formApplicants.filter((a) => a.submittedAt === null).length;
 
   return (
     <div className="space-y-6">
@@ -455,7 +423,7 @@ export default function AdminApplicantsPage() {
         </table>
       </div>
 
-      {/* NEW Email Compose Modal */}
+      {/* Email Compose Modal */}
       {showEmailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-lg bg-white shadow-xl">
@@ -468,8 +436,8 @@ export default function AdminApplicantsPage() {
                 <div>
                   <h2 className="text-xl font-semibold">Compose Email</h2>
                   <p className="text-sm text-gray-500">
-                    {selectedProgramId 
-                      ? `${selectedCount} of ${programApplications.length} applicants selected`
+                    {selectedFormId 
+                      ? `${selectedCount} of ${formApplicants.length} applicants selected`
                       : "Select an application form to view applicants"}
                   </p>
                 </div>
@@ -490,54 +458,22 @@ export default function AdminApplicantsPage() {
                   Select Application Form
                 </h3>
                 
-                <div className="flex gap-3">
-                  <Select
-                    value={selectedProgramId}
-                    onChange={(e) => handleProgramChange(e.target.value)}
-                    options={[
-                      { value: "", label: "-- Select Application Form --" },
-                      ...programs.map((p) => ({
-                        value: p.id,
-                        label: `${p.name}${p.year ? ` (${p.year})` : ""} - ${p.applicantCount} applicants`,
-                      })),
-                    ]}
-                    className="flex-1"
-                  />
-                  
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => setShowNewProgram(!showNewProgram)}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Form
-                  </Button>
-                </div>
-
-                {showNewProgram && (
-                  <div className="mt-3 rounded-lg border bg-gray-50 p-4">
-                    <div className="flex gap-3">
-                      <Input
-                        placeholder="Form Name (e.g., VGMF Fellowship 2024)"
-                        value={newProgramName}
-                        onChange={(e) => setNewProgramName(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Input
-                        placeholder="Year (e.g., 2024)"
-                        value={newProgramYear}
-                        onChange={(e) => setNewProgramYear(e.target.value)}
-                        className="w-32"
-                      />
-                      <Button onClick={createProgram}>Create</Button>
-                      <Button variant="secondary" onClick={() => setShowNewProgram(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                )}
+                <Select
+                  value={selectedFormId}
+                  onChange={(e) => handleFormChange(e.target.value)}
+                  options={[
+                    { value: "", label: "-- Select Application Form --" },
+                    ...fellowshipForms.map((f) => ({
+                      value: f.id,
+                      label: `${f.name} - ${f.applicantCount} applicants`,
+                    })),
+                  ]}
+                  className="w-full"
+                />
               </div>
 
               {/* Step 2: Applicant List with Selection */}
-              {selectedProgramId && (
+              {selectedFormId && (
                 <div className="mb-6">
                   <div className="mb-3 flex items-center justify-between">
                     <h3 className="flex items-center gap-2 text-lg font-semibold">
@@ -550,7 +486,7 @@ export default function AdminApplicantsPage() {
                         onClick={selectAll}
                         className="text-xs text-primary-600 hover:underline"
                       >
-                        Select All ({programApplications.length})
+                        Select All ({formApplicants.length})
                       </button>
                       <span className="text-gray-300">|</span>
                       <button
@@ -580,7 +516,7 @@ export default function AdminApplicantsPage() {
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                     </div>
-                  ) : programApplications.length === 0 ? (
+                  ) : formApplicants.length === 0 ? (
                     <div className="rounded-lg border border-dashed py-8 text-center text-gray-500">
                       No applicants found for this form
                     </div>
@@ -598,7 +534,7 @@ export default function AdminApplicantsPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {programApplications.map((app) => (
+                          {formApplicants.map((app) => (
                             <tr 
                               key={app.id} 
                               className={`hover:bg-gray-50 cursor-pointer ${
@@ -639,11 +575,11 @@ export default function AdminApplicantsPage() {
                       <strong>{selectedCount}</strong> applicant(s) selected
                       <span className="mx-2 text-gray-400">|</span>
                       <span className="text-green-600">
-                        {programApplications.filter(a => selectedApplicationIds.includes(a.id) && a.submittedAt).length} submitted
+                        {formApplicants.filter(a => selectedApplicationIds.includes(a.id) && a.submittedAt).length} submitted
                       </span>
                       <span className="mx-2 text-gray-400">|</span>
                       <span className="text-yellow-600">
-                        {programApplications.filter(a => selectedApplicationIds.includes(a.id) && !a.submittedAt).length} not submitted
+                        {formApplicants.filter(a => selectedApplicationIds.includes(a.id) && !a.submittedAt).length} not submitted
                       </span>
                     </div>
                   )}
@@ -651,7 +587,7 @@ export default function AdminApplicantsPage() {
               )}
 
               {/* Step 3: Compose Email */}
-              {selectedProgramId && (
+              {selectedFormId && (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">3</span>

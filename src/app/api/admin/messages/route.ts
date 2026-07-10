@@ -16,80 +16,114 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = request.nextUrl;
-    const fellowshipProgramId = searchParams.get("fellowshipProgramId");
+    const formId = searchParams.get("formId");
 
-    // If fellowshipProgramId is provided, return applicants for that form
-    if (fellowshipProgramId) {
-      const applications = await prisma.application.findMany({
-        where: { fellowshipProgramId },
+    // If formId is provided, return applicants for that form
+    if (formId) {
+      // Get form submissions for this form
+      const formSubmissions = await prisma.formSubmission.findMany({
+        where: { formId },
         select: {
           id: true,
-          applicationNumber: true,
+          userId: true,
+          formId: true,
+          data: true,
+          submittedAt: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Get unique userIds
+      const userIds = [...new Set(formSubmissions.map(s => s.userId))];
+
+      // Get user and application info
+      const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: {
+          id: true,
           name: true,
           email: true,
-          mobile: true,
-          status: true,
-          submittedAt: true,
-          userId: true,
-          fellowship: {
+          phone: true,
+          applications: {
             select: {
               id: true,
-              fellowshipId: true,
-              fellowName: true,
+              applicationNumber: true,
+              name: true,
+              email: true,
+              mobile: true,
+              status: true,
+              submittedAt: true,
+              userId: true,
             },
           },
         },
-        orderBy: { applicationNumber: "asc" },
       });
 
-      // Count by status
-      const submitted = applications.filter(a => a.submittedAt !== null).length;
-      const notSubmitted = applications.filter(a => a.submittedAt === null).length;
+      // Map submissions to applicants
+      const applicants = formSubmissions.map(submission => {
+        const user = users.find(u => u.id === submission.userId);
+        const app = user?.applications[0];
+        return {
+          submissionId: submission.id,
+          submittedAt: submission.submittedAt,
+          userId: submission.userId,
+          name: user?.name || "Unknown",
+          email: user?.email || "",
+          phone: user?.phone,
+          applicationId: app?.id,
+          applicationNumber: app?.applicationNumber,
+          applicationStatus: app?.status,
+        };
+      });
+
+      const submitted = applicants.filter(a => a.submittedAt !== null).length;
+      const notSubmitted = applicants.filter(a => a.submittedAt === null).length;
 
       return NextResponse.json({
-        applicants: applications,
+        applicants,
         summary: {
-          total: applications.length,
+          total: applicants.length,
           submitted,
           notSubmitted,
         },
       });
     }
 
-    // Otherwise, return list of fellowship programs (application forms)
-    const fellowshipPrograms = await prisma.fellowshipProgram.findMany({
+    // Otherwise, return list of fellowship forms
+    const fellowshipForms = await prisma.formTemplate.findMany({
+      where: { slug: { contains: "fellowship" } },
       select: {
         id: true,
         name: true,
-        year: true,
-        applicationCount: true,
-        _count: {
-          select: {
-            applications: true,
-          },
-        },
+        slug: true,
+        description: true,
+        isActive: true,
+        opensAt: true,
+        closesAt: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
-    // Also get applications without fellowship program (legacy)
-    const legacyCount = await prisma.application.count({
-      where: { fellowshipProgramId: null },
+    // Get count of submissions per form
+    const formCounts = await prisma.formSubmission.groupBy({
+      by: ["formId"],
+      _count: true,
     });
 
+    const formsWithCounts = fellowshipForms.map(form => ({
+      id: form.id,
+      name: form.name,
+      slug: form.slug,
+      description: form.description,
+      isActive: form.isActive,
+      opensAt: form.opensAt,
+      closesAt: form.closesAt,
+      applicantCount: formCounts.find(c => c.formId === form.id)?._count || 0,
+    }));
+
     return NextResponse.json({
-      fellowshipPrograms: fellowshipPrograms.map(fp => ({
-        id: fp.id,
-        name: fp.name,
-        year: fp.year,
-        applicantCount: fp._count.applications,
-      })),
-      legacyApplications: legacyCount > 0 ? {
-        id: "legacy",
-        name: "Legacy Applications",
-        year: null,
-        applicantCount: legacyCount,
-      } : null,
+      fellowshipForms: formsWithCounts,
     });
   } catch (error) {
     console.error("Error fetching data:", error);

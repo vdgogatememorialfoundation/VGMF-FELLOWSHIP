@@ -7,21 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Fellowship Program (Application Form)
-model FellowshipProgram {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  year          Int?
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  applications  Application[]
-
-  @@map("fellowship_programs")
-}
-
 enum UserRole {
   APPLICANT
   ADMIN
@@ -306,7 +291,6 @@ model Application {
   id                    String            @id @default(cuid())
   applicationNumber     String            @unique @map("application_number")
   userId                String            @map("user_id")
-  fellowshipProgramId   String?           @map("fellowship_program_id")
   status                ApplicationStatus @default(DRAFT)
   rejectionReason       String?           @map("rejection_reason")
   adminNotes            String?           @map("admin_notes")
@@ -362,7 +346,6 @@ model Application {
   updatedAt             DateTime          @updatedAt @map("updated_at")
 
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fellowshipProgram      FellowshipProgram?  @relation(fields: [fellowshipProgramId], references: [id])
   researchProposal       ResearchProposal?
   budget                Budget?
   documents             ApplicationDocument[]
