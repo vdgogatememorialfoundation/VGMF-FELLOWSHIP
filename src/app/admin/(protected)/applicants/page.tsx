@@ -47,6 +47,7 @@ interface FellowshipForm {
 }
 
 interface ApplicationForEmail {
+  id: string;
   submissionId: string;
   submittedAt: string | null;
   userId: string;
@@ -365,7 +366,7 @@ export default function AdminApplicantsPage() {
                           >
                             {app.applicationNumber}
                           </Link>
-                          <StatusBadge status={app.status} />
+                          <StatusBadge status={app.status || "DRAFT"} />
                         </div>
                       ))}
                     </div>
@@ -512,7 +513,7 @@ export default function AdminApplicantsPage() {
                     </div>
                   </div>
 
-                  {loadingApplications ? (
+                  {loadingApplicants ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                     </div>
@@ -554,7 +555,7 @@ export default function AdminApplicantsPage() {
                               <td className="px-3 py-2">{app.name}</td>
                               <td className="px-3 py-2">{app.email}</td>
                               <td className="px-3 py-2">
-                                <StatusBadge status={app.status} />
+                                <StatusBadge status={app.applicationStatus || "DRAFT"} />
                               </td>
                               <td className="px-3 py-2">
                                 {app.submittedAt ? (
@@ -669,14 +670,13 @@ Use {applicationNumber} for application ID."
                         loading={sendingEmail}
                         disabled={selectedCount === 0 || !emailSubject.trim() || !emailMessage.trim()}
                         className="w-full"
-                        size="lg"
                       >
                         <Send className="h-4 w-4" />
                         Send Email to {selectedCount} Applicant{selectedCount !== 1 ? "s" : ""}
                       </Button>
 
                       <p className="text-xs text-gray-500 text-center">
-                        Emails will be sent via ZeptoMail with "[VGMF Fellowship]" prefix
+                        Emails will be sent via ZeptoMail with &quot;[VGMF Fellowship]&quot; prefix
                       </p>
                     </div>
                   </div>

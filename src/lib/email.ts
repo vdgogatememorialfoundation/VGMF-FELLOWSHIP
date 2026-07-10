@@ -211,7 +211,7 @@ export async function sendBulkEmailWithAttachments(
   return results;
 }
 
-function renderEmailHtml(title: string, bodyContent: string): string {
+export function renderEmailHtml(title: string, bodyContent: string): string {
   return `
     <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; padding: 30px 15px; margin: 0; min-height: 100%;">
       <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">

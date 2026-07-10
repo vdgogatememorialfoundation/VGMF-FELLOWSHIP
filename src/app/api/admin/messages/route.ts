@@ -22,11 +22,11 @@ export async function GET(request: NextRequest) {
     if (formId) {
       // Get form submissions for this form
       const formSubmissions = await prisma.formSubmission.findMany({
-        where: { formId },
+        where: { formTemplateId: formId },
         select: {
           id: true,
           userId: true,
-          formId: true,
+          formTemplateId: true,
           data: true,
           submittedAt: true,
           createdAt: true,
@@ -42,9 +42,13 @@ export async function GET(request: NextRequest) {
         where: { id: { in: userIds } },
         select: {
           id: true,
-          name: true,
           email: true,
           phone: true,
+          profile: {
+            select: {
+              name: true,
+            },
+          },
           applications: {
             select: {
               id: true,
@@ -65,10 +69,11 @@ export async function GET(request: NextRequest) {
         const user = users.find(u => u.id === submission.userId);
         const app = user?.applications[0];
         return {
+          id: submission.id,
           submissionId: submission.id,
           submittedAt: submission.submittedAt,
           userId: submission.userId,
-          name: user?.name || "Unknown",
+          name: user?.profile?.name || user?.applications[0]?.name || "Unknown",
           email: user?.email || "",
           phone: user?.phone,
           applicationId: app?.id,
@@ -107,7 +112,7 @@ export async function GET(request: NextRequest) {
 
     // Get count of submissions per form
     const formCounts = await prisma.formSubmission.groupBy({
-      by: ["formId"],
+      by: ["formTemplateId"],
       _count: true,
     });
 
@@ -119,7 +124,7 @@ export async function GET(request: NextRequest) {
       isActive: form.isActive,
       opensAt: form.opensAt,
       closesAt: form.closesAt,
-      applicantCount: formCounts.find(c => c.formId === form.id)?._count || 0,
+      applicantCount: formCounts.find(c => c.formTemplateId === form.id)?._count || 0,
     }));
 
     return NextResponse.json({

@@ -476,7 +476,6 @@ export default function AdminMessagesPage() {
                 loading={sending}
                 disabled={selectedIds.length === 0 || !subject.trim() || !message.trim()}
                 className="w-full"
-                size="lg"
               >
                 <Send className="h-4 w-4" />
                 Send to {selectedIds.length} Recipient{selectedIds.length !== 1 ? "s" : ""}
