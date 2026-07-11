@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
           data: {
             fileName: file.name,
             filePath: relativePath,
-            fileData,
             fileSize: file.size,
             mimeType: file.type,
             status: "PENDING",
@@ -122,7 +121,6 @@ export async function POST(request: NextRequest) {
             type: docType as never,
             fileName: file.name,
             filePath: relativePath,
-            fileData,
             fileSize: file.size,
             mimeType: file.type,
           },
@@ -142,7 +140,6 @@ export async function POST(request: NextRequest) {
         applicationId,
         docType,
         relativePath,
-        hasFileData: Boolean(document.fileData?.trim()),
       });
       return NextResponse.json(
         {

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/Input";
 
 type Message = {
   id: string;
+  senderId: string;
+  recipientId: string;
   subject: string;
   body: string;
   isRead: boolean;
