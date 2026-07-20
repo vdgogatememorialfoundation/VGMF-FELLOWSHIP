@@ -66,6 +66,7 @@ const portalLinks: Record<PortalType, { href: string; label: string; icon: React
     { href: "/admin/applications/new", label: "New Application", icon: FilePlus },
     { href: "/admin/applicants", label: "Applicants", icon: UserCog },
     { href: "/admin/users", label: "Portal Users", icon: UserCog },
+    { href: "/admin/questionnaire", label: "Review Questionnaire", icon: Clipboard },
     { href: "/admin/scoring", label: "Scoring Criteria", icon: Clipboard },
     { href: "/admin/scoring/all", label: "Score Dashboard", icon: BarChart3 },
     { href: "/admin/notifications", label: "Notifications", icon: Bell },

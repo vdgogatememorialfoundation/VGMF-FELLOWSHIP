@@ -209,6 +209,166 @@ enum CmsPageSlug {
   REFUND
 }
 
+// ============================================
+// NEW ENUMS FOR THREE-LAYER WORKFLOW SYSTEM
+// ============================================
+
+// Applicant-facing public statuses (simplified view)
+enum ApplicantPublicStatus {
+  APPLICATION_SUBMITTED
+  DOCUMENTS_UNDER_VERIFICATION
+  ELIGIBILITY_ASSESSMENT
+  PROPOSAL_UNDER_REVIEW
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  FINAL_DECISION_PENDING
+  SELECTED
+  WAITLISTED
+  NOT_SELECTED
+  FELLOWSHIP_ACCEPTED
+  AGREEMENT_SUBMITTED
+  ETHICS_APPROVAL_PENDING
+  FIRST_INSTALLMENT_RELEASED
+  PROGRESS_REPORT_DUE
+  MID_TERM_REVIEW
+  SECOND_INSTALLMENT_RELEASED
+  FINAL_REPORT_SUBMITTED
+  FELLOWSHIP_COMPLETED
+}
+
+// Internal admin granular statuses
+enum InternalAdminStatus {
+  // Administrative
+  DRAFT
+  SUBMITTED
+  PAYMENT_VERIFIED
+  ADMINISTRATIVE_SCRUTINY
+  DOCUMENTS_VERIFIED
+  DOCUMENTS_REJECTED
+  CLARIFICATION_REQUESTED
+  
+  // Eligibility
+  ELIGIBILITY_PENDING
+  ELIGIBLE
+  NOT_ELIGIBLE
+  
+  // Proposal Assignment
+  REVIEWER_ASSIGNED
+  REVIEWER_ACCEPTED
+  REVIEWER_DECLINED
+  SECOND_REVIEWER_ASSIGNED
+  STATISTICIAN_ASSIGNED
+  SUBJECT_EXPERT_ASSIGNED
+  ETHICS_EXPERT_ASSIGNED
+  
+  // Proposal Review
+  SCIENTIFIC_REVIEW_STARTED
+  METHODOLOGY_REVIEW
+  LITERATURE_REVIEW
+  BUDGET_REVIEW
+  STATISTICAL_REVIEW
+  ETHICS_REVIEW
+  REVIEWER_SUBMITTED
+  AWAITING_SECOND_REVIEWER
+  REVIEWS_CONSOLIDATED
+  
+  // Committee
+  COMMITTEE_DISCUSSION
+  INTERVIEW_REQUIRED
+  INTERVIEW_WAIVED
+  AWAITING_COMMITTEE_DECISION
+  TRUSTEE_APPROVAL_PENDING
+  APPROVED
+  WAITLISTED
+  REJECTED
+  
+  // Fellowship
+  AGREEMENT_PENDING
+  AGREEMENT_SIGNED
+  MILESTONE_1_APPROVED
+  INSTALLMENT_1_RELEASED
+  PROGRESS_REPORT_PENDING
+  PROGRESS_REPORT_APPROVED
+  MILESTONE_2_APPROVED
+  INSTALLMENT_2_RELEASED
+  FINAL_REPORT_PENDING
+  FINAL_EVALUATION
+  FELLOWSHIP_CLOSED
+}
+
+// Review section types
+enum ReviewSectionType {
+  SCIENTIFIC_VALIDITY
+  CONTRIBUTION
+  LITERATURE
+  METHODOLOGY
+  STATISTICS
+  ETHICS
+  INVESTIGATOR
+  BUDGET
+  EXPECTED_OUTCOMES
+  FINAL_RECOMMENDATION
+}
+
+// Review question types
+enum ReviewQuestionType {
+  SCORE
+  CHECKBOX
+  TEXT
+  SELECT
+  TABLE
+  CONFIDENCE_LEVEL
+}
+
+// Reviewer final recommendations
+enum ReviewRecommendation {
+  APPROVE
+  APPROVE_WITH_MINOR_REVISION
+  MAJOR_REVISION
+  REJECT
+  INTERVIEW_REQUIRED
+}
+
+// Interview recommendations from reviewers
+enum InterviewRecommendation {
+  NO_INTERVIEW
+  RECOMMENDED
+  STRONGLY_RECOMMENDED
+  MANDATORY
+}
+
+// Budget review status
+enum BudgetReviewStatus {
+  APPROVED
+  REDUCED
+  REJECTED
+  REQUIRES_REVISION
+}
+
+// Reviewer assignment status
+enum ReviewerAssignmentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  IN_PROGRESS
+  SUBMITTED
+}
+
+// Conflict of interest status
+enum ConflictOfInterestStatus {
+  DECLARED
+  NO_CONFLICT
+  PENDING
+}
+
+// Proposal version status
+enum VersionStatus {
+  ORIGINAL
+  REVISED
+  CLARIFICATION
+}
+
 model User {
   id            String   @id @default(cuid())
   userId        String   @unique @map("user_id")
@@ -237,6 +397,15 @@ model User {
   auditLogs            AuditLog[]
   sentMessages         InboxMessage[] @relation("MessageSender")
   receivedMessages     InboxMessage[] @relation("MessageRecipient")
+  
+  // Review system relations
+  completeReviews      CompleteReview[]
+  proposalAnnotations   ProposalAnnotation[]
+  conflictOfInterests  ConflictOfInterest[]
+  committeeMatrixItems CommitteeMatrixItem[]
+  enhancedAssignments  EnhancedReviewerAssignment[]
+  budgetRecommendations BudgetRecommendation[]
+  clarificationRequests ClarificationRequest[]
 
   @@map("users")
 }
@@ -360,6 +529,18 @@ model Application {
   applicationQueries ApplicationQuery[]
   verificationSessions VerificationSession[]
   inboxMessages      InboxMessage[]
+  
+  // Review system relations
+  completeReviews      CompleteReview[]
+  proposalVersions     ProposalVersion[]
+  proposalAnnotations  ProposalAnnotation[]
+  conflictOfInterests  ConflictOfInterest[]
+  committeeMatrix      CommitteeMatrix?
+  internalStatusHistory InternalStatusHistory[]
+  enhancedAssignments  EnhancedReviewerAssignment[]
+  duplicateProposals   DuplicateProposal[] @relation("FlaggedApplications")
+  matchedDuplicates    DuplicateProposal[] @relation("MatchedApplications")
+  clarificationRequests ClarificationRequest[]
 
   @@map("applications")
 }
@@ -1188,4 +1369,389 @@ model FormSubmission {
   formTemplate FormTemplate @relation(fields: [formTemplateId], references: [id])
 
   @@map("form_submissions")
+}
+
+// ============================================
+// REVIEW SYSTEM MODELS FOR THREE-LAYER WORKFLOW
+// ============================================
+
+// Review Sections (configurable by admin)
+model ReviewSection {
+  id            String            @id @default(cuid())
+  name          String
+  type          ReviewSectionType
+  description   String?
+  order         Int               @default(0)
+  weight        Float             @default(0)  // Percentage weight for final score
+  maxScore      Float             @default(100)
+  isRequired    Boolean           @default(true) @map("is_required")
+  isActive      Boolean           @default(true) @map("is_active")
+  helpText      String?           @map("help_text")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  questions     ReviewQuestion[]
+  reviewResponses CompleteReview[]
+
+  @@map("review_sections")
+}
+
+// Review Questions (configurable by admin)
+model ReviewQuestion {
+  id              String            @id @default(cuid())
+  sectionId       String            @map("section_id")
+  questionText    String            @map("question_text")
+  questionType    ReviewQuestionType @map("question_type")
+  order           Int               @default(0)
+  maxScore        Float?             @map("max_score")
+  weight          Float?             @default(1) @map("weight")
+  options         String?            // JSON array for SELECT/CHECKBOX options
+  isRequired      Boolean           @default(true) @map("is_required")
+  isActive        Boolean           @default(true) @map("is_active")
+  helpText        String?           @map("help_text")
+  placeholder     String?           @map("placeholder")
+  minValue        Float?             @map("min_value")
+  maxValue        Float?             @map("max_value")
+  subsection      String?           @map("subsection")  // For grouping in methodology section
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  section         ReviewSection     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  responses       ReviewResponse[]
+
+  @@index([sectionId, order])
+  @@map("review_questions")
+}
+
+// Individual Review Responses
+model ReviewResponse {
+  id              String            @id @default(cuid())
+  questionId      String            @map("question_id")
+  reviewId        String            @map("review_id")
+  score           Float?
+  booleanValue    Boolean?          @map("boolean_value")
+  textValue       String?           @map("text_value")
+  selectedOptions String?           @map("selected_options")  // JSON array
+  confidenceLevel Int?              @map("confidence_level")  // 1-5 scale
+  tableData       Json?             @map("table_data")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  question        ReviewQuestion    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  review          CompleteReview    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, reviewId])
+  @@index([reviewId])
+  @@map("review_responses")
+}
+
+// Complete Review (summary scores with weighted calculation)
+model CompleteReview {
+  id                    String               @id @default(cuid())
+  applicationId        String               @map("application_id")
+  reviewerId            String               @map("reviewer_id")
+  sectionId            String               @map("section_id")
+  
+  // Calculated scores
+  totalScore           Float                @default(0) @map("total_score")
+  maxPossibleScore     Float                @default(100) @map("max_possible_score")
+  weightedScore        Float                @default(0) @map("weighted_score")
+  
+  // Final recommendation
+  recommendation       ReviewRecommendation?
+  interviewRecommendation InterviewRecommendation? @map("interview_recommendation")
+  overallComment       String?               @map("overall_comment")
+  
+  // Status
+  isDraft              Boolean              @default(true) @map("is_draft")
+  isSubmitted          Boolean              @default(false) @map("is_submitted")
+  submittedAt          DateTime?             @map("submitted_at")
+  
+  // Reviewer notes (private)
+  reviewerNotes        String?              @map("reviewer_notes")  // Only visible to reviewer
+  committeeNotes       String?              @map("committee_notes")  // Visible to committee
+  
+  // Metadata
+  timeSpentMinutes     Int?                 @map("time_spent_minutes")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  application          Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer             User                 @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  section              ReviewSection        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  responses            ReviewResponse[]
+
+  @@unique([applicationId, reviewerId, sectionId])
+  @@index([applicationId])
+  @@index([reviewerId])
+  @@map("complete_reviews")
+}
+
+// Proposal Version (track revisions)
+model ProposalVersion {
+  id                String        @id @default(cuid())
+  applicationId     String        @map("application_id")
+  versionNumber     Int           @map("version_number")
+  status            VersionStatus @default(ORIGINAL)
+  projectTitle      String?
+  objectives        String?       @db.Text
+  methodology       String?       @db.Text
+  sampleSize        String?
+  studyDuration     String?
+  expectedOutcomes  String?       @db.Text
+  budgetSummary     String?       @db.Text
+  revisionNotes     String?       @map("revision_notes")  // What changed
+  submittedAt       DateTime      @default(now()) @map("submitted_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  application       Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, versionNumber])
+  @@map("proposal_versions")
+}
+
+// Proposal Annotation (PDF commenting)
+model ProposalAnnotation {
+  id              String   @id @default(cuid())
+  applicationId   String   @map("application_id")
+  reviewerId      String   @map("reviewer_id")
+  versionId       String?  @map("version_id")
+  
+  // Annotation data
+  type            String   // HIGHLIGHT, COMMENT, UNDERLINE, STICKY
+  pageNumber      Int      @map("page_number")
+  selectedText    String?  @map("selected_text")
+  annotationText  String   @map("annotation_text")
+  positionX       Float    @map("position_x")
+  positionY       Float    @map("position_y")
+  color           String?  // hex color
+  
+  // Reply thread
+  parentAnnotationId String? @map("parent_annotation_id")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application     Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer        User                 @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  version         ProposalVersion?     @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  parent          ProposalAnnotation?  @relation("AnnotationThread", fields: [parentAnnotationId], references: [id], onDelete: Cascade)
+  replies         ProposalAnnotation[]  @relation("AnnotationThread")
+
+  @@index([applicationId, reviewerId])
+  @@map("proposal_annotations")
+}
+
+// Conflict of Interest Declaration
+model ConflictOfInterest {
+  id              String                   @id @default(cuid())
+  applicationId   String                   @map("application_id")
+  reviewerId      String                   @map("reviewer_id")
+  status          ConflictOfInterestStatus @default(PENDING)
+  
+  // If conflict declared
+  conflictType    String?                  @map("conflict_type")  // FINANCIAL, PERSONAL, PROFESSIONAL, OTHER
+  conflictDetails String?                  @map("conflict_details") @db.Text
+  
+  // Declaration
+  declaresNoConflict Boolean               @default(false) @map("declares_no_conflict")
+  declarationTimestamp DateTime?           @map("declaration_timestamp")
+  
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  application     Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer        User                    @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, reviewerId])
+  @@map("conflict_of_interest")
+}
+
+// Committee Matrix (for side-by-side comparison)
+model CommitteeMatrix {
+  id              String   @id @default(cuid())
+  applicationId   String   @unique @map("application_id")
+  
+  // Final decision
+  finalDecision   String?  @map("final_decision")
+  finalScore      Float?   @map("final_score")
+  finalBudget     Float?   @map("final_budget")
+  interviewRequired Boolean @default(false) @map("interview_required")
+  committeeRemarks String? @map("committee_remarks") @db.Text
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application     Application            @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  items           CommitteeMatrixItem[]
+
+  @@map("committee_matrices")
+}
+
+// Committee Matrix Item (scores from each reviewer)
+model CommitteeMatrixItem {
+  id              String           @id @default(cuid())
+  matrixId        String           @map("matrix_id")
+  reviewerId      String           @map("reviewer_id")
+  reviewerName    String           @map("reviewer_name")
+  
+  // Scores by section
+  sectionScores   Json             @map("section_scores")  // { sectionId: { score, maxScore, weighted } }
+  totalScore      Float            @default(0) @map("total_score")
+  
+  // Individual recommendations
+  recommendation  ReviewRecommendation? @map("recommendation")
+  interviewRecommendation InterviewRecommendation? @map("interview_recommendation")
+  
+  // Budget recommendation
+  budgetRecommended Float?          @map("budget_recommended")
+  
+  // Variance from other reviewers
+  varianceLevel   String?          @map("variance_level")  // LOW, MODERATE, HIGH
+  
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  matrix          CommitteeMatrix  @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+
+  @@unique([matrixId, reviewerId])
+  @@map("committee_matrix_items")
+}
+
+// Internal Status History (tracking granular internal status changes)
+model InternalStatusHistory {
+  id                String             @id @default(cuid())
+  applicationId     String             @map("application_id")
+  previousStatus    InternalAdminStatus? @map("previous_status")
+  newStatus         InternalAdminStatus @map("new_status")
+  changedBy         String?            @map("changed_by")
+  notes             String?             @db.Text
+  
+  // For tracking review phases
+  reviewPhase       String?            @map("review_phase")
+  reviewerId        String?             @map("reviewer_id")
+  
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  application       Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("internal_status_history")
+}
+
+// Enhanced Reviewer Assignment (with deadline tracking)
+model EnhancedReviewerAssignment {
+  id              String                   @id @default(cuid())
+  applicationId   String                   @map("application_id")
+  reviewerId      String                   @map("reviewer_id")
+  sectionType     ReviewSectionType?       @map("section_type")
+  
+  status          ReviewerAssignmentStatus @default(PENDING)
+  
+  // Assignment details
+  assignedBy      String?                  @map("assigned_by")
+  assignedAt      DateTime                 @default(now()) @map("assigned_at")
+  deadline        DateTime?                @map("deadline")
+  
+  // Tracking
+  acceptedAt      DateTime?                @map("accepted_at")
+  declinedAt      DateTime?                @map("declined_at")
+  declineReason   String?                  @map("decline_reason")
+  startedAt       DateTime?                @map("started_at")
+  completedAt     DateTime?                @map("completed_at")
+  
+  // Conflict of interest
+  conflictDeclared Boolean                 @default(false) @map("conflict_declared")
+  
+  notes           String?                  @db.Text
+
+  application     Application              @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer        User                     @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, reviewerId, sectionType])
+  @@index([reviewerId, status])
+  @@map("enhanced_reviewer_assignments")
+}
+
+// Budget Recommendation (editable budget table)
+model BudgetRecommendation {
+  id              String             @id @default(cuid())
+  reviewId        String             @map("review_id")
+  applicationId   String             @map("application_id")
+  reviewerId      String             @map("reviewer_id")
+  
+  // Original requested
+  equipmentOriginal     Float   @default(0) @map("equipment_original")
+  consumablesOriginal   Float   @default(0) @map("consumables_original")
+  travelOriginal        Float   @default(0) @map("travel_original")
+  documentationOriginal Float   @default(0) @map("documentation_original")
+  publicationOriginal   Float   @default(0) @map("publication_original")
+  otherOriginal         Float   @default(0) @map("other_original")
+  totalOriginal         Float   @default(0) @map("total_original")
+  
+  // Recommended amount
+  equipmentRecommended     Float   @default(0) @map("equipment_recommended")
+  consumablesRecommended   Float   @default(0) @map("consumables_recommended")
+  travelRecommended        Float   @default(0) @map("travel_recommended")
+  documentationRecommended Float   @default(0) @map("documentation_recommended")
+  publicationRecommended   Float   @default(0) @map("publication_recommended")
+  otherRecommended         Float   @default(0) @map("other_recommended")
+  totalRecommended         Float   @default(0) @map("total_recommended")
+  
+  // Status
+  status          BudgetReviewStatus @default(APPROVED)
+  remarks         String?            @db.Text
+  
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  review          CompleteReview     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId])
+  @@map("budget_recommendations")
+}
+
+// Duplicate Proposal Detection
+model DuplicateProposal {
+  id              String   @id @default(cuid())
+  flaggedApplicationId String @map("flagged_application_id")
+  matchApplicationId String @map("match_application_id")
+  
+  similarityScore Float   @map("similarity_score")  // 0-100
+  matchType       String  @map("match_type")  // TITLE, METHODOLOGY, BUDGET, OVERLAP
+  matchDetails    Json    @map("match_details")  // Specific matching details
+  isReviewed      Boolean @default(false) @map("is_reviewed")
+  reviewerId      String? @map("reviewer_id")
+  reviewedAt      DateTime? @map("reviewed_at")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  flaggedApplication Application @relation("FlaggedApplications", fields: [flaggedApplicationId], references: [id], onDelete: Cascade)
+  matchApplication   Application @relation("MatchedApplications", fields: [matchApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([flaggedApplicationId])
+  @@map("duplicate_proposals")
+}
+
+// Clarification Request (from reviewer to applicant)
+model ClarificationRequest {
+  id              String   @id @default(cuid())
+  applicationId   String   @map("application_id")
+  reviewerId      String   @map("reviewer_id")
+  
+  sectionRef      String?  @map("section_ref")  // Which section needs clarification
+  questionText    String   @map("question_text") @db.Text
+  applicantResponse String? @map("applicant_response") @db.Text
+  
+  status          String   @default("PENDING")  // PENDING, RESPONDED, RESOLVED
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  respondedAt     DateTime? @map("responded_at")
+  resolvedAt      DateTime? @map("resolved_at")
+
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer        User        @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("clarification_requests")
 }
