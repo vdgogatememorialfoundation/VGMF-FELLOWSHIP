@@ -3,7 +3,7 @@ import PDFDocument from "pdfkit";
 import archiver from "archiver";
 import { formatDate, formatCurrency, getStatusLabel } from "./utils";
 import type { AdminReportId } from "./admin-report-types";
-import { ADMIN_REPORTS } from "./admin-report-types";
+import { ADMIN_REPORTS, reportDownloadFilename } from "./admin-report-types";
 
 export { ADMIN_REPORTS, type AdminReportId, isAdminReportId, reportDownloadFilename } from "./admin-report-types";
 
@@ -62,44 +62,92 @@ async function loadApplicantRows(): Promise<string[][]> {
 }
 
 async function loadReviewerScoreRows(): Promise<string[][]> {
-  const scores = await prisma.committeeScore.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: {
-      application: { select: { applicationNumber: true, name: true } },
-      committeeUser: { include: { profile: true } },
-    },
-  });
+  const [applicationScores, committeeScores] = await Promise.all([
+    prisma.applicationScore.findMany({
+      orderBy: { updatedAt: "desc" },
+      include: { scores: { orderBy: { criteriaName: "asc" } } },
+    }),
+    prisma.committeeScore.findMany({
+      orderBy: { updatedAt: "desc" },
+      include: {
+        application: { select: { applicationNumber: true, name: true } },
+        committeeUser: { include: { profile: true } },
+      },
+    }),
+  ]);
 
-  return [
+  const applicationIds = [...new Set(applicationScores.map((score) => score.applicationId))];
+  const applications = applicationIds.length
+    ? await prisma.application.findMany({
+        where: { id: { in: applicationIds } },
+        select: { id: true, applicationNumber: true, name: true },
+      })
+    : [];
+  const applicationById = new Map<string, { applicationNumber: string; name: string }>(
+    applications.map((app) => [app.id, app])
+  );
+
+  const rows: string[][] = [
     [
       "Application Number",
       "Applicant Name",
       "Reviewer",
-      "Scientific Merit",
-      "Innovation",
-      "Feasibility",
-      "Budget Justification",
-      "Viddhakarma Relevance",
+      "Criteria Scores",
       "Total Score",
-      "Shortlisted",
+      "Max Score",
+      "Percentage",
+      "Recommended Amount",
+      "Submitted",
+      "Locked",
       "Remarks",
       "Updated At",
     ],
-    ...scores.map((score) => [
+  ];
+
+  for (const score of applicationScores) {
+    const app = applicationById.get(score.applicationId);
+    const percentage =
+      score.maxPossibleScore > 0 ? `${((score.totalScore / score.maxPossibleScore) * 100).toFixed(1)}%` : "";
+    rows.push([
+      app?.applicationNumber ?? "",
+      app?.name ?? "",
+      score.reviewerName,
+      score.scores.map((item) => `${item.criteriaName}: ${item.score}/${item.maxScore}`).join("; "),
+      String(score.totalScore),
+      String(score.maxPossibleScore),
+      percentage,
+      score.recommendedAmount != null ? formatCurrency(score.recommendedAmount) : "",
+      score.isSubmitted ? "Yes" : "No",
+      score.isLocked ? "Yes" : "No",
+      score.remarks ?? "",
+      formatDate(score.updatedAt),
+    ]);
+  }
+
+  for (const score of committeeScores) {
+    rows.push([
       score.application.applicationNumber,
       score.application.name,
       score.committeeUser.profile?.name || score.committeeUser.email,
-      String(score.scientificMerit),
-      String(score.innovation),
-      String(score.feasibility),
-      String(score.budgetJustification),
-      String(score.viddhakarmaRelevance),
+      [
+        `Scientific Merit: ${score.scientificMerit}`,
+        `Innovation: ${score.innovation}`,
+        `Feasibility: ${score.feasibility}`,
+        `Budget Justification: ${score.budgetJustification}`,
+        `Viddhakarma Relevance: ${score.viddhakarmaRelevance}`,
+      ].join("; "),
       String(score.totalScore),
-      score.isShortlisted ? "Yes" : "No",
+      "",
+      "",
+      "",
+      score.isShortlisted ? "Shortlisted" : "Yes",
+      "",
       score.remarks ?? "",
       formatDate(score.updatedAt),
-    ]),
-  ];
+    ]);
+  }
+
+  return rows;
 }
 
 async function loadFellowshipAwardRows(): Promise<string[][]> {
@@ -288,8 +336,8 @@ async function loadPublicationRows(): Promise<string[][]> {
       submission.fellowship.fellowshipId,
       submission.fellowship.fellowName,
       submission.fellowship.projectTitle,
-      "Final manuscript / publication deliverable",
-      submission.manuscriptPath ? "Manuscript uploaded" : submission.finalReportPath ? "Final report uploaded" : "",
+      "Final report / publication deliverable",
+      submission.finalReportPath ? "Final report uploaded" : submission.presentationPath ? "Presentation uploaded" : "",
     ]);
   }
 
@@ -297,6 +345,16 @@ async function loadPublicationRows(): Promise<string[][]> {
 }
 
 async function loadAllSubmissionsRows(): Promise<string[][]> {
+  const reviewerScores = await prisma.applicationScore.findMany({
+    select: { applicationId: true, reviewerName: true, totalScore: true, maxPossibleScore: true },
+  });
+  const reviewerScoresByApp = new Map<string, string[]>();
+  for (const score of reviewerScores) {
+    const list = reviewerScoresByApp.get(score.applicationId) ?? [];
+    list.push(`${score.reviewerName}: ${score.totalScore}/${score.maxPossibleScore}`);
+    reviewerScoresByApp.set(score.applicationId, list);
+  }
+
   const applications = await prisma.application.findMany({
     orderBy: { submittedAt: "desc" },
     include: {
@@ -345,9 +403,10 @@ async function loadAllSubmissionsRows(): Promise<string[][]> {
       const lastStatusChange = app.statusHistory[0]?.createdAt 
         ? formatDate(app.statusHistory[0].createdAt) 
         : "";
-      const committeeScore = app.committeeScores.length > 0 
-        ? app.committeeScores.map(s => `${s.committeeUser.profile?.name || 'N/A'}: ${s.totalScore}`).join("; ")
-        : "";
+      const committeeScore = [
+        ...(reviewerScoresByApp.get(app.id) ?? []),
+        ...app.committeeScores.map((s) => `${s.committeeUser.profile?.name || "N/A"}: ${s.totalScore}`),
+      ].join("; ");
       
       return [
         app.applicationNumber,
@@ -412,7 +471,7 @@ async function loadDocumentStatusRows(): Promise<string[][]> {
       doc.application.applicationNumber,
       doc.application.name,
       doc.application.email,
-      doc.documentType.replace(/_/g, " "),
+      doc.type.replace(/_/g, " "),
       doc.fileName,
       doc.fileSize ? String(Math.round(doc.fileSize / 1024)) : "",
       formatDate(doc.uploadedAt),
@@ -552,69 +611,98 @@ async function loadReportRows(reportId: AdminReportId): Promise<string[][]> {
   }
 }
 
+const PDF_CELL_MAX_CHARS = 400;
+const PDF_CELL_PADDING = 3;
+
+function pdfPageSizeForColumns(columnCount: number): string {
+  if (columnCount <= 8) return "A4";
+  if (columnCount <= 14) return "A3";
+  return "A2";
+}
+
 function drawPdfTable(
   doc: InstanceType<typeof PDFDocument>,
   title: string,
   rows: string[][]
 ) {
-  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const left = doc.page.margins.left;
+  const pageWidth = doc.page.width - left - doc.page.margins.right;
+  const bottomLimit = () => doc.page.height - doc.page.margins.bottom;
   const generatedAt = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
-  doc.fontSize(16).font("Helvetica-Bold").text(title, { align: "center" });
-  doc.moveDown(0.3);
-  doc.fontSize(9).font("Helvetica").fillColor("#666666").text(`Generated: ${generatedAt}`, {
+  doc.fillColor("#111111").fontSize(16).font("Helvetica-Bold").text(title, left, doc.y, {
+    width: pageWidth,
     align: "center",
   });
+  doc.moveDown(0.3);
+  doc.fontSize(9).font("Helvetica").fillColor("#666666").text(
+    `Generated: ${generatedAt}    Records: ${Math.max(rows.length - 1, 0)}`,
+    left,
+    doc.y,
+    { width: pageWidth, align: "center" }
+  );
   doc.fillColor("#111111");
   doc.moveDown(1);
 
   if (rows.length <= 1) {
-    doc.fontSize(11).font("Helvetica").text("No records found for this report.");
+    doc.fontSize(11).font("Helvetica").text("No records found for this report.", left, doc.y, {
+      width: pageWidth,
+      align: "center",
+    });
     return;
   }
 
   const headers = rows[0];
   const dataRows = rows.slice(1);
   const columnWidth = pageWidth / headers.length;
+  const textWidth = columnWidth - PDF_CELL_PADDING * 2;
+  const headerFontSize = 8;
+  const bodyFontSize = 7;
 
-  doc.fontSize(8).font("Helvetica-Bold");
-  headers.forEach((header, index) => {
-    doc.text(header, doc.page.margins.left + index * columnWidth, doc.y, {
-      width: columnWidth - 4,
-      lineBreak: false,
-    });
-  });
-  doc.moveDown(0.8);
+  const cellText = (value: string) => {
+    const text = value?.trim() ? value.replace(/₹\s?/g, "Rs. ") : "—";
+    return text.length > PDF_CELL_MAX_CHARS ? `${text.slice(0, PDF_CELL_MAX_CHARS)}…` : text;
+  };
 
-  doc.font("Helvetica").fontSize(7);
-  for (const row of dataRows) {
-    const rowTop = doc.y;
-    let maxHeight = 12;
+  const measureRow = (cells: string[], font: string, fontSize: number) => {
+    doc.font(font).fontSize(fontSize);
+    return (
+      Math.max(...cells.map((cell) => doc.heightOfString(cell, { width: textWidth })), fontSize) +
+      PDF_CELL_PADDING * 2
+    );
+  };
 
-    row.forEach((cell, index) => {
-      const height = doc.heightOfString(cell || "—", {
-        width: columnWidth - 4,
-      });
-      maxHeight = Math.max(maxHeight, height);
-      doc.text(cell || "—", doc.page.margins.left + index * columnWidth, rowTop, {
-        width: columnWidth - 4,
-      });
-    });
-
-    doc.y = rowTop + maxHeight + 6;
-
-    if (doc.y > doc.page.height - doc.page.margins.bottom - 40) {
-      doc.addPage();
-      doc.fontSize(8).font("Helvetica-Bold");
-      headers.forEach((header, index) => {
-        doc.text(header, doc.page.margins.left + index * columnWidth, doc.y, {
-          width: columnWidth - 4,
-          lineBreak: false,
-        });
-      });
-      doc.moveDown(0.8);
-      doc.font("Helvetica").fontSize(7);
+  const drawRow = (cells: string[], font: string, fontSize: number, fill?: string) => {
+    const height = measureRow(cells, font, fontSize);
+    const top = doc.y;
+    if (fill) {
+      doc.save().rect(left, top, pageWidth, height).fill(fill).restore();
     }
+    doc.save().lineWidth(0.3).strokeColor("#cccccc");
+    doc.moveTo(left, top + height).lineTo(left + pageWidth, top + height).stroke();
+    doc.restore();
+    doc.fillColor("#111111").font(font).fontSize(fontSize);
+    cells.forEach((cell, index) => {
+      doc.text(cell, left + index * columnWidth + PDF_CELL_PADDING, top + PDF_CELL_PADDING, {
+        width: textWidth,
+      });
+    });
+    doc.x = left;
+    doc.y = top + height;
+  };
+
+  const headerCells = headers.map((header) => cellText(header));
+  const drawHeader = () => drawRow(headerCells, "Helvetica-Bold", headerFontSize, "#e8eef7");
+
+  drawHeader();
+  for (const row of dataRows) {
+    const cells = headers.map((_, index) => cellText(row[index] ?? ""));
+    const height = measureRow(cells, "Helvetica", bodyFontSize);
+    if (doc.y + height > bottomLimit()) {
+      doc.addPage();
+      drawHeader();
+    }
+    drawRow(cells, "Helvetica", bodyFontSize);
   }
 }
 
@@ -628,7 +716,12 @@ export async function buildAdminReportPdf(reportId: AdminReportId): Promise<Buff
   const title = ADMIN_REPORTS.find((report) => report.id === reportId)?.title ?? "Report";
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 36, size: "A4", layout: "landscape" });
+    const columnCount = rows[0]?.length ?? 1;
+    const doc = new PDFDocument({
+      margin: 36,
+      size: pdfPageSizeForColumns(columnCount),
+      layout: "landscape",
+    });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
