@@ -1,7 +1,5 @@
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
 import prisma from "./db";
+import { readStoredUploadBytes } from "./upload-files";
 
 export function getUndertakingPdfUrl(applicationId: string): string {
   return `/api/undertaking/${applicationId}/pdf?t=${Date.now()}`;
@@ -12,7 +10,6 @@ export async function getUndertakingPdfFile(applicationId: string) {
     where: { applicationId },
     select: {
       applicationId: true,
-      pdfData: true,
       pdfPath: true,
       fullName: true,
       application: { select: { applicationNumber: true } },
@@ -21,22 +18,13 @@ export async function getUndertakingPdfFile(applicationId: string) {
 
   if (!undertaking) return null;
 
-  if (undertaking.pdfData) {
-    return {
-      data: Buffer.from(undertaking.pdfData, "base64"),
-      fileName: `undertaking_${undertaking.application.applicationNumber}.pdf`,
-    };
-  }
+  const data = await readStoredUploadBytes(undertaking.pdfPath);
+  if (!data) return null;
 
-  const diskPath = path.join(process.cwd(), "public", undertaking.pdfPath.replace(/^\//, ""));
-  if (existsSync(diskPath)) {
-    return {
-      data: await readFile(diskPath),
-      fileName: path.basename(undertaking.pdfPath),
-    };
-  }
-
-  return null;
+  return {
+    data,
+    fileName: `undertaking_${undertaking.application.applicationNumber}.pdf`,
+  };
 }
 
 /** Remove undertaking records whose PDF was lost (e.g. after Render redeploy). */
@@ -45,12 +33,12 @@ export async function repairOrphanUndertaking(applicationId: string) {
     where: { applicationId },
   });
 
-  if (!undertaking || undertaking.pdfData) {
+  if (!undertaking) {
     return undertaking;
   }
 
-  const diskPath = path.join(process.cwd(), "public", undertaking.pdfPath.replace(/^\//, ""));
-  if (existsSync(diskPath)) {
+  const data = await readStoredUploadBytes(undertaking.pdfPath);
+  if (data) {
     return undertaking;
   }
 
@@ -69,13 +57,10 @@ export function formatUndertakingForClient<
   T extends {
     applicationId: string;
     pdfPath: string;
-    pdfData?: string | null;
-    signatureData?: string | null;
   },
 >(undertaking: T) {
-  const { pdfData: _pdf, signatureData: _sig, ...rest } = undertaking;
   return {
-    ...rest,
+    ...undertaking,
     pdfUrl: getUndertakingPdfUrl(undertaking.applicationId),
   };
 }

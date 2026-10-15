@@ -182,11 +182,6 @@ export async function readStoredUploadBytes(relativePath: string): Promise<Buffe
   return readFileFromDisk(storagePath);
 }
 
-const MAX_DB_FILE_BYTES = 10 * 1024 * 1024;
-
-/** Keep a PostgreSQL copy for fallback even when R2 is configured. */
-
-
 async function backfillR2FromBuffer(
   storagePath: string,
   buffer: Buffer,
@@ -251,14 +246,12 @@ async function repairApplicationDocumentStorage(
   mimeType?: string | null
 ): Promise<void> {
   const normalized = normalizeStoragePath(storagePath) ?? storagePath;
-  const fileData = prepareFileDataForStorage(buffer);
 
   await prisma.applicationDocument
     .update({
       where: { id: documentId },
       data: {
         filePath: normalized,
-        ...(fileData ? { fileData } : {}),
       },
     })
     .catch((error) => console.error("Document storage repair failed:", documentId, error));
@@ -271,13 +264,8 @@ async function loadApplicationDocumentBytes(document: {
   applicationId: string;
   type: string;
   filePath: string;
-  fileData: string | null;
   mimeType: string;
 }): Promise<Buffer | null> {
-  if (document.fileData?.trim()) {
-    return decodeFileData(document.fileData);
-  }
-
   for (const storagePath of buildApplicationDocumentStorageCandidates(document)) {
     const bytes = await readStoredUploadBytes(storagePath);
     if (bytes) {
@@ -337,14 +325,12 @@ async function repairFellowshipDocumentStorage(
   mimeType?: string | null
 ): Promise<void> {
   const normalized = normalizeStoragePath(storagePath) ?? storagePath;
-  const fileData = prepareFileDataForStorage(buffer);
 
   await prisma.fellowshipDocument
     .update({
       where: { id: documentId },
       data: {
         filePath: normalized,
-        ...(fileData ? { fileData } : {}),
       },
     })
     .catch((error) => console.error("Fellowship storage repair failed:", documentId, error));
@@ -358,13 +344,8 @@ async function loadFellowshipDocumentBytes(document: {
   type: string;
   installmentNo: number;
   filePath: string;
-  fileData: string | null;
   mimeType: string;
 }): Promise<Buffer | null> {
-  if (document.fileData?.trim()) {
-    return decodeFileData(document.fileData);
-  }
-
   for (const storagePath of buildFellowshipDocumentStorageCandidates(document)) {
     const bytes = await readStoredUploadBytes(storagePath);
     if (bytes) {
@@ -501,6 +482,8 @@ async function findStoredUploadByPath(segments: string[]) {
           { finalReportPath: storedPath },
           { manuscriptPath: storedPath },
           { utilizationCertPath: storedPath },
+          { billsVouchersPath: storedPath },
+          { presentationPath: storedPath },
         ],
       },
     });
@@ -547,7 +530,6 @@ export async function getApplicationDocumentFile(documentId: string) {
       applicationId: document.applicationId,
       type: document.type,
       filePath: document.filePath,
-      hasFileData: Boolean(document.fileData?.trim()),
       r2Configured: isR2Configured(),
     });
     return null;
@@ -576,7 +558,6 @@ export async function getFellowshipDocumentFile(documentId: string) {
       fellowshipId: document.fellowshipId,
       type: document.type,
       filePath: document.filePath,
-      hasFileData: Boolean(document.fileData?.trim()),
       r2Configured: isR2Configured(),
     });
     return null;

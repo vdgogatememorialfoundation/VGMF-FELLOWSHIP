@@ -1,5 +1,10 @@
 import prisma from "./db";
 import { generateFellowshipAgreementPdf, getFellowshipAgreementUrl } from "./agreement-pdf";
+import { persistUpload, readStoredUploadBytes } from "./upload-files";
+
+function fellowshipAgreementStoragePath(fellowshipId: string): string {
+  return `/uploads/fellowships/${fellowshipId}/agreement/agreement.pdf`;
+}
 
 export async function generateAndStoreFellowshipAgreement(fellowshipId: string) {
   const fellowship = await prisma.fellowship.findUnique({
@@ -24,12 +29,14 @@ export async function generateAndStoreFellowshipAgreement(fellowshipId: string) 
   });
 
   const agreementUrl = getFellowshipAgreementUrl(fellowship.id);
+  const storagePath = fellowshipAgreementStoragePath(fellowship.id);
   const generatedAt = new Date();
+
+  await persistUpload(storagePath, pdfBuffer, "application/pdf");
 
   await prisma.fellowship.update({
     where: { id: fellowshipId },
     data: {
-      agreementPdfData: pdfBuffer.toString("base64"),
       agreementGeneratedAt: generatedAt,
       awardLetterPath: agreementUrl,
     },
@@ -45,7 +52,7 @@ export async function generateAndStoreFellowshipAgreement(fellowshipId: string) 
     },
     update: {
       fileName: `Agreement_${fellowship.fellowshipId}.pdf`,
-      filePath: agreementUrl,
+      filePath: storagePath,
       fileSize: pdfBuffer.length,
       mimeType: "application/pdf",
       status: "APPROVED",
@@ -56,7 +63,7 @@ export async function generateAndStoreFellowshipAgreement(fellowshipId: string) 
       installmentNo: 1,
       type: "FELLOWSHIP_AGREEMENT",
       fileName: `Agreement_${fellowship.fellowshipId}.pdf`,
-      filePath: agreementUrl,
+      filePath: storagePath,
       fileSize: pdfBuffer.length,
       mimeType: "application/pdf",
       status: "APPROVED",
@@ -74,7 +81,7 @@ export async function generateAndStoreFellowshipAgreement(fellowshipId: string) 
     },
     update: {
       fileName: `Acceptance_${fellowship.fellowshipId}.pdf`,
-      filePath: agreementUrl,
+      filePath: storagePath,
       fileSize: pdfBuffer.length,
       mimeType: "application/pdf",
       status: "APPROVED",
@@ -85,7 +92,7 @@ export async function generateAndStoreFellowshipAgreement(fellowshipId: string) 
       installmentNo: 1,
       type: "ACCEPTANCE_LETTER",
       fileName: `Acceptance_${fellowship.fellowshipId}.pdf`,
-      filePath: agreementUrl,
+      filePath: storagePath,
       fileSize: pdfBuffer.length,
       mimeType: "application/pdf",
       status: "APPROVED",
@@ -100,15 +107,18 @@ export async function getFellowshipAgreementFile(fellowshipId: string) {
   const fellowship = await prisma.fellowship.findUnique({
     where: { id: fellowshipId },
     select: {
+      id: true,
       fellowshipId: true,
-      agreementPdfData: true,
     },
   });
 
-  if (!fellowship?.agreementPdfData) return null;
+  if (!fellowship) return null;
+
+  const data = await readStoredUploadBytes(fellowshipAgreementStoragePath(fellowship.id));
+  if (!data) return null;
 
   return {
-    data: Buffer.from(fellowship.agreementPdfData, "base64"),
+    data,
     fileName: `Fellowship_Agreement_${fellowship.fellowshipId}.pdf`,
   };
 }
